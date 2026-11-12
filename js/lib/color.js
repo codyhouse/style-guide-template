@@ -118,3 +118,23 @@ export function shadeScale(h, c) {
   });
   return scale;
 }
+
+// Reads a typed CSS color (#rgb, #rrggbb, rgb(), oklch()) into a DTCG oklch color, or null.
+export function parseCssColor(input) {
+  const s = String(input).trim().toLowerCase();
+  const round = (n) => Math.round(n * 1e4) / 1e4;
+  const fromSrgb = (r, g, b, a = 1) => {
+    const [l, c, h] = toOklch({ colorSpace: 'srgb', components: [r, g, b] });
+    return oklch(round(l), round(c), round(h), a);
+  };
+  let m = s.match(/^#([0-9a-f]{3}|[0-9a-f]{6})$/);
+  if (m) {
+    const hex = m[1].length === 3 ? [...m[1]].map((x) => x + x).join('') : m[1];
+    return fromSrgb(...[0, 2, 4].map((i) => parseInt(hex.slice(i, i + 2), 16) / 255));
+  }
+  m = s.match(/^rgba?\(\s*([\d.]+)[\s,]+([\d.]+)[\s,]+([\d.]+)(?:\s*[,/]\s*([\d.]+))?\s*\)$/);
+  if (m) return fromSrgb(+m[1] / 255, +m[2] / 255, +m[3] / 255, m[4] === undefined ? 1 : +m[4]);
+  m = s.match(/^oklch\(\s*([\d.]+)(%?)\s+([\d.]+)\s+([\d.]+)(?:\s*\/\s*([\d.]+))?\s*\)$/);
+  if (m) return oklch(round(m[2] ? +m[1] / 100 : +m[1]), +m[3], +m[4], m[5] === undefined ? 1 : +m[5]);
+  return null;
+}

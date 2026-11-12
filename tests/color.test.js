@@ -55,3 +55,16 @@ test('shade scale', () => {
   assert.equal(s['950'].components[0], 0.15);
   for (const v of Object.values(s)) assert.ok(inGamut(v));
 });
+
+test('parseCssColor reads hex, rgb and oklch', async () => {
+  const { parseCssColor } = await import('../js/lib/color.js');
+  assert.equal(parseCssColor('#ff0000').hex, '#ff0000');
+  assert.equal(parseCssColor('#f00').hex, '#ff0000');
+  assert.equal(parseCssColor('rgb(255, 0, 0)').hex, '#ff0000');
+  assert.equal(parseCssColor('rgb(255 0 0)').hex, '#ff0000');
+  assert.deepEqual(parseCssColor('oklch(0.55 0.18 260)').components, [0.55, 0.18, 260]);
+  assert.deepEqual(parseCssColor('oklch(55% 0.18 260)').components, [0.55, 0.18, 260]);
+  assert.equal(parseCssColor('oklch(0.5 0.1 10 / 0.5)').alpha, 0.5);
+  assert.equal(parseCssColor('#ff0000').colorSpace, 'oklch');
+  assert.equal(parseCssColor('blue-ish'), null);
+});
