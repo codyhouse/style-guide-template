@@ -1,0 +1,476 @@
+[
+ {
+  "id": "42dot-sans",
+  "family": "42dot Sans",
+  "subsets": [
+   "korean",
+   "latin"
+  ],
+  "weights": [
+   300,
+   400,
+   500,
+   600,
+   700,
+   800
+  ],
+  "styles": [
+   "normal"
+  ],
+  "defSubset": "latin",
+  "variable": true,
+  "lastModified": "2025-06-02",
+  "category": "sans-serif",
+  "license": "OFL-1.1",
+  "type": "google"
+ },
+ {
+  "id": "abeezee",
+  "family": "ABeeZee",
+  "subsets": [
+   "latin",
+   "latin-ext"
+  ],
+  "weights": [
+   400
+  ],
+  "styles": [
+   "italic",
+   "normal"
+  ],
+  "defSubset": "latin",
+  "variable": false,
+  "lastModified": "2025-09-08",
+  "category": "sans-serif",
+  "license": "OFL-1.1",
+  "type": "google"
+ },
+ {
+  "id": "abel",
+  "family": "Abel",
+  "subsets": [
+   "latin"
+  ],
+  "weights": [
+   400
+  ],
+  "styles": [
+   "normal"
+  ],
+  "defSubset": "latin",
+  "variable": false,
+  "lastModified": "2025-05-30",
+  "category": "sans-serif",
+  "license": "OFL-1.1",
+  "type": "google"
+ },
+ {
+  "id": "abhaya-libre",
+  "family": "Abhaya Libre",
+  "subsets": [
+   "latin",
+   "latin-ext",
+   "sinhala"
+  ],
+  "weights": [
+   400,
+   500,
+   600,
+   700,
+   800
+  ],
+  "styles": [
+   "normal"
+  ],
+  "defSubset": "latin",
+  "variable": false,
+  "lastModified": "2025-09-16",
+  "category": "serif",
+  "license": "OFL-1.1",
+  "type": "google"
+ },
+ {
+  "id": "aboreto",
+  "family": "Aboreto",
+  "subsets": [
+   "latin",
+   "latin-ext"
+  ],
+  "weights": [
+   400
+  ],
+  "styles": [
+   "normal"
+  ],
+  "defSubset": "latin",
+  "variable": false,
+  "lastModified": "2025-05-30",
+  "category": "display",
+  "license": "OFL-1.1",
+  "type": "google"
+ },
+ {
+  "id": "abril-fatface",
+  "family": "Abril Fatface",
+  "subsets": [
+   "latin",
+   "latin-ext"
+  ],
+  "weights": [
+   400
+  ],
+  "styles": [
+   "normal"
+  ],
+  "defSubset": "latin",
+  "variable": false,
+  "lastModified": "2025-09-16",
+  "category": "display",
+  "license": "OFL-1.1",
+  "type": "google"
+ },
+ {
+  "id": "abyssinica-sil",
+  "family": "Abyssinica SIL",
+  "subsets": [
+   "ethiopic",
+   "latin",
+   "latin-ext"
+  ],
+  "weights": [
+   400
+  ],
+  "styles": [
+   "normal"
+  ],
+  "defSubset": "latin",
+  "variable": false,
+  "lastModified": "2025-09-10",
+  "category": "serif",
+  "license": "OFL-1.1",
+  "type": "google"
+ },
+ {
+  "id": "aclonica",
+  "family": "Aclonica",
+  "subsets": [
+   "latin",
+   "latin-ext"
+  ],
+  "weights": [
+   400
+  ],
+  "styles": [
+   "normal"
+  ],
+  "defSubset": "latin",
+  "variable": false,
+  "lastModified": "2025-09-08",
+  "category": "sans-serif",
+  "license": "Apache-2.0",
+  "type": "google"
+ },
+ {
+  "id": "acme",
+  "family": "Acme",
+  "subsets": [
+   "latin"
+  ],
+  "weights": [
+   400
+  ],
+  "styles": [
+   "normal"
+  ],
+  "defSubset": "latin",
+  "variable": false,
+  "lastModified": "2026-06-30",
+  "category": "sans-serif",
+  "license": "OFL-1.1",
+  "type": "google"
+ },
+ {
+  "id": "actor",
+  "family": "Actor",
+  "subsets": [
+   "latin"
+  ],
+  "weights": [
+   400
+  ],
+  "styles": [
+   "normal"
+  ],
+  "defSubset": "latin",
+  "variable": false,
+  "lastModified": "2025-09-10",
+  "category": "sans-serif",
+  "license": "OFL-1.1",
+  "type": "google"
+ },
+ {
+  "id": "adamina",
+  "family": "Adamina",
+  "subsets": [
+   "latin"
+  ],
+  "weights": [
+   400
+  ],
+  "styles": [
+   "normal"
+  ],
+  "defSubset": "latin",
+  "variable": false,
+  "lastModified": "2025-09-16",
+  "category": "serif",
+  "license": "OFL-1.1",
+  "type": "google"
+ },
+ {
+  "id": "adlam-display",
+  "family": "ADLaM Display",
+  "subsets": [
+   "adlam",
+   "latin",
+   "latin-ext"
+  ],
+  "weights": [
+   400
+  ],
+  "styles": [
+   "normal"
+  ],
+  "defSubset": "latin",
+  "variable": false,
+  "lastModified": "2025-05-30",
+  "category": "display",
+  "license": "OFL-1.1",
+  "type": "google"
+ },
+ {
+  "id": "advent-pro",
+  "family": "Advent Pro",
+  "subsets": [
+   "cyrillic",
+   "cyrillic-ext",
+   "greek",
+   "latin",
+   "latin-ext"
+  ],
+  "weights": [
+   100,
+   200,
+   300,
+   400,
+   500,
+   600,
+   700,
+   800,
+   900
+  ],
+  "styles": [
+   "italic",
+   "normal"
+  ],
+  "defSubset": "latin",
+  "variable": true,
+  "lastModified": "2025-09-16",
+  "category": "sans-serif",
+  "license": "OFL-1.1",
+  "type": "google"
+ },
+ {
+  "id": "adwaita-mono",
+  "family": "Adwaita Mono",
+  "subsets": [
+   "latin"
+  ],
+  "weights": [
+   400,
+   700
+  ],
+  "styles": [
+   "normal",
+   "italic"
+  ],
+  "defSubset": "latin",
+  "variable": false,
+  "lastModified": "2025-12-21",
+  "category": "monospace",
+  "license": "OFL-1.1",
+  "type": "other"
+ },
+ {
+  "id": "adwaita-sans",
+  "family": "Adwaita Sans",
+  "subsets": [
+   "latin"
+  ],
+  "weights": [
+   100,
+   200,
+   300,
+   400,
+   500,
+   600,
+   700,
+   800,
+   900
+  ],
+  "styles": [
+   "normal",
+   "italic"
+  ],
+  "defSubset": "latin",
+  "variable": false,
+  "lastModified": "2025-12-21",
+  "category": "sans-serif",
+  "license": "OFL-1.1",
+  "type": "other"
+ },
+ {
+  "id": "afacad",
+  "family": "Afacad",
+  "subsets": [
+   "cyrillic-ext",
+   "latin",
+   "latin-ext",
+   "math",
+   "symbols",
+   "vietnamese"
+  ],
+  "weights": [
+   400,
+   500,
+   600,
+   700
+  ],
+  "styles": [
+   "italic",
+   "normal"
+  ],
+  "defSubset": "latin",
+  "variable": true,
+  "lastModified": "2025-09-05",
+  "category": "sans-serif",
+  "license": "OFL-1.1",
+  "type": "google"
+ },
+ {
+  "id": "afacad-flux",
+  "family": "Afacad Flux",
+  "subsets": [
+   "latin",
+   "latin-ext",
+   "vietnamese"
+  ],
+  "weights": [
+   100,
+   200,
+   300,
+   400,
+   500,
+   600,
+   700,
+   800,
+   900
+  ],
+  "styles": [
+   "normal"
+  ],
+  "defSubset": "latin",
+  "variable": true,
+  "lastModified": "2025-09-08",
+  "category": "sans-serif",
+  "license": "OFL-1.1",
+  "type": "google"
+ },
+ {
+  "id": "agbalumo",
+  "family": "Agbalumo",
+  "subsets": [
+   "cyrillic-ext",
+   "ethiopic",
+   "latin",
+   "latin-ext",
+   "vietnamese"
+  ],
+  "weights": [
+   400
+  ],
+  "styles": [
+   "normal"
+  ],
+  "defSubset": "latin",
+  "variable": false,
+  "lastModified": "2025-06-25",
+  "category": "display",
+  "license": "OFL-1.1",
+  "type": "google"
+ },
+ {
+  "id": "merriweather",
+  "family": "Merriweather",
+  "subsets": [
+   "cyrillic",
+   "cyrillic-ext",
+   "latin",
+   "latin-ext",
+   "vietnamese"
+  ],
+  "weights": [
+   300,
+   400,
+   500,
+   600,
+   700,
+   800,
+   900
+  ],
+  "styles": [
+   "italic",
+   "normal"
+  ],
+  "defSubset": "latin",
+  "variable": true,
+  "lastModified": "2025-09-02",
+  "category": "serif",
+  "license": "OFL-1.1",
+  "type": "google"
+ },
+ {
+  "id": "open-sans",
+  "family": "Open Sans",
+  "subsets": [
+   "cyrillic",
+   "cyrillic-ext",
+   "greek",
+   "greek-ext",
+   "hebrew",
+   "latin",
+   "latin-ext",
+   "math",
+   "symbols",
+   "vietnamese"
+  ],
+  "weights": [
+   300,
+   400,
+   500,
+   600,
+   700,
+   800
+  ],
+  "styles": [
+   "italic",
+   "normal"
+  ],
+  "defSubset": "latin",
+  "variable": true,
+  "lastModified": "2025-09-16",
+  "category": "sans-serif",
+  "license": "OFL-1.1",
+  "type": "google"
+ }
+]
