@@ -60,6 +60,15 @@ export function createStore({ doc, storage, fileStore }) {
       current = base;
       for (const fn of subs) fn(current);
     },
+    // Drops files no draft refers to, from memory and from the browser's storage.
+    async prune(keep) {
+      for (const path of [...files.keys()]) {
+        if (keep.has(path)) continue;
+        files.delete(path);
+        try { await fileStore.delete(path); } catch { /* already gone */ }
+      }
+    },
+    drafts: () => [current, base, read(storage, PREVIOUS)].filter(Boolean),
     // Session files always land in memory; persistence can fail (quota) and is reported.
     async addFiles(map) {
       const notPersisted = [];

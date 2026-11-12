@@ -1,6 +1,6 @@
 // CSS custom properties from a DTCG resolver document.
 import { flatten, contexts, defaultInputs, mergedTree, aliasTarget } from './resolver.js';
-import { toOklchString } from './color.js';
+import { cssColor } from './color.js';
 import { fontFaceRules, cssString } from './fonts.js';
 
 const GENERIC = new Set(['serif', 'sans-serif', 'monospace', 'cursive', 'fantasy', 'system-ui', 'ui-serif',
@@ -12,7 +12,9 @@ const TYPO_FIELDS = [['fontFamily', 'font-family', 'fontFamily'], ['fontSize', '
   ['fontWeight', 'font-weight', 'fontWeight'], ['letterSpacing', 'letter-spacing', 'dimension'],
   ['lineHeight', 'line-height', 'number']];
 
-export const cssName = (path) => '--' + path.split('.').filter((s) => s !== '$root').join('-');
+// Names come from loaded files: anything outside [A-Za-z0-9_-] is written as a CSS escape.
+const ident = (s) => s.replace(/[^A-Za-z0-9_-]/g, (c) => `\\${c.codePointAt(0).toString(16)} `);
+export const cssName = (path) => '--' + ident(path.split('.').filter((s) => s !== '$root').join('-'));
 
 const pointerPath = (ref) => ref.replace(/^#\//, '').split('/').filter((s) => s !== '$value').join('.');
 
@@ -22,7 +24,7 @@ export function cssValue(type, value, name = cssName) {
   if (value && typeof value === 'object' && typeof value.$ref === 'string') return `var(${name(pointerPath(value.$ref))})`;
   const v = (t, x) => cssValue(t, x, name);
   switch (type) {
-    case 'color': return toOklchString(value);
+    case 'color': return cssColor(value);
     case 'dimension':
     case 'duration': return `${value.value}${value.unit}`;
     case 'fontFamily': return [value].flat().map((f) => (GENERIC.has(f) ? f : cssString(f))).join(', ');
@@ -66,7 +68,7 @@ export function generateCss(doc, { fontSrc, vendor, name = cssName, rootSelector
   for (const { modifier, context, isDefault } of contexts(doc)) {
     if (isDefault) continue;
     const lines = cssDeclarations(flatten(mergedTree(doc, { ...inputs, [modifier]: context })), name).filter((l) => !known.has(l));
-    if (lines.length) css += block(`:root[data-${modifier}="${context}"]`, lines);
+    if (lines.length) css += block(`:root[data-${ident(modifier)}="${ident(context)}"]`, lines);
   }
   const faces = fontFaceRules(doc.sets?.foundation?.$extensions?.[vendor]?.fontFiles, fontSrc);
   return faces ? `${css}${faces}\n` : css;

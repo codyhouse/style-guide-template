@@ -120,3 +120,27 @@ test('README has the hosted URL and a contrast table with warnings', () => {
   assert.match(md, /https:\/\/styleguide\.example\.com/);
   assert.match(md, /\| light \| primary text \| 3\.2 \| 4\.5 \| warning \|/);
 });
+
+test('a file that breaks in any theme is rejected at load', () => {
+  const doc = load();
+  doc.modifiers.theme.contexts.dark = [{ color: { page: { background: { $type: 'color', $value: '{color.nope}' } } } }];
+  assert.ok(parseBrandJson(JSON.stringify(doc), 'x.resolver.json').errors.length);
+});
+
+test('a file with broken brand metadata is rejected at load', () => {
+  const doc = load();
+  doc.sets.foundation.$extensions[V].fontFiles = [{ family: 'A' }];
+  assert.ok(parseBrandJson(JSON.stringify(doc), 'x.resolver.json').errors.some((e) => /src/.test(e.message)));
+});
+
+test('a resolver without a foundation set is rejected with a clear message', () => {
+  const doc = load();
+  doc.sets = { base: doc.sets.foundation };
+  doc.resolutionOrder[0] = { $ref: '#/sets/base' };
+  assert.match(parseBrandJson(JSON.stringify(doc), 'x.resolver.json').errors[0].message, /foundation/);
+});
+
+test('a corrupt ZIP is an error, not a throw', () => {
+  const r = loadZip(new Uint8Array([1, 2, 3]));
+  assert.ok(r.errors.length);
+});

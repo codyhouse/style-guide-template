@@ -62,3 +62,31 @@ test('srcs that are not plain relative paths are treated as missing', () => {
     assert.equal(resolveAsset({ src }, ctx).source, 'missing', src);
   }
 });
+
+test('brand metadata is validated', async () => {
+  const { validateBrandMeta } = await import('../js/lib/assets.js');
+  assert.deepEqual(validateBrandMeta({ assetGroups: [{ id: 'logos', label: 'L', items: [{ label: 'a', src: 'logos/a.svg' }] }], fontFiles: [] }), []);
+  const bad = validateBrandMeta({
+    assetGroups: [{ id: 'x"y', items: [] }, { id: 'ok' }, { id: '../up', items: [] }],
+    fontFiles: [{ family: 'A' }],
+  });
+  assert.ok(bad.some((e) => /x"y/.test(e.message)));
+  assert.ok(bad.some((e) => /items/.test(e.message)));
+  assert.ok(bad.some((e) => /\.\.\/up/.test(e.message)));
+  assert.ok(bad.some((e) => /src/.test(e.message)));
+});
+
+test('adoptVendor moves every foreign extension (tokens and groups) to this site', async () => {
+  const { adoptVendor } = await import('../js/lib/assets.js');
+  const doc = load();
+  const t = doc.sets.foundation.sources[0];
+  const move = (o) => { o['com.other.site'] = o[V]; delete o[V]; };
+  move(doc.sets.foundation.$extensions);
+  move(t.color.brand['600'].$extensions);
+  move(t.spacing.$extensions);
+  const out = adoptVendor(doc, V);
+  assert.deepEqual(out.sets.foundation.sources[0].color.brand['600'].$extensions[V].pantone, 'PANTONE 2727 C');
+  assert.ok(out.sets.foundation.sources[0].spacing.$extensions[V].scale);
+  assert.ok(brandMeta(out, V).assetGroups.length);
+  assert.equal(JSON.stringify(out).includes('com.other.site'), false);
+});

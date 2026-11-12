@@ -3,7 +3,7 @@ import { vendorKey } from './lib/vendor-key.js';
 import { createStore, idbFileStore } from './lib/state.js';
 import { generateCss } from './lib/css.js';
 import { checkContrast } from './lib/contrast.js';
-import { brandMeta, withBrandMeta, missingAssets, matchDropped, allSrcs } from './lib/assets.js';
+import { brandMeta, withBrandMeta, missingAssets, matchDropped, allSrcs, adoptVendor } from './lib/assets.js';
 import { classify, parseBrandJson, loadZip, saveJson, slug, buildExport } from './lib/io.js';
 import * as E from './lib/edit.js';
 import { render, urlFor } from './ui/render.js';
@@ -70,10 +70,12 @@ async function addFontUploads(files) {
   setMeta((m) => E.addFontFiles(m, entries));
 }
 
-function loadBrand(doc, files) {
-  store.load(withBrandMeta(doc, vendor, brandMeta(doc, vendor)), files);
+async function loadBrand(doc, files) {
+  const own = adoptVendor(doc, vendor);
+  store.load(withBrandMeta(own, vendor, brandMeta(own, vendor)));
   pending = [];
   ambiguous = [];
+  if (files?.size) await persist(files);
 }
 
 async function fillMissing(files) {
@@ -84,6 +86,14 @@ async function fillMissing(files) {
 }
 
 async function routeFiles(files) {
+  try {
+    await routeFilesUnsafe(files);
+  } catch (e) {
+    warn(`Could not load ${files.map((f) => f.name).join(', ')}: ${e.message}`);
+  }
+}
+
+async function routeFilesUnsafe(files) {
   const brandFiles = files.filter((f) => ['resolver', 'tokens', 'zip'].includes(classify(f.name)));
   const [brand] = brandFiles;
   if (brandFiles.length > 1) warn(`Loaded ${brand.name}; drop one brand file at a time (${brandFiles.length - 1} ignored).`);
@@ -91,11 +101,11 @@ async function routeFiles(files) {
     if (classify(brand.name) === 'zip') {
       const { doc, files: zipped, errors } = loadZip(new Uint8Array(await brand.arrayBuffer()));
       if (errors.length) warn(...errors.map((e) => `${brand.name}: ${e.path ? `${e.path}: ` : ''}${e.message}`));
-      else loadBrand(doc, zipped);
+      else await loadBrand(doc, zipped);
     } else {
       const { doc, errors } = parseBrandJson(await brand.text(), brand.name);
       if (errors.length) warn(...errors.map((e) => `${brand.name}: ${e.path ? `${e.path}: ` : ''}${e.message}`));
-      else loadBrand(doc);
+      else await loadBrand(doc);
     }
   }
   const rest = files.filter((f) => !brandFiles.includes(f));
@@ -151,14 +161,25 @@ function checkFonts() {
   });
 }
 
+let pruneTimer;
 function draw() {
   const doc = store.get();
-  const css = generateCss(doc, { vendor, fontSrc: (f) => urlFor(f, ctx) ?? f.src });
-  render({ doc, css, theme, session: store.files, library, vendor });
+  try {
+    const css = generateCss(doc, { vendor, fontSrc: (f) => urlFor(f, ctx) ?? f.src });
+    render({ doc, css, theme, session: store.files, library, vendor });
+  } catch (e) {
+    // A draft that cannot be shown must never lock the page: fall back, keep the draft under Undo.
+    if (doc === preset) throw e;
+    warn(`This brand could not be shown (${e.message}). Showing the default brand; your draft is under Edit > Undo.`);
+    store.load(preset);
+    return;
+  }
   drawPanels();
   setTypographyLabels();
   updateNavigation();
   checkFonts();
+  clearTimeout(pruneTimer);
+  pruneTimer = setTimeout(() => store.prune(new Set(store.drafts().flatMap((d) => allSrcs(brandMeta(d, vendor)).map((x) => x.src)))), 2000);
 }
 
 /*******************
@@ -215,7 +236,8 @@ nav.addEventListener('click', (event) => {
   event.preventDefault();
   header.classList.remove('nav-is-visible');
   trigger.setAttribute('aria-expanded', 'false');
-  const target = document.querySelector(link.hash);
+  const target = document.getElementById(decodeURIComponent(link.hash.slice(1)));
+  if (!target) return;
   const topMargin = parseFloat(getComputedStyle(target).marginTop);
   scrollTo({ top: target.getBoundingClientRect().top + scrollY - header.offsetHeight - topMargin, behavior: reduceMotion.matches ? 'auto' : 'smooth' });
   history.replaceState(null, '', link.hash);
@@ -226,7 +248,7 @@ function updateNavigation() {
   for (const section of document.querySelectorAll('main > section')) {
     const top = section.getBoundingClientRect().top + scrollY;
     const topMargin = parseFloat(getComputedStyle(section).marginTop);
-    const anchor = nav.querySelector(`a[href="#${section.id}"]`);
+    const anchor = nav.querySelector(`a[href="#${CSS.escape(section.id)}"]`);
     const inView = top - header.offsetHeight - topMargin <= scrollY && top + section.offsetHeight - topMargin > scrollY + 1;
     anchor?.classList.toggle('selected', inView);
     if (inView) anchor?.setAttribute('aria-current', 'true');

@@ -3,7 +3,8 @@ import { h, icon } from './dom.js';
 import { listbox } from './listbox.js';
 import { fontsourcePicker } from './fontsource-picker.js';
 import * as E from '../lib/edit.js';
-import { resolve, contexts } from '../lib/resolver.js';
+import { resolve } from '../lib/resolver.js';
+import { checkBrand } from '../lib/io.js';
 import { brandMeta, withBrandMeta } from '../lib/assets.js';
 import { applyScale, setStep } from '../lib/scale.js';
 import { parseCssColor, toHex, toOklchString } from '../lib/color.js';
@@ -80,14 +81,13 @@ export function renderEditor(body, app) {
   const tree = E.foundation(doc);
   const tokens = resolve(doc, { theme: app.theme() });
   const meta = brandMeta(doc, vendor);
-  // An edit that breaks an alias (e.g. removing a hue a role points to) is refused, not applied.
+  // An edit the page could not render (e.g. removing a hue a role points to) is refused, not applied.
   // Edits read the token as it is now, so two edits in a row never undo each other.
   const fresh = (path) => path.split('.').reduce((n, k) => n?.[k], E.foundation(store.get()));
   const set = (next, structural) => {
-    try {
-      for (const c of contexts(next).filter((x) => x.modifier === 'theme')) resolve(next, { theme: c.context });
-    } catch (e) {
-      app.warn(`Not applied: ${e.message}`);
+    const [problem] = checkBrand(next);
+    if (problem) {
+      app.warn(`Not applied: ${problem.path ? `${problem.path}: ` : ''}${problem.message}`);
       return;
     }
     store.set(next);

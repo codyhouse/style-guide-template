@@ -161,7 +161,9 @@ header {
 		}
 
 		li a {
-			display: inline-block;
+			display: inline-flex;
+			align-items: center;
+			min-height: 1.5rem;
 			font-size: var(--font-size-sm);
 			padding: .4em .2em;
 			border-bottom: none;

@@ -74,3 +74,24 @@ test('a resolver passes through toResolver unchanged', () => {
   const doc = load();
   assert.equal(toResolver(doc, 'X'), doc);
 });
+
+test('color components must have three entries', () => {
+  const doc = load();
+  tree(doc).color.brand['700'].$value.components = [0.5];
+  assert.ok(validateResolver(doc).errors.some((e) => /components/.test(e.message)));
+});
+
+test('border and transition sub-values are validated', () => {
+  const doc = load();
+  tree(doc).border = { $type: 'border', bad: { $value: { color: '{color.brand.600}', width: { value: 1, unit: 'px' }, style: 'solid;}html{x:y' } } };
+  tree(doc).transition = { $type: 'transition', bad: { $value: { duration: { value: 1, unit: 'em' }, delay: { value: 0, unit: 'ms' }, timingFunction: [0, 0, 1, 1] } } };
+  const errors = validateResolver(doc).errors;
+  assert.ok(errors.some((e) => e.path.endsWith('border.bad')));
+  assert.ok(errors.some((e) => e.path.endsWith('transition.bad')));
+});
+
+test('names with { } . are rejected (DTCG)', () => {
+  const doc = load();
+  tree(doc).color['a{b'] = { $value: '{color.brand.600}' };
+  assert.ok(validateResolver(doc).errors.some((e) => /name/.test(e.message)));
+});

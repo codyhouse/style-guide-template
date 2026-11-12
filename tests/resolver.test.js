@@ -68,3 +68,10 @@ test('aliasTarget', () => {
   assert.equal(aliasTarget('a.b'), null);
   assert.equal(aliasTarget({ value: 1 }), null);
 });
+
+test('an unknown context falls back to the default one', () => {
+  const doc = load();
+  delete doc.modifiers.theme.contexts.dark;
+  assert.doesNotThrow(() => resolve(doc, { theme: 'dark' }));
+  assert.equal(resolve(doc, { theme: 'dark' }).get('color.page.background').value, '{color.neutral.50}');
+});

@@ -12,6 +12,7 @@ const COLOR_SPACES = new Set(['srgb', 'srgb-linear', 'hsl', 'hwb', 'lab', 'lch',
 const WEIGHTS = new Set(['thin', 'hairline', 'extra-light', 'ultra-light', 'light', 'normal', 'regular', 'book',
   'medium', 'semi-bold', 'demi-bold', 'bold', 'extra-bold', 'ultra-bold', 'black', 'heavy', 'extra-black', 'ultra-black']);
 
+const STROKES = new Set(['solid', 'dashed', 'dotted', 'double', 'groove', 'ridge', 'outset', 'inset']);
 const isObj = (v) => v !== null && typeof v === 'object' && !Array.isArray(v);
 const isAlias = (v) => (typeof v === 'string' && /^\{[^{}]+\}$/.test(v)) || (isObj(v) && typeof v.$ref === 'string');
 const join = (path, key) => (path ? `${path}.${key}` : key);
@@ -36,8 +37,8 @@ function checkColor(v) {
   if (isAlias(v)) return null;
   if (!isObj(v)) return 'color must be an object { colorSpace, components }';
   if (!COLOR_SPACES.has(v.colorSpace)) return `colorSpace "${v.colorSpace}" is not a DTCG color space`;
-  if (!Array.isArray(v.components) || v.components.some((c) => c !== 'none' && typeof c !== 'number')) {
-    return 'components must be an array of numbers or "none"';
+  if (!Array.isArray(v.components) || v.components.length !== 3 || v.components.some((c) => c !== 'none' && typeof c !== 'number')) {
+    return 'components must be an array of 3 numbers or "none"';
   }
   if (v.alpha !== undefined && (typeof v.alpha !== 'number' || v.alpha < 0 || v.alpha > 1)) return 'alpha must be 0..1';
   if (v.hex !== undefined && !/^#[0-9a-fA-F]{6}$/.test(v.hex)) return 'hex must be 6-digit #rrggbb';
@@ -74,6 +75,20 @@ function checkValue(type, v) {
     case 'cubicBezier':
       return Array.isArray(v) && v.length === 4 && v.every((n) => typeof n === 'number') ? null : 'must be [x1, y1, x2, y2]';
     case 'shadow': return checkShadow(v);
+    case 'strokeStyle':
+      return STROKES.has(v) || isObj(v) ? null : `stroke style must be one of ${[...STROKES].join(', ')}`;
+    case 'border': {
+      if (!isObj(v)) return 'border must be { color, width, style }';
+      return (checkColor(v.color) && `border color: ${checkColor(v.color)}`)
+        || (checkDimension(v.width) && `border width: ${checkDimension(v.width)}`)
+        || checkValue('strokeStyle', v.style);
+    }
+    case 'transition': {
+      if (!isObj(v)) return 'transition must be { duration, delay, timingFunction }';
+      return (checkDimension(v.duration, ['ms', 's']) && `transition duration: ${checkDimension(v.duration, ['ms', 's'])}`)
+        || (checkDimension(v.delay, ['ms', 's']) && `transition delay: ${checkDimension(v.delay, ['ms', 's'])}`)
+        || checkValue('cubicBezier', v.timingFunction);
+    }
     case 'typography': {
       if (!isObj(v)) return 'typography must be an object';
       const parts = [['fontFamily', 'fontFamily'], ['fontSize', 'dimension'], ['fontWeight', 'fontWeight'],
@@ -99,6 +114,7 @@ export function validateTokens(tree, path = '', inherited, errors = [], only) {
       if (!GROUP_KEYS.has(key)) errors.push({ path: p, message: `unknown reserved key ${key}` });
       continue;
     }
+    if (/[{}.]/.test(key)) { errors.push({ path: p, message: `name "${key}" must not contain {, } or .` }); continue; }
     if (!isObj(node)) { errors.push({ path: p, message: 'must be a token or a group' }); continue; }
     const onlyNode = only?.[key];
     if (only && onlyNode === undefined) continue;

@@ -79,3 +79,28 @@ test('anchoredScale keeps the typed color exactly as the nearest shade', async (
   const ls = Object.values(scale).map((s) => s.components[0]);
   assert.deepEqual([...ls].sort((a, b) => b - a), ls, 'shades stay ordered light to dark');
 });
+
+test('every DTCG color space converts (white is white everywhere)', async () => {
+  const { toHex } = await import('../js/lib/color.js');
+  const white = {
+    srgb: [1, 1, 1], 'srgb-linear': [1, 1, 1], hsl: [0, 0, 100], hwb: [0, 100, 0], lab: [100, 0, 0], lch: [100, 0, 0],
+    oklab: [1, 0, 0], oklch: [1, 0, 0], 'display-p3': [1, 1, 1], 'a98-rgb': [1, 1, 1], 'prophoto-rgb': [1, 1, 1],
+    rec2020: [1, 1, 1], 'xyz-d65': [0.95047, 1, 1.08883], 'xyz-d50': [0.96422, 1, 0.82521],
+  };
+  for (const [colorSpace, components] of Object.entries(white)) assert.equal(toHex({ colorSpace, components }), '#ffffff', colorSpace);
+});
+
+test('known reds in other spaces', async () => {
+  const { toHex } = await import('../js/lib/color.js');
+  assert.equal(toHex({ colorSpace: 'lab', components: [54.2905, 80.8049, 69.891] }), '#ff0000');
+  assert.equal(toHex({ colorSpace: 'hsl', components: [0, 100, 50] }), '#ff0000');
+  assert.equal(toHex({ colorSpace: 'display-p3', components: [1, 0, 0] }), '#ff0000');
+});
+
+test('cssColor writes each space natively', async () => {
+  const { cssColor } = await import('../js/lib/color.js');
+  assert.equal(cssColor({ colorSpace: 'display-p3', components: [1, 0, 0] }), 'color(display-p3 1 0 0)');
+  assert.equal(cssColor({ colorSpace: 'lab', components: [50, 20, -30], alpha: 0.5 }), 'lab(50 20 -30 / 0.5)');
+  assert.equal(cssColor({ colorSpace: 'hsl', components: [10, 50, 40] }), 'hsl(10 50% 40%)');
+  assert.equal(cssColor({ colorSpace: 'oklch', components: [0.5, 0.1, 10] }), 'oklch(0.5 0.1 10)');
+});

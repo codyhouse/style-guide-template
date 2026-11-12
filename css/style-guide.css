@@ -386,7 +386,9 @@ header {
     padding: 0 var(--spacing-sm);
   }
   .cd-main-nav li a {
-    display: inline-block;
+    display: inline-flex;
+    align-items: center;
+    min-height: 1.5rem;
     font-size: var(--font-size-sm);
     padding: 0.4em 0.2em;
     border-bottom: none;
@@ -1219,6 +1221,7 @@ xEditor - header actions, panels, drawer, listbox, token and file views
 .cd-copy {
   display: block;
   width: 100%;
+  min-height: 1.5rem;
   padding: 0;
   border: none;
   background: none;

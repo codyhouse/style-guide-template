@@ -3,7 +3,7 @@ import { h, icon } from './dom.js';
 import { resolve } from '../lib/resolver.js';
 import { brandMeta, resolveAsset } from '../lib/assets.js';
 import { toHex, toRgbaString, toOklchString, cmyk } from '../lib/color.js';
-import { cssName, generateCss } from '../lib/css.js';
+import { cssName, cssValue, generateCss } from '../lib/css.js';
 import { tailwindCss, shadcnCss } from '../lib/exports.js';
 import { cssString } from '../lib/fonts.js';
 import { ROLES } from '../lib/contrast.js';
@@ -25,6 +25,17 @@ export function objectUrl(path, data) {
   const blob = data instanceof Blob ? data : new Blob([data], { type: MIME[extOf(path)] ?? 'application/octet-stream' });
   const url = URL.createObjectURL(blob);
   urls.set(path, { data, url });
+  return url;
+}
+
+// Downloads of session files are served as plain bytes, so an uploaded SVG never runs as a page.
+const downloads = new Map();
+function downloadUrl(path, data) {
+  const cached = downloads.get(path);
+  if (cached?.data === data) return cached.url;
+  if (cached) URL.revokeObjectURL(cached.url);
+  const url = URL.createObjectURL(new Blob([data], { type: 'application/octet-stream' }));
+  downloads.set(path, { data, url });
   return url;
 }
 
@@ -58,13 +69,13 @@ function fileView(item, ctx) {
       h('b', {}, item.label ?? name),
       item.description ? h('small', {}, item.description) : null,
       h('small', {}, `${name} ${ext.toUpperCase()} ${formatSize(sizeOf(ctx.session.get(item.src)))}`.trim()),
-      h('a', { href: url, download: name }, 'Download')));
+      h('a', { href: ctx.session.has(item.src) ? downloadUrl(item.src, ctx.session.get(item.src)) : url, download: name }, 'Download')));
 }
 
 const group = (meta, id) => meta.assetGroups.find((g) => g.id === id) ?? { items: [] };
 
 function renderBranding(body, meta, ctx) {
-  const [, ...logos] = group(meta, 'logos').items; // the first logo sits in the header
+  const logos = group(meta, 'logos').items; // the first one also sits in the header
   body.replaceChildren(
     h('ul', { class: 'cd-logos' }, logos.map((l) => h('li', { class: 'cd-box' }, image(l, ctx)))),
     h('ul', { class: 'cd-favicons' }, group(meta, 'favicons').items.map((f) => h('li', {}, image(f, ctx)))),
@@ -96,11 +107,32 @@ function swatch(path, token, vendor) {
   return h('li', {},
     copyable(hex, h('span', { class: 'cd-color-swatch', style: { background: `var(${cssName(path)})` } }), { 'aria-label': `${name}: copy ${hex}`, class: 'cd-copy cd-copy-swatch' }),
     h('b', {}, name),
-    copyable(hex, h('small', {}, hex)),
-    copyable(toRgbaString(c), h('small', {}, toRgbaString(c))),
-    copyable(toOklchString(c), h('small', {}, toOklchString(c))),
-    copyable(cmykText, h('small', {}, Array.isArray(ext.cmyk) ? cmykText : `${cmykText} (approx.)`)),
-    ext.pantone ? copyable(String(ext.pantone), h('small', {}, String(ext.pantone))) : null);
+    // value lines copy on click; keyboard users get one stop per swatch (the hex) instead of five
+    copyable(hex, h('small', {}, hex), { tabindex: '-1' }),
+    copyable(toRgbaString(c), h('small', {}, toRgbaString(c)), { tabindex: '-1' }),
+    copyable(toOklchString(c), h('small', {}, toOklchString(c)), { tabindex: '-1' }),
+    copyable(cmykText, h('small', {}, Array.isArray(ext.cmyk) ? cmykText : `${cmykText} (approx.)`), { tabindex: '-1' }),
+    ext.pantone ? copyable(String(ext.pantone), h('small', {}, String(ext.pantone)), { tabindex: '-1' }) : null);
+}
+
+// One Tab stop per hue row; arrow keys, Home and End move between its shades.
+function scaleRow(hue, items) {
+  const row = h('ul', { class: 'cd-scale', 'aria-labelledby': `hue-${hue}` }, items);
+  const stops = () => [...row.querySelectorAll('.cd-copy-swatch')];
+  stops().forEach((b, i) => { b.tabIndex = i === 0 ? 0 : -1; });
+  row.addEventListener('keydown', (e) => {
+    const list = stops();
+    const i = list.indexOf(document.activeElement);
+    if (i < 0) return;
+    const next = { ArrowRight: i + 1, ArrowDown: i + 1, ArrowLeft: i - 1, ArrowUp: i - 1, Home: 0, End: list.length - 1 }[e.key];
+    if (next === undefined) return;
+    e.preventDefault();
+    const j = Math.max(0, Math.min(list.length - 1, next));
+    list[i].tabIndex = -1;
+    list[j].tabIndex = 0;
+    list[j].focus();
+  });
+  return row;
 }
 
 function renderColors(body, tokens, vendor) {
@@ -116,13 +148,13 @@ function renderColors(body, tokens, vendor) {
   }
   const roleRow = ([path, t]) => h('tr', {},
     h('td', {}, h('span', { class: 'cd-chip', style: { background: `var(${cssName(path)})` } }), h('code', {}, path)),
-    h('td', {}, typeof t.value === 'string' ? t.value : toOklchString(t.value)),
+    h('td', {}, typeof t.value === 'string' ? t.value : t.value?.$ref ?? toOklchString(t.value)),
     h('td', {}, toHex(t.resolved)));
   const table = (rows) => h('table', { class: 'cd-roles' },
     h('thead', {}, h('tr', {}, h('th', {}, 'Token'), h('th', {}, 'Value'), h('th', {}, 'Hex'))),
     h('tbody', {}, rows.map(roleRow)));
   body.replaceChildren(
-    ...[...hues].flatMap(([hue, shades]) => [h('h3', {}, hue), h('ul', { class: 'cd-scale' }, shades.map(([p, t]) => swatch(p, t, vendor)))]),
+    ...[...hues].flatMap(([hue, shades]) => [h('h3', { id: `hue-${hue}` }, hue), scaleRow(hue, shades.map(([p, t]) => swatch(p, t, vendor)))]),
     h('h3', {}, 'Roles'), table(roles),
     ...(other.length ? [h('h3', {}, 'Other tokens'), table(other)] : []),
   );
@@ -214,6 +246,18 @@ function renderCode(body, doc, vendor) {
   show(codeTab);
 }
 
+const SHOWN = ['color.', 'spacing.', 'radius.', 'shadow.', 'font-size.', 'typography.', 'font.'];
+function renderOther(main, tokens) {
+  main.querySelector('#other-tokens')?.remove();
+  const rest = [...tokens].filter(([p]) => !SHOWN.some((x) => p.startsWith(x)));
+  if (!rest.length) return;
+  main.insertBefore(h('section', { id: 'other-tokens' }, h('h2', {}, 'Other tokens'),
+    h('div', { class: 'cd-box' }, h('table', { class: 'cd-roles' },
+      h('thead', {}, h('tr', {}, h('th', {}, 'Token'), h('th', {}, 'Type'), h('th', {}, 'CSS value'))),
+      h('tbody', {}, rest.map(([p, t]) => h('tr', {}, h('td', {}, h('code', {}, cssName(p))), h('td', {}, t.type), h('td', {}, h('code', {}, cssValue(t.type, t.value) ?? '')))))))),
+  main.querySelector('#css-variables'));
+}
+
 function renderCustomGroups(main, meta, ctx) {
   for (const s of main.querySelectorAll('section[data-group]')) s.remove();
   const before = main.querySelector('#spacing');
@@ -255,5 +299,6 @@ export function render({ doc, css, theme, session, library, vendor }) {
   renderScale(body('shadow'), tokens, 'shadow', 'shadow');
   renderCode(body('css-variables'), doc, vendor);
   renderCustomGroups(main, meta, ctx);
+  renderOther(main, tokens);
   renderNav(document.getElementById('cd-nav'), main);
 }

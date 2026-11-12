@@ -1,11 +1,11 @@
 // Loading brand files and ZIPs, saving JSON, and exporting the brand kit ZIP.
 import { zipSync, unzipSync } from '../vendor/fflate.js';
 import { validateResolver, toResolver } from './schema.js';
-import { resolve, ResolveError } from './resolver.js';
+import { resolve, contexts, defaultInputs } from './resolver.js';
 import { generateCss } from './css.js';
 import { checkContrast } from './contrast.js';
 import { licenseUrl } from './fontsource.js';
-import { brandMeta, withBrandMeta, resolveAsset } from './assets.js';
+import { brandMeta, withBrandMeta, resolveAsset, validateBrandMeta } from './assets.js';
 
 const ext = (name) => name.toLowerCase().split('.').pop();
 
@@ -31,20 +31,38 @@ export function parseBrandJson(text, name) {
     return { doc: null, errors: [{ path: '', message: `Invalid JSON in ${name}: ${e.message}` }] };
   }
   const doc = toResolver(json, baseName(name));
+  return { doc, errors: checkBrand(doc) };
+}
+
+// Everything the page does with a brand runs here once, in every theme: a brand that passes also renders.
+export function checkBrand(doc) {
   const { errors } = validateResolver(doc);
-  if (!errors.length) {
-    try {
-      resolve(doc);
-    } catch (e) {
-      if (!(e instanceof ResolveError)) throw e;
-      errors.push({ path: e.path, message: e.message });
-    }
+  if (errors.length) return errors;
+  if (!doc.sets?.foundation) return [{ path: 'sets', message: 'This site needs the brand tokens in a set named "foundation".' }];
+  const ext = doc.sets.foundation.$extensions ?? {};
+  for (const [key, meta] of Object.entries(ext)) {
+    if (meta && typeof meta === 'object' && ('assetGroups' in meta || 'fontFiles' in meta)) errors.push(...validateBrandMeta(meta, `$extensions.${key}`));
   }
-  return { doc, errors };
+  if (errors.length) return errors;
+  try {
+    const inputs = defaultInputs(doc);
+    for (const c of contexts(doc)) resolve(doc, { ...inputs, [c.modifier]: c.context });
+    const vendor = Object.keys(ext).find((k) => 'fontFiles' in (ext[k] ?? {}));
+    generateCss(doc, { vendor, fontSrc: (f) => f.src });
+    checkContrast(doc);
+  } catch (e) {
+    errors.push({ path: e.path ?? '', message: e.message });
+  }
+  return errors;
 }
 
 export function loadZip(bytes) {
-  const entries = unzipSync(bytes);
+  let entries;
+  try {
+    entries = unzipSync(bytes);
+  } catch (e) {
+    return { doc: null, files: new Map(), errors: [{ path: '', message: `Not a readable ZIP file (${e.message})` }] };
+  }
   const names = Object.keys(entries).filter((n) => !n.includes('/'));
   const brand = names.find((n) => classify(n) === 'resolver') ?? names.find((n) => /\.tokens(\.json)?$/i.test(n));
   if (!brand) return { doc: null, files: new Map(), errors: [{ path: '', message: 'The ZIP has no .resolver.json or .tokens.json at its root' }] };

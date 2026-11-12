@@ -88,3 +88,12 @@ test('restorePrevious swaps, so restoring twice gets back to where you were', ()
   s.restorePrevious();
   assert.deepEqual(s.get(), b);
 });
+
+test('prune deletes files no draft refers to', async () => {
+  const fileStore = memFiles();
+  const s = createStore({ doc: a, storage: mem(), fileStore });
+  await s.addFiles(new Map([['g/keep.svg', new Uint8Array(1)], ['g/drop.svg', new Uint8Array(1)]]));
+  await s.prune(new Set(['g/keep.svg']));
+  assert.deepEqual([...s.files.keys()], ['g/keep.svg']);
+  assert.deepEqual([...(await fileStore.getAll()).keys()], ['g/keep.svg']);
+});

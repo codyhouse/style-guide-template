@@ -28,7 +28,7 @@ export function mergedTree(doc, inputs = defaultInputs(doc)) {
     const [, kind, name] = $ref.match(/^#\/(sets|modifiers)\/(.+)$/);
     const sources = kind === 'sets'
       ? doc.sets[name].sources
-      : doc.modifiers[name].contexts[inputs[name] ?? defaultInputs(doc)[name]] ?? [];
+      : doc.modifiers[name].contexts[inputs[name]] ?? doc.modifiers[name].contexts[defaultInputs(doc)[name]] ?? [];
     for (const s of sources) tree = deepMerge(tree, s);
   }
   return tree;
