@@ -165,15 +165,21 @@ main {
 	}
 
 	@include MQ(L) {
+		/* masonry: sections stack down two columns, in order, with no row gaps */
 		max-width: none;
-		display: grid;
-		grid-template-columns: 1fr 1fr;
+		columns: 2;
 		column-gap: 4%;
 		padding-top: calc(var(--header-h) + 2.5rem);
 
 		> h1,
 		> .cd-panels {
-			grid-column: 1 / -1;
+			column-span: all;
+		}
+
+		> section {
+			break-inside: avoid;
+			/* keeps each heading's top margin inside its section, so both columns start level */
+			display: flow-root;
 		}
 	}
 }
