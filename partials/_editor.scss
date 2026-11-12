@@ -27,9 +27,14 @@ xEditor - header actions, panels, drawer, listbox, token and file views
 .cd-actions {
 	display: flex;
 	align-items: center;
-	gap: var(--spacing-xs);
-	padding: 0 var(--spacing-sm);
+	gap: 0;
+	padding: 0;
 	flex: none;
+
+	@include MQ(S) {
+		gap: var(--spacing-xs);
+		padding: 0 var(--spacing-sm);
+	}
 
 	@include MQ(L) {
 		margin-right: 5%;

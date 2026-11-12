@@ -51,7 +51,11 @@ header {
 .cd-logo {
 	/* logo box style */
 	background-color: var(--color-primary-background);
-	width: 7.5rem;
+	width: 5.5rem;
+
+	@include MQ(S) {
+		width: 7.5rem;
+	}
 
 	@include MQ(M) {
 		width: 11.25rem;
@@ -81,6 +85,10 @@ header {
 			}
 		}
 	}
+}
+
+.cd-nav-trigger {
+	color: var(--color-page-foreground);
 }
 
 .cd-nav-trigger span {
@@ -250,9 +258,11 @@ xButtons
 	}
 
 	&[aria-busy=true] {
+		/* the label is visually hidden; the spinner in the button's text color shows the state */
 		cursor: progress;
 		position: relative;
-		color: transparent;
+		min-width: 6.5rem;
+		min-height: 2.5rem;
 
 		&::after {
 			/* loading spinner */

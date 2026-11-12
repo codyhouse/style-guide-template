@@ -42,7 +42,12 @@ header {
 .cd-logo {
   /* logo box style */
   background-color: var(--color-primary-background);
-  width: 7.5rem;
+  width: 5.5rem;
+}
+@media only screen and (min-width: 768px) {
+  .cd-logo {
+    width: 7.5rem;
+  }
 }
 @media only screen and (min-width: 1024px) {
   .cd-logo {
@@ -71,6 +76,10 @@ header {
   .cd-main-nav li a:hover {
     color: var(--color-page-foreground);
   }
+}
+
+.cd-nav-trigger {
+  color: var(--color-page-foreground);
 }
 
 .cd-nav-trigger span {
@@ -228,9 +237,11 @@ xButtons
   pointer-events: none;
 }
 .btn[aria-busy=true] {
+  /* the label is visually hidden; the spinner in the button's text color shows the state */
   cursor: progress;
   position: relative;
-  color: transparent;
+  min-width: 6.5rem;
+  min-height: 2.5rem;
 }
 .btn[aria-busy=true]::after {
   /* loading spinner */
@@ -457,8 +468,6 @@ header {
   height: 100%;
   width: 3.125rem;
   overflow: hidden;
-  white-space: nowrap;
-  color: transparent;
   background: none;
   border: none;
   cursor: pointer;
@@ -681,11 +690,13 @@ section h2::before {
 
 .cd-roles {
   width: 100%;
+  table-layout: fixed;
   border-collapse: collapse;
   font-size: var(--font-size-sm);
 }
 
 .cd-roles th, .cd-roles td {
+  overflow-wrap: anywhere;
   text-align: left;
   padding: var(--spacing-xs) var(--spacing-sm);
   border-bottom: 1px solid var(--color-card-border);
@@ -829,11 +840,17 @@ xEditor - header actions, panels, drawer, listbox, token and file views
 .cd-actions {
   display: flex;
   align-items: center;
-  gap: var(--spacing-xs);
-  padding: 0 var(--spacing-sm);
+  gap: 0;
+  padding: 0;
   flex: none;
 }
 
+@media only screen and (min-width: 768px) {
+  .cd-actions {
+    gap: var(--spacing-xs);
+    padding: 0 var(--spacing-sm);
+  }
+}
 @media only screen and (min-width: 1600px) {
   .cd-actions {
     margin-right: 5%;

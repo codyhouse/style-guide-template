@@ -183,7 +183,7 @@ function renderCss(body, css) {
     }
     setTimeout(() => { copy.lastChild.textContent = ' Copy'; }, 2000);
   });
-  body.replaceChildren(h('div', { class: 'cd-code' }, copy, h('pre', {}, h('code', {}, css))));
+  body.replaceChildren(h('div', { class: 'cd-code' }, copy, h('pre', { tabindex: '0', 'aria-label': 'Generated CSS' }, h('code', {}, css))));
 }
 
 function renderCustomGroups(main, meta, ctx) {
