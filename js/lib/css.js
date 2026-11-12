@@ -16,10 +16,11 @@ export const cssName = (path) => '--' + path.split('.').filter((s) => s !== '$ro
 
 const pointerPath = (ref) => ref.replace(/^#\//, '').split('/').filter((s) => s !== '$value').join('.');
 
-export function cssValue(type, value) {
+export function cssValue(type, value, name = cssName) {
   const target = aliasTarget(value);
-  if (target) return `var(${cssName(target)})`;
-  if (value && typeof value === 'object' && typeof value.$ref === 'string') return `var(${cssName(pointerPath(value.$ref))})`;
+  if (target) return `var(${name(target)})`;
+  if (value && typeof value === 'object' && typeof value.$ref === 'string') return `var(${name(pointerPath(value.$ref))})`;
+  const v = (t, x) => cssValue(t, x, name);
   switch (type) {
     case 'color': return toOklchString(value);
     case 'dimension':
@@ -27,29 +28,29 @@ export function cssValue(type, value) {
     case 'fontFamily': return [value].flat().map((f) => (GENERIC.has(f) ? f : cssString(f))).join(', ');
     case 'fontWeight': return String(WEIGHTS[value] ?? value);
     case 'cubicBezier': return `cubic-bezier(${value.join(', ')})`;
-    case 'shadow': return [value].flat().map((s) => (aliasTarget(s) ? cssValue('shadow', s) : [
-      ...(s.inset ? ['inset'] : []), ...['offsetX', 'offsetY', 'blur', 'spread'].map((k) => cssValue('dimension', s[k])),
-      cssValue('color', s.color)].join(' '))).join(', ');
-    case 'border': return `${cssValue('dimension', value.width)} ${value.style} ${cssValue('color', value.color)}`;
-    case 'transition': return `${cssValue('duration', value.duration)} ${cssValue('cubicBezier', value.timingFunction)} ${cssValue('duration', value.delay)}`;
+    case 'shadow': return [value].flat().map((s) => (aliasTarget(s) ? v('shadow', s) : [
+      ...(s.inset ? ['inset'] : []), ...['offsetX', 'offsetY', 'blur', 'spread'].map((k) => v('dimension', s[k])),
+      v('color', s.color)].join(' '))).join(', ');
+    case 'border': return `${v('dimension', value.width)} ${value.style} ${v('color', value.color)}`;
+    case 'transition': return `${v('duration', value.duration)} ${v('cubicBezier', value.timingFunction)} ${v('duration', value.delay)}`;
     case 'number': return Number.isFinite(value) ? String(value) : null;
     case 'strokeStyle': return typeof value === 'string' && /^[a-z-]+$/.test(value) ? value : null;
     default: return null;
   }
 }
 
-export function cssDeclarations(tokens) {
+export function cssDeclarations(tokens, name = cssName) {
   const out = [];
   for (const [path, { type, value }] of tokens) {
     if (type === 'typography') {
       const whole = aliasTarget(value);
       for (const [field, prop, t] of TYPO_FIELDS) {
-        const v = whole ? `var(${cssName(whole)}-${prop})` : cssValue(t, value[field]);
-        out.push(`${cssName(path)}-${prop}: ${v};`);
+        const v = whole ? `var(${name(whole)}-${prop})` : cssValue(t, value[field], name);
+        out.push(`${name(path)}-${prop}: ${v};`);
       }
     } else {
-      const v = cssValue(type, value);
-      if (v !== null) out.push(`${cssName(path)}: ${v};`);
+      const v = cssValue(type, value, name);
+      if (v !== null) out.push(`${name(path)}: ${v};`);
     }
   }
   return out;
@@ -57,14 +58,14 @@ export function cssDeclarations(tokens) {
 
 const block = (selector, lines) => `${selector} {\n${lines.map((l) => `  ${l}`).join('\n')}\n}\n`;
 
-export function generateCss(doc, { fontSrc, vendor }) {
+export function generateCss(doc, { fontSrc, vendor, name = cssName, rootSelector = ':root' }) {
   const inputs = defaultInputs(doc);
-  const base = cssDeclarations(flatten(mergedTree(doc, inputs)));
-  let css = block(':root', base);
+  const base = cssDeclarations(flatten(mergedTree(doc, inputs)), name);
+  let css = block(rootSelector, base);
   const known = new Set(base);
   for (const { modifier, context, isDefault } of contexts(doc)) {
     if (isDefault) continue;
-    const lines = cssDeclarations(flatten(mergedTree(doc, { ...inputs, [modifier]: context }))).filter((l) => !known.has(l));
+    const lines = cssDeclarations(flatten(mergedTree(doc, { ...inputs, [modifier]: context })), name).filter((l) => !known.has(l));
     if (lines.length) css += block(`:root[data-${modifier}="${context}"]`, lines);
   }
   const faces = fontFaceRules(doc.sets?.foundation?.$extensions?.[vendor]?.fontFiles, fontSrc);
