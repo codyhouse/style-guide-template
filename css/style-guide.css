@@ -839,6 +839,27 @@ xEditor - header actions, panels, drawer, listbox, token and file views
   font-size: var(--font-size-xs);
 }
 
+.cd-color-input {
+  display: flex;
+  gap: var(--spacing-xs);
+}
+
+.cd-color-input input[type=text] {
+  flex: 1;
+  min-width: 0;
+}
+
+.cd-color-input input[type=color] {
+  flex: none;
+  width: var(--control-h);
+  height: var(--control-h);
+  padding: 0.125rem;
+  border: 1px solid var(--color-input-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-input-background);
+  cursor: pointer;
+}
+
 .cd-hue {
   margin-bottom: var(--spacing-lg);
 }

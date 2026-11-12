@@ -321,6 +321,27 @@ xEditor - header actions, panels, drawer, listbox, token and file views
 	}
 }
 
+.cd-color-input {
+	display: flex;
+	gap: var(--spacing-xs);
+
+	input[type=text] {
+		flex: 1;
+		min-width: 0;
+	}
+
+	input[type=color] {
+		flex: none;
+		width: var(--control-h);
+		height: var(--control-h);
+		padding: 0.125rem;
+		border: 1px solid var(--color-input-border); // ds-allow-hardcode: hairline
+		border-radius: var(--radius-sm);
+		background: var(--color-input-background);
+		cursor: pointer;
+	}
+}
+
 .cd-hue {
 	margin-bottom: var(--spacing-lg);
 }

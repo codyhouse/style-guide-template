@@ -64,10 +64,27 @@ const thumb = (item, url) => (url && IMAGE.test(item.src)
   : h('span', { class: 'cd-thumb cd-thumb-file', 'aria-hidden': 'true' }, item.src.split('.').pop()));
 const cap = (x) => x.charAt(0).toUpperCase() + x.slice(1);
 
+// The picker commits through the text field, so both share one change handler.
+function colorInput(key, label, value, onCommit, attrs = {}) {
+  const input = text(key, value, onCommit, attrs);
+  const hex = () => { const c = parseCssColor(input.value); return c ? toHex(c) : '#000000'; };
+  const pick = h('input', { type: 'color', value: hex(), 'aria-label': `Pick ${label}`, 'data-key': `${key}-picker` });
+  pick.addEventListener('input', () => { input.value = pick.value; });
+  pick.addEventListener('change', () => { input.value = pick.value; input.dispatchEvent(new Event('change')); });
+  input.addEventListener('change', () => { pick.value = hex(); });
+  return h('div', { class: 'cd-color-input' }, input, pick);
+}
+
 function colorError(input, ok) {
+  const box = input.closest('.cd-field') ?? input.parentElement;
+  const id = `${input.dataset.key}-error`;
   input.setAttribute('aria-invalid', String(!ok));
-  input.parentElement.querySelector('.cd-error')?.remove();
-  if (!ok) input.parentElement.append(h('span', { class: 'cd-error' }, 'Use #rrggbb, rgb(r g b) or oklch(L C H).'));
+  box.querySelector('.cd-error')?.remove();
+  if (ok) input.removeAttribute('aria-describedby');
+  else {
+    box.append(h('span', { class: 'cd-error', id }, 'Use #rrggbb, rgb(r g b) or oklch(L C H).'));
+    input.setAttribute('aria-describedby', id);
+  }
 }
 
 export function renderEditor(body, app) {
@@ -121,7 +138,7 @@ export function renderEditor(body, app) {
       const base = tree.color[hue].$extensions?.[vendor]?.base ?? ('600' in tree.color[hue] ? '600' : shades[Math.floor(shades.length / 2)]);
       return h('div', { class: 'cd-hue' },
         h('div', { class: 'cd-field-row' },
-          field(`${hue} base color`, text(`hue-${hue}`, toHex(tree.color[hue][base].$value), (v, input) => {
+          field(`${cap(hue)} base color`, colorInput(`hue-${hue}`, `${hue} base color`, toHex(tree.color[hue][base].$value), (v, input) => {
             const c = parseCssColor(v);
             colorError(input, !!c);
             if (c) set(E.setHue(store.get(), hue, c, vendor), true);
@@ -155,8 +172,9 @@ export function renderEditor(body, app) {
     }),
     (() => {
       const name = text('new-hue-name', '', () => {}, { placeholder: 'accent' });
-      const color = text('new-hue-color', '', () => {}, { placeholder: 'e.g. oklch(0.6 0.15 260)' });
-      return h('div', { class: 'cd-field-row' }, field('New hue name', name), field('Color', color),
+      const colorField = colorInput('new-hue-color', 'the new hue color', '', () => {}, { placeholder: 'e.g. oklch(0.6 0.15 260)' });
+      const color = colorField.querySelector('input');
+      return h('div', { class: 'cd-field-row' }, field('New hue name', name), field('Color', colorField),
         h('button', { type: 'button', class: 'btn btn-small', onclick: () => {
           const c = parseCssColor(color.value);
           const id = name.value.trim().toLowerCase().replace(/[^a-z0-9-]+/g, '-');
