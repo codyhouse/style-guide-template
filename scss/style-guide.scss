@@ -235,9 +235,8 @@ xIcons
 -------------------------------- */
 
 .cd-icons li {
-	/* icons size */
-	width: 2rem;
-	height: 2rem;
+	/* icon tile with its name */
+	min-width: 4rem;
 }
 
 @include meta.load-css('../partials/basic-style');

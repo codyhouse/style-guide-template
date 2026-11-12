@@ -42,6 +42,27 @@ function choose(key, label, options, value, onChange) {
 const iconButton = (name, label, onclick, key) =>
   h('button', { type: 'button', class: 'cd-action', onclick, 'data-key': key, title: label }, icon(name), h('span', {}, label));
 
+// Drawer areas fold; which ones are open survives re-renders.
+const openAreas = new Set(['Brand', 'Palette']);
+function area(name, ...children) {
+  const el = h('details', { class: 'cd-drawer-area', open: openAreas.has(name) },
+    h('summary', {}, h('h3', {}, name)), ...children);
+  el.addEventListener('toggle', () => (el.open ? openAreas.add(name) : openAreas.delete(name)));
+  return el;
+}
+
+function uploadButton(label, key, onFiles, accept) {
+  const input = h('input', { type: 'file', multiple: true, hidden: true, accept });
+  input.addEventListener('change', () => { onFiles([...input.files]); input.value = ''; });
+  return h('div', {}, input, h('button', { type: 'button', class: 'btn btn-secondary btn-small', 'data-key': key, onclick: () => input.click() }, label));
+}
+
+const IMAGE = /\.(svg|png|jpe?g|gif|webp|avif|ico)$/i;
+const thumb = (item, url) => (url && IMAGE.test(item.src)
+  ? h('img', { class: 'cd-thumb', src: url, alt: '' })
+  : h('span', { class: 'cd-thumb cd-thumb-file', 'aria-hidden': 'true' }, item.src.split('.').pop()));
+const cap = (x) => x.charAt(0).toUpperCase() + x.slice(1);
+
 function colorError(input, ok) {
   input.setAttribute('aria-invalid', String(!ok));
   input.parentElement.querySelector('.cd-error')?.remove();
@@ -75,21 +96,26 @@ export function renderEditor(body, app) {
   const setMeta = (fn, structural = true) => set(withBrandMeta(store.get(), vendor, fn(brandMeta(store.get(), vendor))), structural);
 
   /* brand */
-  const brand = h('section', { class: 'cd-drawer-area' }, h('h3', {}, 'Brand'),
+  const brand = area('Brand',
     field('Name', text('brand-name', doc.name, (v) => v && set({ ...store.get(), name: v }))),
-    choose('brand-preset', 'Start from a preset', manifest.brands.map((b) => ({ value: b.path, label: b.name })), null, async (path) => {
+    h('div', { class: 'cd-field-row' },
+      h('button', { type: 'button', class: 'btn btn-small', onclick: app.load }, 'Load file'),
+      h('button', { type: 'button', class: 'btn btn-secondary btn-small', onclick: app.save }, 'Save JSON'),
+      h('button', { type: 'button', class: 'btn btn-secondary btn-small', onclick: app.export }, 'Export ZIP')),
+    choose('brand-preset', 'Replace with a preset', manifest.brands.map((b) => ({ value: b.path, label: b.name })), null, async (path) => {
       const next = await fetch(`library/${path}`).then((r) => r.json());
       store.load(next);
       rerender();
     }),
     h('div', { class: 'cd-field-row' },
-      store.hasPrevious() ? h('button', { type: 'button', class: 'btn btn-secondary btn-small', onclick: () => { store.restorePrevious(); rerender(); } }, 'Restore previous draft') : null,
-      h('button', { type: 'button', class: 'btn btn-secondary btn-small', onclick: () => { store.clearDraft(); rerender(); } }, 'Clear local draft')));
+      h('button', { type: 'button', class: 'btn btn-secondary btn-small', onclick: () => { store.clearDraft(); rerender(); } }, 'Clear local draft'),
+      store.hasPrevious() ? h('button', { type: 'button', class: 'btn btn-secondary btn-small', onclick: () => { store.restorePrevious(); rerender(); } }, 'Undo: restore previous draft') : null),
+    h('p', { class: 'cd-hint' }, 'Clearing or replacing keeps your previous draft, so it can be undone.'));
 
   /* palette */
   const hues = Object.keys(tree.color ?? {}).filter((k) => !k.startsWith('$') && !ROLES.includes(k)
     && Object.keys(tree.color[k]).some((s) => SHADE.test(s)));
-  const palette = h('section', { class: 'cd-drawer-area' }, h('h3', {}, 'Palette'),
+  const palette = area('Palette',
     hues.map((hue) => {
       const shades = Object.keys(tree.color[hue]).filter((s) => SHADE.test(s));
       const base = tree.color[hue].$extensions?.[vendor]?.base ?? ('600' in tree.color[hue] ? '600' : shades[Math.floor(shades.length / 2)]);
@@ -141,16 +167,16 @@ export function renderEditor(body, app) {
 
   /* roles */
   const shadeOptions = hues.flatMap((hue) => Object.keys(tree.color[hue]).filter((s) => SHADE.test(s))
-    .map((s) => ({ value: `{color.${hue}.${s}}`, label: `${hue}-${s}` })));
-  const roles = h('section', { class: 'cd-drawer-area' }, h('h3', {}, 'Roles'),
+    .map((s) => ({ value: `{color.${hue}.${s}}`, label: `${hue}-${s}`, swatch: `var(--color-${hue}-${s})` })));
+  const roles = area('Roles',
     h('p', { class: 'cd-hint' }, `Editing the ${app.theme()} theme. Switch the theme in the header to edit the other.`),
     ROLES.map((role) => {
       const props = [...tokens.keys()].filter((p) => p.startsWith(`color.${role}.`));
       if (!props.length) return null;
-      return h('div', {}, h('h4', {}, role), props.map((p) => {
+      return h('div', {}, props.map((p) => {
         const value = tokens.get(p).value;
-        const options = shadeOptions.some((o) => o.value === value) ? shadeOptions : [{ value, label: 'Custom value' }, ...shadeOptions];
-        return choose(`role-${p}`, p.replace(/^color\./, ''), options, value, (v) => set(E.setRole(store.get(), app.theme(), p.replace(/^color\./, ''), v)));
+        const options = shadeOptions.some((o) => o.value === value) ? shadeOptions : [{ value, label: 'Custom value', swatch: `var(${'--' + p.replace(/\./g, '-')})` }, ...shadeOptions];
+        return choose(`role-${p}`, cap(`${role} ${p.split('.').slice(2).join(' ').replace(/-/g, ' ')}`), options, value, (v) => set(E.setRole(store.get(), app.theme(), p.replace(/^color\./, ''), v)));
       }));
     }));
 
@@ -159,15 +185,14 @@ export function renderEditor(body, app) {
     ...Object.values(tree.font ?? {}).flatMap((t) => (t?.$value ? [[t.$value].flat()[0]] : []))])];
   const fontTokens = Object.keys(tree.font ?? {}).filter((k) => !k.startsWith('$'));
   const sizeSteps = Object.keys(tree['font-size'] ?? {}).filter((k) => !k.startsWith('$'));
-  const fontUpload = h('input', { type: 'file', accept: '.woff2,.woff,.ttf,.otf', multiple: true, 'data-key': 'font-upload' });
-  fontUpload.addEventListener('change', async () => { await app.addFontUploads([...fontUpload.files]); rerender(); });
+  const fontUpload = uploadButton('Upload font files', 'font-upload', async (files) => { await app.addFontUploads(files); rerender(); }, '.woff2,.woff,.ttf,.otf');
   const pickerEl = h('div', {});
   fontsourcePicker(pickerEl, { onPick: (entries) => { setMeta((m) => E.addFontFiles(m, entries)); } });
-  const type = h('section', { class: 'cd-drawer-area' }, h('h3', {}, 'Fonts and type'),
+  const type = area('Fonts and type',
     fontTokens.map((name) => {
       const current = [tree.font[name].$value].flat();
       const generic = GENERIC.includes(current.at(-1)) ? current.at(-1) : 'sans-serif';
-      return choose(`font-${name}`, `font-${name}`, families.map((f) => ({ value: f, label: f })), current[0],
+      return choose(`font-${name}`, `${cap(name)} font`, families.map((f) => ({ value: f, label: f })), current[0],
         (f) => set(E.setToken(store.get(), `font.${name}`, { $value: [f, generic] })));
     }),
     Object.entries(tree.typography ?? {}).filter(([k, t]) => !k.startsWith('$') && t.$value && typeof t.$value === 'object').map(([name, t]) => {
@@ -176,10 +201,10 @@ export function renderEditor(body, app) {
         const cur = fresh(`typography.${name}`);
         set(E.setToken(store.get(), `typography.${name}`, { ...cur, $value: { ...cur.$value, ...patch } }));
       };
-      return h('div', {}, h('h4', {}, name),
+      return h('div', {}, h('h4', {}, cap(name.replace(/-/g, ' '))),
         h('div', { class: 'cd-field-row' },
-          choose(`typo-${name}-font`, 'Font', fontTokens.map((f) => ({ value: `{font.${f}}`, label: `font-${f}` })), v.fontFamily, (x) => put({ fontFamily: x })),
-          choose(`typo-${name}-size`, 'Size', sizeSteps.map((s) => ({ value: `{font-size.${s}}`, label: `font-size-${s}` })), v.fontSize, (x) => put({ fontSize: x }))),
+          choose(`typo-${name}-font`, 'Font', fontTokens.map((f) => ({ value: `{font.${f}}`, label: `${cap(f)} font` })), v.fontFamily, (x) => put({ fontFamily: x })),
+          choose(`typo-${name}-size`, 'Size', sizeSteps.map((s) => ({ value: `{font-size.${s}}`, label: `${s} (${tree['font-size'][s].$value.value}${tree['font-size'][s].$value.unit})` })), v.fontSize, (x) => put({ fontSize: x }))),
         h('div', { class: 'cd-field-row' },
           field('Weight', number(`typo-${name}-weight`, v.fontWeight, (x) => x >= 1 && x <= 1000 && put({ fontWeight: x }), { min: 1, max: 1000 })),
           field('Line height', number(`typo-${name}-lh`, v.lineHeight, (x) => x > 0 && put({ lineHeight: x }), { min: 0 }))));
@@ -188,7 +213,7 @@ export function renderEditor(body, app) {
     h('ul', { class: 'cd-list-editor' }, meta.fontFiles.map((f) => h('li', {},
       h('span', {}, `${f.family} ${f.weight} ${f.style}${f.subset ? ` (${f.subset})` : ''}`),
       iconButton('trash', `Remove ${f.src}`, () => setMeta((m) => E.removeFontFile(m, f.src)), `rm-font-${f.src}`)))),
-    field('Upload font files', fontUpload, 'woff2, woff, ttf or otf. Family, weight and style are read from the file name.'),
+    fontUpload, h('p', { class: 'cd-hint' }, 'woff2, woff, ttf or otf. Family, weight and style are read from the file name.'),
     h('h4', {}, 'Add from Fontsource'), pickerEl);
 
   /* scales */
@@ -212,11 +237,11 @@ export function renderEditor(body, app) {
           (x) => set(E.setToken(store.get(), group, setStep(g, step, { ...t.$value, value: x }, vendor)), true)));
       })));
   };
-  const scales = h('section', { class: 'cd-drawer-area' }, h('h3', {}, 'Scales'),
+  const scales = area('Scales',
     scaleGroup('spacing', 'Spacing'), scaleGroup('radius', 'Radius'), scaleGroup('font-size', 'Font size'));
 
   /* shadow */
-  const shadow = h('section', { class: 'cd-drawer-area' }, h('h3', {}, 'Shadow'),
+  const shadow = area('Shadow',
     Object.entries(tree.shadow ?? {}).filter(([k, t]) => !k.startsWith('$') && !Array.isArray(t.$value) && typeof t.$value === 'object').map(([name, t]) => {
       const v = t.$value;
       const put = (patch) => {
@@ -231,10 +256,9 @@ export function renderEditor(body, app) {
 
   /* assets */
   const libraryFiles = [...library].filter((p) => !p.startsWith('brands/'));
-  const assets = h('section', { class: 'cd-drawer-area' }, h('h3', {}, 'Assets'),
+  const assets = area('Assets',
     meta.assetGroups.map((g) => {
-      const upload = h('input', { type: 'file', multiple: true, 'data-key': `upload-${g.id}` });
-      upload.addEventListener('change', async () => { await app.addUploads([...upload.files], g.id); rerender(); });
+      const upload = uploadButton(`Upload to ${g.label}`, `upload-${g.id}`, async (files) => { await app.addUploads(files, g.id); rerender(); });
       let libPick = libraryFiles[0];
       const libSlot = h('div', {});
       listbox(libSlot, { label: `Library file for ${g.label}`, options: libraryFiles.map((p) => ({ value: p, label: p })), value: libPick, onChange: (v) => { libPick = v; } });
@@ -245,13 +269,14 @@ export function renderEditor(body, app) {
           iconButton('down', `Move ${g.label} down`, () => setMeta((m) => E.moveGroup(m, g.id, 1)), `down-${g.id}`),
           iconButton('trash', `Remove ${g.label}`, () => setMeta((m) => E.removeGroup(m, g.id)), `rm-${g.id}`)),
         h('ul', { class: 'cd-list-editor' }, g.items.map((i) => h('li', {},
+          thumb(i, app.urlFor(i)),
           h('div', {},
             field('Label', text(`label-${g.id}-${i.src}`, i.label, (v) => setMeta((m) => E.updateItem(m, g.id, i.src, { label: v }), false))),
             field('Description', text(`desc-${g.id}-${i.src}`, i.description, (v) => setMeta((m) => E.updateItem(m, g.id, i.src, { description: v || undefined }), false)), i.src)),
           iconButton('up', `Move ${i.label} up`, () => setMeta((m) => E.moveItem(m, g.id, i.src, -1)), `up-${g.id}-${i.src}`),
           iconButton('down', `Move ${i.label} down`, () => setMeta((m) => E.moveItem(m, g.id, i.src, 1)), `down-${g.id}-${i.src}`),
           iconButton('trash', `Remove ${i.label}`, () => setMeta((m) => E.removeItem(m, g.id, i.src)), `rm-${g.id}-${i.src}`)))),
-        field('Upload files', upload),
+        upload,
         libraryFiles.length ? h('div', { class: 'cd-field-row' }, h('div', { class: 'cd-field' }, h('span', {}, 'From the library'), libSlot),
           h('button', { type: 'button', class: 'btn btn-secondary btn-small', onclick: () => {
             if (!g.items.some((x) => x.src === libPick)) setMeta((m) => E.addItems(m, g.id, [{ label: libPick.split('/').pop(), src: libPick }]));

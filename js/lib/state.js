@@ -44,16 +44,18 @@ export function createStore({ doc, storage, fileStore }) {
       store.flush();
     },
     hasPrevious: () => storage.getItem(PREVIOUS) !== null,
+    // Swaps the current draft and the previous one, so a restore can itself be undone.
     restorePrevious() {
       const prev = read(storage, PREVIOUS);
       if (!prev) return false;
-      storage.removeItem(PREVIOUS);
+      storage.setItem(PREVIOUS, JSON.stringify(current));
       store.set(prev);
       store.flush();
       return true;
     },
     clearDraft() {
       clearTimeout(timer);
+      storage.setItem(PREVIOUS, JSON.stringify(current));
       storage.removeItem(DRAFT);
       current = base;
       for (const fn of subs) fn(current);

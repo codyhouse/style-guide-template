@@ -3,7 +3,8 @@ import { h, icon } from './dom.js';
 import { resolve } from '../lib/resolver.js';
 import { brandMeta, resolveAsset } from '../lib/assets.js';
 import { toHex, toRgbaString, toOklchString, cmyk } from '../lib/color.js';
-import { cssName } from '../lib/css.js';
+import { cssName, generateCss } from '../lib/css.js';
+import { tailwindCss, shadcnCss } from '../lib/exports.js';
 import { cssString } from '../lib/fonts.js';
 import { ROLES } from '../lib/contrast.js';
 
@@ -70,17 +71,36 @@ function renderBranding(body, meta, ctx) {
   );
 }
 
+// Click to copy: the button briefly says "Copied" (announced through its live region).
+function copyable(text, content, attrs = {}) {
+  const status = h('span', { class: 'cd-copy-status', 'aria-live': 'polite' });
+  const btn = h('button', { type: 'button', class: 'cd-copy', title: `Copy ${text}`, ...attrs }, content, status);
+  btn.addEventListener('click', async () => {
+    try {
+      await navigator.clipboard.writeText(text);
+      status.textContent = 'Copied';
+    } catch {
+      status.textContent = 'Copy failed';
+    }
+    setTimeout(() => { status.textContent = ''; }, 1500);
+  });
+  return btn;
+}
+
 function swatch(path, token, vendor) {
   const ext = token.extensions?.[vendor] ?? {};
   const c = token.resolved;
+  const name = path.replace(/^color\./, '').replace('.', '-');
+  const hex = toHex(c);
+  const cmykText = Array.isArray(ext.cmyk) ? `CMYK ${ext.cmyk.join(' ')}` : `CMYK ${cmyk(c).join(' ')}`;
   return h('li', {},
-    h('div', { class: 'cd-color-swatch', style: { background: `var(${cssName(path)})` } }),
-    h('b', {}, path.replace(/^color\./, '').replace('.', '-')),
-    h('small', {}, toHex(c)),
-    h('small', {}, toRgbaString(c)),
-    h('small', {}, toOklchString(c)),
-    h('small', {}, ext.cmyk ? `CMYK ${ext.cmyk.join(' ')}` : `CMYK ${cmyk(c).join(' ')} (approx.)`),
-    ext.pantone ? h('small', {}, ext.pantone) : null);
+    copyable(hex, h('span', { class: 'cd-color-swatch', style: { background: `var(${cssName(path)})` } }), { 'aria-label': `${name}: copy ${hex}`, class: 'cd-copy cd-copy-swatch' }),
+    h('b', {}, name),
+    copyable(hex, h('small', {}, hex)),
+    copyable(toRgbaString(c), h('small', {}, toRgbaString(c))),
+    copyable(toOklchString(c), h('small', {}, toOklchString(c))),
+    copyable(cmykText, h('small', {}, Array.isArray(ext.cmyk) ? cmykText : `${cmykText} (approx.)`)),
+    ext.pantone ? copyable(String(ext.pantone), h('small', {}, String(ext.pantone))) : null);
 }
 
 function renderColors(body, tokens, vendor) {
@@ -138,7 +158,7 @@ function renderTypography(body, tokens, meta) {
 
 function renderIcons(body, meta, ctx) {
   body.replaceChildren(h('ul', { class: 'cd-box' },
-    group(meta, 'icons').items.map((i) => h('li', { title: i.label }, image(i, ctx)))));
+    group(meta, 'icons').items.map((i) => h('li', {}, h('figure', {}, image(i, ctx, { alt: '' }), h('figcaption', {}, i.label ?? i.src.split('/').pop()))))));
 }
 
 function renderScale(body, tokens, prefix, kind) {
@@ -149,23 +169,49 @@ function renderScale(body, tokens, prefix, kind) {
     return;
   }
   const style = (p) => (kind === 'radius' ? { 'border-radius': `var(${cssName(p)})` } : { 'box-shadow': `var(${cssName(p)})` });
-  body.replaceChildren(h('div', { class: 'cd-swatch-grid' }, list.map(([p, t]) => h('figure', {},
+  body.replaceChildren(h('div', { class: `cd-swatch-grid${kind === 'shadow' ? ' cd-shadow-stage' : ''}` }, list.map(([p, t]) => h('figure', {},
     h('div', { class: kind === 'radius' ? 'cd-radius-box' : 'cd-shadow-box', style: style(p) }),
     h('figcaption', {}, h('code', {}, cssName(p)), h('br'), kind === 'radius' ? dim(t.resolved) : '')))));
 }
 
-function renderCss(body, css) {
-  const copy = h('button', { type: 'button', class: 'btn btn-secondary btn-small' }, icon('copy'), ' Copy');
-  copy.addEventListener('click', async () => {
-    try {
-      await navigator.clipboard.writeText(css);
-      copy.lastChild.textContent = ' Copied';
-    } catch {
-      copy.lastChild.textContent = ' Copy failed';
+let codeTab = 'css';
+function renderCode(body, doc, vendor) {
+  const fontSrc = (f) => `../${f.src}`; // same layout as the brand kit's css/ folder
+  const tabs = [
+    ['css', 'CSS variables', () => generateCss(doc, { vendor, fontSrc })],
+    ['tailwind', 'Tailwind v4', () => tailwindCss(doc, { vendor, fontSrc })],
+    ['shadcn', 'shadcn/ui', () => shadcnCss(doc)],
+  ];
+  const id = (k) => `cd-code-${k}`;
+  const list = h('div', { role: 'tablist', class: 'cd-tabs', 'aria-label': 'Code format' });
+  const panel = h('div', { role: 'tabpanel', class: 'cd-code', id: 'cd-code-panel' });
+  const show = (key, focus) => {
+    codeTab = key;
+    const [, label, make] = tabs.find((t) => t[0] === key);
+    const code = make();
+    for (const btn of list.children) {
+      const on = btn.dataset.tab === key;
+      btn.setAttribute('aria-selected', String(on));
+      btn.tabIndex = on ? 0 : -1;
+      if (on && focus) btn.focus();
     }
-    setTimeout(() => { copy.lastChild.textContent = ' Copy'; }, 2000);
+    panel.setAttribute('aria-labelledby', id(key));
+    panel.replaceChildren(
+      copyable(code, h('span', {}, icon('copy'), ' Copy'), { class: 'btn btn-secondary btn-small cd-copy-code', 'aria-label': `Copy ${label}` }),
+      h('pre', { tabindex: '0', 'aria-label': label }, h('code', {}, code)));
+  };
+  for (const [key, label] of tabs) {
+    list.append(h('button', { type: 'button', role: 'tab', id: id(key), 'data-tab': key, 'aria-controls': 'cd-code-panel', onclick: () => show(key) }, label));
+  }
+  list.addEventListener('keydown', (e) => {
+    const i = tabs.findIndex((t) => t[0] === codeTab);
+    const next = { ArrowRight: i + 1, ArrowLeft: i - 1, Home: 0, End: tabs.length - 1 }[e.key];
+    if (next === undefined) return;
+    e.preventDefault();
+    show(tabs[(next + tabs.length) % tabs.length][0], true);
   });
-  body.replaceChildren(h('div', { class: 'cd-code' }, copy, h('pre', { tabindex: '0', 'aria-label': 'Generated CSS' }, h('code', {}, css))));
+  body.replaceChildren(list, panel);
+  show(codeTab);
 }
 
 function renderCustomGroups(main, meta, ctx) {
@@ -207,7 +253,7 @@ export function render({ doc, css, theme, session, library, vendor }) {
   renderScale(body('spacing'), tokens, 'spacing', 'spacing');
   renderScale(body('radius'), tokens, 'radius', 'radius');
   renderScale(body('shadow'), tokens, 'shadow', 'shadow');
-  renderCss(body('css-variables'), css);
+  renderCode(body('css-variables'), doc, vendor);
   renderCustomGroups(main, meta, ctx);
   renderNav(document.getElementById('cd-nav'), main);
 }

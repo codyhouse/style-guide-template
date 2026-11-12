@@ -1166,35 +1166,35 @@
               "label": "Icons",
               "items": [
                 {
-                  "label": "Icon 1",
+                  "label": "Grid",
                   "src": "icons/icon-1.svg"
                 },
                 {
-                  "label": "Icon 2",
+                  "label": "Location",
                   "src": "icons/icon-2.svg"
                 },
                 {
-                  "label": "Icon 3",
+                  "label": "Search",
                   "src": "icons/icon-3.svg"
                 },
                 {
-                  "label": "Icon 4",
+                  "label": "Upload",
                   "src": "icons/icon-4.svg"
                 },
                 {
-                  "label": "Icon 5",
+                  "label": "Favorite",
                   "src": "icons/icon-5.svg"
                 },
                 {
-                  "label": "Icon 6",
+                  "label": "Send",
                   "src": "icons/icon-6.svg"
                 },
                 {
-                  "label": "Icon 7",
+                  "label": "Print",
                   "src": "icons/icon-7.svg"
                 },
                 {
-                  "label": "Icon 8",
+                  "label": "Refresh",
                   "src": "icons/icon-8.svg"
                 }
               ]

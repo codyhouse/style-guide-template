@@ -241,7 +241,13 @@ addEventListener('scroll', updateNavigation, { passive: true });
 const drawer = document.getElementById('cd-drawer');
 const drawerBody = document.getElementById('cd-drawer-body');
 const editToggle = document.getElementById('edit-toggle');
-const app = { store, vendor, library, manifest, theme: () => theme, addUploads, addFontUploads, warn };
+const app = {
+  store, vendor, library, manifest, theme: () => theme, addUploads, addFontUploads, warn,
+  urlFor: (item) => urlFor(item, ctx),
+  load: () => document.getElementById('load-btn').click(),
+  save: () => document.getElementById('save-btn').click(),
+  export: () => document.getElementById('export-btn').click(),
+};
 
 function openDrawer() {
   renderEditor(drawerBody, app);

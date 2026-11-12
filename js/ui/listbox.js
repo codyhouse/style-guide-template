@@ -1,6 +1,9 @@
 // Listbox: a button that announces its value and opens a role="listbox" popup.
 // Keyboard: arrows, Home/End, typeahead, Enter/Space to pick, Escape to close.
+// An option may carry a swatch (any CSS color) shown as a chip next to its label.
 import { h, icon } from './dom.js';
+
+const chip = (swatch) => (swatch ? h('span', { class: 'cd-chip', 'aria-hidden': 'true', style: { background: swatch } }) : null);
 
 let uid = 0;
 
@@ -18,13 +21,14 @@ export function listbox(el, { label, options, value, onChange, typeahead = true 
     'aria-labelledby': `${id}-label ${id}-trigger`, id: `${id}-trigger`,
   }, valueEl, icon('chevron'));
   const popup = h('ul', { role: 'listbox', class: 'cd-listbox-popup', id: `${id}-list`, tabindex: '-1', 'aria-labelledby': `${id}-label`, hidden: true },
-    options.map((o, i) => h('li', { role: 'option', id: `${id}-opt-${i}`, class: 'cd-listbox-option', 'aria-selected': String(o.value === value) }, o.label)));
+    options.map((o, i) => h('li', { role: 'option', id: `${id}-opt-${i}`, class: 'cd-listbox-option', 'aria-selected': String(o.value === value) }, chip(o.swatch), o.label)));
   const root = h('div', { class: 'cd-listbox' }, labelEl, trigger, popup);
   el.replaceChildren(root);
 
   const optionEls = () => [...popup.children];
   const show = () => {
-    valueEl.textContent = options.find((o) => o.value === current)?.label ?? 'Choose';
+    const o = options.find((x) => x.value === current);
+    valueEl.replaceChildren(chip(o?.swatch) ?? '', o?.label ?? 'Choose');
     optionEls().forEach((o, i) => {
       o.setAttribute('aria-selected', String(options[i].value === current));
       o.classList.toggle('is-active', i === active);

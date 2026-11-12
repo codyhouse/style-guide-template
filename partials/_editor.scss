@@ -75,7 +75,7 @@ xEditor - header actions, panels, drawer, listbox, token and file views
 		background: var(--color-secondary-background-active);
 	}
 
-	@include MQ(L) {
+	@include MQ(M) {
 		span {
 			position: static;
 			width: auto;
@@ -226,13 +226,45 @@ xEditor - header actions, panels, drawer, listbox, token and file views
 }
 
 .cd-drawer-area {
-	margin-bottom: var(--spacing-xl);
+	border-bottom: 1px solid var(--color-card-border); // ds-allow-hardcode: hairline
+	padding: var(--spacing-sm) 0;
 
-	> h3 {
-		font-family: var(--font-heading);
-		font-size: var(--font-size-sm);
-		text-transform: uppercase;
+	> summary {
+		display: flex;
+		align-items: center;
+		min-height: 2.75rem;
+		cursor: pointer;
+		list-style: none;
+
+		&::-webkit-details-marker {
+			display: none;
+		}
+
+		&::after {
+			/* chevron drawn with borders */
+			content: '';
+			margin-left: auto;
+			width: 0.5rem;
+			height: 0.5rem;
+			border: solid currentColor;
+			border-width: 0 0.125rem 0.125rem 0;
+			transform: rotate(45deg);
+			transition: transform var(--duration-fast);
+		}
+
+		h3 {
+			font-family: var(--font-heading);
+			font-size: var(--font-size-md);
+			font-weight: 700;
+		}
+	}
+
+	&[open] > summary {
 		margin-bottom: var(--spacing-sm);
+
+		&::after {
+			transform: rotate(-135deg);
+		}
 	}
 
 	h4 {
@@ -331,7 +363,7 @@ xEditor - header actions, panels, drawer, listbox, token and file views
 		font-size: var(--font-size-sm);
 		overflow-wrap: anywhere;
 
-		> :first-child {
+		> div {
 			flex: 1;
 			min-width: 0;
 		}
@@ -553,4 +585,118 @@ xEditor - header actions, panels, drawer, listbox, token and file views
 		line-height: 1.3;
 		overflow-wrap: anywhere;
 	}
+}
+
+/* shared: color chip, thumbnails, copy-on-click, tabs */
+
+.cd-chip {
+	display: inline-block;
+	flex: none;
+	width: 1rem;
+	height: 1rem;
+	margin-right: var(--spacing-xs);
+	vertical-align: middle;
+	border-radius: var(--radius-sm);
+	box-shadow: inset 0 0 0 1px var(--color-card-border); // ds-allow-hardcode: hairline
+}
+
+.cd-thumb {
+	flex: none;
+	width: 3rem;
+	height: 3rem;
+	object-fit: contain;
+	border-radius: var(--radius-sm);
+	background: var(--color-muted-background);
+}
+
+.cd-thumb-file {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	color: var(--color-muted-foreground);
+	font-size: var(--font-size-xs);
+	font-weight: 700;
+	text-transform: uppercase;
+}
+
+.cd-copy {
+	display: block;
+	width: 100%;
+	padding: 0;
+	border: none;
+	background: none;
+	color: inherit;
+	font: inherit;
+	text-align: inherit;
+	cursor: copy;
+
+	@include hover {
+		text-decoration: underline;
+	}
+}
+
+.cd-copy-status {
+	display: block;
+	font-size: var(--font-size-xs);
+	font-weight: 700;
+	color: var(--color-page-foreground);
+
+	&:empty {
+		display: none;
+	}
+}
+
+.cd-copy-swatch {
+	border-radius: var(--radius-sm);
+}
+
+.cd-tabs {
+	display: flex;
+	flex-wrap: wrap;
+	gap: var(--spacing-xs);
+	margin-bottom: var(--spacing-sm);
+
+	[role=tab] {
+		min-height: 2.75rem;
+		padding: 0 var(--spacing-md);
+		border: 1px solid var(--color-card-border); // ds-allow-hardcode: hairline
+		border-radius: var(--radius-sm);
+		background: transparent;
+		color: var(--color-page-foreground);
+		font: inherit;
+		font-size: var(--font-size-sm);
+		cursor: pointer;
+
+		&[aria-selected=true] {
+			background: var(--color-primary-background);
+			border-color: var(--color-primary-background);
+			color: var(--color-primary-foreground);
+		}
+	}
+}
+
+.cd-shadow-stage {
+	padding: var(--spacing-xl);
+	border-radius: var(--radius-md);
+	background: var(--color-muted-background);
+
+	.cd-shadow-box {
+		/* an opaque tile so the shadow reads */
+		border: none;
+		border-radius: var(--radius-md);
+		background: var(--color-card-background);
+	}
+}
+
+.cd-drawer-body .cd-hint {
+	margin: var(--spacing-xs) 0;
+	color: var(--color-muted-foreground);
+	font-size: var(--font-size-xs);
+	line-height: 1.5;
+}
+
+.cd-drawer-body .cd-field-row + .cd-field-row,
+.cd-drawer-body .cd-field-row + .cd-field,
+.cd-drawer-body .cd-field + .cd-field-row {
+	margin-top: var(--spacing-sm);
 }

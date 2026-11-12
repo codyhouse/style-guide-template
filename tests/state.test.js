@@ -69,3 +69,22 @@ test('persisted files come back on a new store', async () => {
   await t.ready;
   assert.ok(t.files.has('logos/x.svg'));
 });
+
+test('clearDraft keeps the cleared draft as previous, so it can be undone', () => {
+  const s = createStore({ doc: a, storage: mem(), fileStore: memFiles() });
+  s.update(edit);
+  s.flush();
+  s.clearDraft();
+  assert.deepEqual(s.get(), a);
+  assert.equal(s.restorePrevious(), true);
+  assert.deepEqual(s.get(), edit(a));
+});
+
+test('restorePrevious swaps, so restoring twice gets back to where you were', () => {
+  const s = createStore({ doc: a, storage: mem(), fileStore: memFiles() });
+  s.load(b);
+  s.restorePrevious();
+  assert.deepEqual(s.get(), a);
+  s.restorePrevious();
+  assert.deepEqual(s.get(), b);
+});
