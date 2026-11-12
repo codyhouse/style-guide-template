@@ -7,7 +7,7 @@
     "build": "pnpm typecheck && vite build",
     "preview": "vite preview",
     "test": "vitest run",
-    "typecheck": "tsc -p . && tsc -p tests",
+    "typecheck": "vue-tsc -p . && tsc -p tests",
     "lint": "eslint . && prettier --check .",
     "format": "prettier --write ."
   },
@@ -15,23 +15,27 @@
     "@eslint/js": "^10.0.1",
     "@types/culori": "^4.0.1",
     "@types/node": "^26.6.6",
+    "@vitejs/plugin-vue": "^6.0.10",
     "eslint": "^10.14.0",
     "eslint-config-prettier": "^10.1.8",
-    "eslint-plugin-lit": "^2.3.1",
+    "eslint-plugin-vue": "^10.12.1",
     "globals": "^17.14.0",
     "prettier": "^3.10.0",
     "sass": "^1.108.2",
     "typescript": "^6.0.3",
     "typescript-eslint": "^8.72.2",
     "vite": "^8.3.8",
-    "vitest": "^5.1.0"
+    "vitest": "^5.1.0",
+    "vue-eslint-parser": "^10.4.2",
+    "vue-tsc": "^3.3.14"
   },
   "dependencies": {
     "@floating-ui/dom": "^1.8.0",
+    "@lucide/vue": "^1.72.0",
     "culori": "^4.0.2",
     "fflate": "^0.8.3",
     "idb-keyval": "^6.3.0",
-    "lit": "^3.3.3",
+    "vue": "^3.5.45",
     "zod": "^4.6.7"
   }
 }

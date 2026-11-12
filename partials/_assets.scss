@@ -1,0 +1,68 @@
+.cd-files {
+	/* masonry: images keep their proportions and flow down as many columns as fit */
+	columns: 14rem;
+	column-gap: var(--spacing-lg);
+
+	> * {
+		break-inside: avoid;
+		margin-bottom: var(--spacing-lg);
+	}
+}
+
+.cd-file {
+	display: grid;
+	gap: var(--spacing-xs);
+	align-content: start;
+	font-size: var(--font-size-sm);
+
+	figcaption {
+		display: grid;
+		gap: var(--spacing-xs);
+		justify-items: start;
+	}
+	overflow-wrap: anywhere;
+
+	img {
+		display: block;
+		width: 100%;
+		height: auto;
+		border-radius: var(--radius-sm);
+	}
+
+	a {
+		color: var(--color-primary-background);
+		text-decoration: underline;
+	}
+
+	small {
+		color: var(--color-muted-foreground);
+	}
+}
+
+.cd-file-card {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	height: 8rem;
+	border-radius: var(--radius-sm);
+	background: var(--color-muted-background);
+	color: var(--color-muted-foreground);
+	font-weight: 700;
+	text-transform: uppercase;
+}
+
+.cd-missing {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	gap: var(--spacing-xs);
+	min-height: 5rem;
+	padding: var(--spacing-sm);
+	border: 0.125rem dashed var(--color-input-border);
+	border-radius: var(--radius-sm);
+	color: var(--color-muted-foreground);
+	font-size: var(--font-size-xs);
+	text-align: center;
+	overflow-wrap: anywhere;
+}

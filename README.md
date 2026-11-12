@@ -59,6 +59,6 @@ Files under `public/library/` are offered to every user of the site (served at `
 
 Based on the [CodyHouse Style Guide Template](http://codyhouse.co/gem/css-style-guide-template/) ([Terms](http://codyhouse.co/terms/)).
 
-Color conversion and parsing by [culori](https://culorijs.org) (MIT). ZIP files by [fflate](https://github.com/101arrowz/fflate) (MIT). Stored files by [idb-keyval](https://github.com/jakearchibald/idb-keyval) (Apache-2.0). Dropdown placement by [Floating UI](https://floating-ui.com) (MIT). Components by [Lit](https://lit.dev) (BSD-3-Clause). Validation by [zod](https://zod.dev) (MIT). The build writes every bundled library's license to `dist/.vite/license.md`.
+Color conversion and parsing by [culori](https://culorijs.org) (MIT). ZIP files by [fflate](https://github.com/101arrowz/fflate) (MIT). Stored files by [idb-keyval](https://github.com/jakearchibald/idb-keyval) (Apache-2.0). Dropdown placement by [Floating UI](https://floating-ui.com) (MIT). Components by [Vue](https://vuejs.org) (MIT). Icons by [Lucide](https://lucide.dev) (ISC). Validation by [zod](https://zod.dev) (MIT). The build writes every bundled library's license to `dist/.vite/license.md`.
 
 Icons by [Petras Nargela](https://dribbble.com/petrasnargela), available for free download on [Freebiesbug](http://freebiesbug.com/psd-freebies/80-stroke-icons-psd-ai-webfont/). Interface icons from [Lucide](https://lucide.dev).

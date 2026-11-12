@@ -1,10 +1,5 @@
+@use 'sass:meta';
 @use 'layout' as *;
-
-/* --------------------------------
-
-xEditor - header actions, panels, drawer, listbox, token and file views
-
--------------------------------- */
 
 .cd-icon {
 	width: 1.25rem;
@@ -26,30 +21,6 @@ xEditor - header actions, panels, drawer, listbox, token and file views
 	padding: 0.4em 1em;
 	font-size: var(--font-size-sm);
 }
-
-/* Lit components that only group markup take no box of their own, so the layout and
-   selectors such as main > section see straight through them */
-sg-app,
-sg-guide,
-sg-panels,
-sg-colors,
-sg-typography,
-sg-scale,
-sg-code,
-sg-editor,
-sg-edit-brand,
-sg-edit-palette,
-sg-edit-roles,
-sg-edit-type,
-sg-edit-scales,
-sg-edit-shadow,
-sg-edit-assets,
-cd-color-input,
-cd-fontsource-picker {
-	display: contents;
-}
-
-/* header actions */
 
 .cd-actions {
 	display: flex;
@@ -128,8 +99,6 @@ cd-fontsource-picker {
 	}
 }
 
-/* panels: contrast, missing assets, warnings */
-
 .cd-panels {
 	display: grid;
 	gap: var(--spacing-lg);
@@ -190,8 +159,6 @@ cd-fontsource-picker {
 	}
 }
 
-/* full-page drop overlay */
-
 .cd-drop {
 	position: fixed;
 	inset: 0;
@@ -210,8 +177,6 @@ cd-fontsource-picker {
 		display: flex;
 	}
 }
-
-/* drawer */
 
 .cd-drawer {
 	position: fixed;
@@ -289,7 +254,6 @@ cd-fontsource-picker {
 		}
 
 		&::after {
-			/* chevron drawn with borders */
 			content: '';
 			margin-left: auto;
 			width: 0.5rem;
@@ -456,8 +420,6 @@ cd-fontsource-picker {
 	}
 }
 
-/* listbox (replaces native select) */
-
 .cd-listbox {
 	position: relative;
 	display: inline-block;
@@ -530,8 +492,6 @@ cd-fontsource-picker {
 		font-weight: 700;
 	}
 }
-
-/* token views: spacing, radius, shadow, CSS variables */
 
 .cd-token-list {
 	display: grid;
@@ -642,70 +602,7 @@ cd-fontsource-picker {
 	}
 }
 
-/* asset groups */
-
-.cd-files {
-	/* masonry: images keep their proportions and flow down as many columns as fit */
-	columns: 14rem;
-	column-gap: var(--spacing-lg);
-
-	> * {
-		break-inside: avoid;
-		margin-bottom: var(--spacing-lg);
-	}
-}
-
-.cd-file {
-	display: grid;
-	gap: var(--spacing-xs);
-	align-content: start;
-	font-size: var(--font-size-sm);
-	overflow-wrap: anywhere;
-
-	img {
-		display: block;
-		width: 100%;
-		height: auto;
-		border-radius: var(--radius-sm);
-	}
-
-	a {
-		color: var(--color-primary-background);
-		text-decoration: underline;
-	}
-
-	small {
-		color: var(--color-muted-foreground);
-	}
-}
-
-.cd-file-card {
-	display: flex;
-	align-items: center;
-	justify-content: center;
-	height: 8rem;
-	border-radius: var(--radius-sm);
-	background: var(--color-muted-background);
-	color: var(--color-muted-foreground);
-	font-weight: 700;
-	text-transform: uppercase;
-}
-
-.cd-missing {
-	display: flex;
-	flex-direction: column;
-	align-items: center;
-	justify-content: center;
-	gap: var(--spacing-xs);
-	min-height: 5rem;
-	padding: var(--spacing-sm);
-	border: 0.125rem dashed var(--color-input-border);
-	border-radius: var(--radius-sm);
-	color: var(--color-muted-foreground);
-	font-size: var(--font-size-xs);
-	text-align: center;
-	overflow-wrap: anywhere;
-}
+@include meta.load-css('assets');
 
 .cd-specimen {
 	display: grid;
@@ -718,8 +615,6 @@ cd-fontsource-picker {
 		overflow-wrap: anywhere;
 	}
 }
-
-/* shared: color chip, thumbnails, copy-on-click, tabs */
 
 .cd-chip {
 	display: inline-block;

@@ -10,9 +10,7 @@
     "isolatedModules": true,
     "skipLibCheck": true,
     "resolveJsonModule": true,
-    "noUncheckedIndexedAccess": false,
-    "experimentalDecorators": true,
-    "useDefineForClassFields": false
+    "noUncheckedIndexedAccess": false
   },
-  "include": ["src", "vite.config.ts"]
+  "include": ["src", "src/**/*.vue", "vite.config.ts"]
 }

@@ -1,7 +1,8 @@
-// Opens the session (library, preset, the browser's saved draft) and mounts the app.
+import { createApp } from 'vue';
 import { Session } from './app/session.js';
-import { App } from './ui/app.js';
+import App from './vue/App.vue';
 
-const app = new App();
-app.session = await Session.open();
-document.body.prepend(app);
+const session = await Session.open();
+const mount = document.createElement('div');
+document.body.prepend(mount);
+createApp(App, { session }).mount(mount);
