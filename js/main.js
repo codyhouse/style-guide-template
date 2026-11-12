@@ -1,110 +1,105 @@
-jQuery(document).ready(function($){
-	/*******************
-		color swatch
-	********************/
-	//convert rgba color to hex color
-	$.cssHooks.backgroundColor = {
-	    get: function(elem) {
-	        if (elem.currentStyle)
-	            var bg = elem.currentStyle["background-color"];
-	        else if (window.getComputedStyle)
-	            var bg = document.defaultView.getComputedStyle(elem,
-	                null).getPropertyValue("background-color");
-	        if (bg.search("rgb") == -1)
-	            return bg;
-	        else {
-	            bg = bg.match(/^rgb\((\d+),\s*(\d+),\s*(\d+)\)$/);
-	            function hex(x) {
-	                return ("0" + parseInt(x).toString(16)).slice(-2);
-	            }
-	            return "#" + hex(bg[1]) + hex(bg[2]) + hex(bg[3]);
-	        }
-	    }
-	}
-	//set a label for each color swatch
-	$('.cd-color-swatch').each(function(){
-		var actual = $(this);
-		$('<b>'+actual.css("background-color")+'</b>').insertAfter(actual);
-	});
+import { HOSTED_URL } from './config.js';
+import { vendorKey } from './lib/vendor-key.js';
+import { createStore, idbFileStore } from './lib/state.js';
+import { generateCss } from './lib/css.js';
+import { render, urlFor } from './ui/render.js';
 
-	/*******************
-		buttons
-	********************/
-	var buttonsWrapper = $('#buttons .cd-box'),
-		buttonsHtml = buttonsWrapper.html(),
-		containerHtml = $('<div class="cd-box"></div>').insertAfter(buttonsWrapper),
-		buttonsHtmlText = buttonsHtml.split('</button>');
+const vendor = vendorKey(HOSTED_URL);
+const THEME_KEY = 'styleguide:theme';
+const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)');
 
-	$.map(buttonsHtmlText, function(value){
-		if(value.indexOf('button') >= 0 ) {
-			var splitText = value.split('class="'),
-				block1 = splitText[0]+'class="';
-				block2 = splitText[1].split('"');
-				
-			var wrapperElement = $('<p></p>').text(block1),
-				spanElement = $('<span></span>').text(block2[0]);
-			spanElement.appendTo(wrapperElement);
-			wrapperElement.appendTo(containerHtml);
-			wrapperElement.append('"'+block2[1]+'&lt;/button&gt;');
-		}
-	});
+const manifest = await fetch('library/manifest.json').then((r) => r.json());
+const library = new Set(manifest.files);
+const preset = await fetch(`library/${manifest.brands[0].path}`).then((r) => r.json());
+const store = createStore({ doc: preset, storage: localStorage, fileStore: idbFileStore() });
+await store.ready;
 
-	/*******************
-		typography
-	********************/
-	var heading = $('#typography h1'),
-		headingDescriptionText = heading.children('span').eq(0),
-		body = heading.next('p'),
-		bodyDescriptionText = body.children('span').eq(0);
-		
-	setTypography(heading, headingDescriptionText);
-	setTypography(body, bodyDescriptionText);
-	$(window).on('resize', function(){
-		setTypography(heading, headingDescriptionText);
-		setTypography(body, bodyDescriptionText);
-	});
+const ctx = { session: store.files, library };
+let theme = localStorage.getItem(THEME_KEY) ?? (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
 
-	function setTypography(element, textElement) {
-		var fontSize = Math.round(element.css('font-size').replace('px',''))+'px',
-			fontFamily = (element.css('font-family').split(','))[0].replace(/\'/g, '').replace(/\"/g, ''),
-			fontWeight = element.css('font-weight');
-		textElement.text(fontWeight + ' '+ fontFamily+' '+fontSize );
-	}
+function draw() {
+  const doc = store.get();
+  const css = generateCss(doc, { vendor, fontSrc: (f) => urlFor(f, ctx) ?? f.src });
+  render({ doc, css, theme, session: store.files, library, vendor });
+  setTypographyLabels();
+  updateNavigation();
+}
 
-	/*******************
-		main  navigation
-	********************/
-	var contentSections = $('main section');
-	//open navigation on mobile
-	$('.cd-nav-trigger').on('click', function(){
-		$('header').toggleClass('nav-is-visible');
-	});
-	//smooth scroll to the selected section
-	$('.cd-main-nav a[href^="#"]').on('click', function(event){
-        event.preventDefault();
-        $('header').removeClass('nav-is-visible');
-        var target= $(this.hash),
-        	topMargin = target.css('marginTop').replace('px', ''),
-        	hedearHeight = $('header').height();
-        $('body,html').animate({'scrollTop': parseInt(target.offset().top - hedearHeight - topMargin)}, 200); 
-    });
-    //update selected navigation element
-    $(window).on('scroll', function(){
-    	updateNavigation();
-    });
-
-    function updateNavigation() {
-		contentSections.each(function(){
-			var actual = $(this),
-				actualHeight = actual.height(),
-				topMargin = actual.css('marginTop').replace('px', ''),
-				actualAnchor = $('.cd-main-nav').find('a[href="#'+actual.attr('id')+'"]');
-			
-			if ( ( parseInt(actual.offset().top - $('.cd-main-nav').height() - topMargin )<= $(window).scrollTop() ) && ( parseInt(actual.offset().top +  actualHeight - topMargin )  > $(window).scrollTop() +1 ) ) {
-				actualAnchor.addClass('selected');
-			}else {
-				actualAnchor.removeClass('selected');
-			}
-		});
-	}
+/*******************
+	theme
+********************/
+const themeToggle = document.getElementById('theme-toggle');
+function applyTheme() {
+  document.documentElement.dataset.theme = theme;
+  themeToggle.setAttribute('aria-pressed', String(theme === 'dark'));
+}
+themeToggle.addEventListener('click', () => {
+  theme = theme === 'dark' ? 'light' : 'dark';
+  localStorage.setItem(THEME_KEY, theme);
+  applyTheme();
+  draw();
 });
+
+/*******************
+	typography
+********************/
+const heading = document.querySelector('#typography > .cd-box h1');
+const body = heading.nextElementSibling;
+
+function setTypography(element) {
+  const s = getComputedStyle(element);
+  const family = s.fontFamily.split(',')[0].replace(/['"]/g, '');
+  element.querySelector('span').textContent = `${s.fontWeight} ${family} ${Math.round(parseFloat(s.fontSize))}px`;
+}
+function setTypographyLabels() {
+  setTypography(heading);
+  setTypography(body);
+}
+addEventListener('resize', setTypographyLabels);
+document.fonts?.addEventListener('loadingdone', setTypographyLabels);
+
+/*******************
+	main navigation
+********************/
+const header = document.querySelector('header');
+const trigger = document.querySelector('.cd-nav-trigger');
+const nav = document.getElementById('cd-nav');
+
+// open navigation on mobile
+trigger.addEventListener('click', () => {
+  const open = header.classList.toggle('nav-is-visible');
+  trigger.setAttribute('aria-expanded', String(open));
+});
+
+// smooth scroll to the selected section
+nav.addEventListener('click', (event) => {
+  const link = event.target.closest('a[href^="#"]');
+  if (!link) return;
+  event.preventDefault();
+  header.classList.remove('nav-is-visible');
+  trigger.setAttribute('aria-expanded', 'false');
+  const target = document.querySelector(link.hash);
+  const topMargin = parseFloat(getComputedStyle(target).marginTop);
+  scrollTo({ top: target.getBoundingClientRect().top + scrollY - header.offsetHeight - topMargin, behavior: reduceMotion.matches ? 'auto' : 'smooth' });
+  history.replaceState(null, '', link.hash);
+});
+
+// update selected navigation element
+function updateNavigation() {
+  for (const section of document.querySelectorAll('main > section')) {
+    const top = section.getBoundingClientRect().top + scrollY;
+    const topMargin = parseFloat(getComputedStyle(section).marginTop);
+    const anchor = nav.querySelector(`a[href="#${section.id}"]`);
+    const inView = top - header.offsetHeight - topMargin <= scrollY && top + section.offsetHeight - topMargin > scrollY + 1;
+    anchor?.classList.toggle('selected', inView);
+    if (inView) anchor?.setAttribute('aria-current', 'true');
+    else anchor?.removeAttribute('aria-current');
+  }
+}
+addEventListener('scroll', updateNavigation, { passive: true });
+
+applyTheme();
+store.subscribe(draw);
+draw();
+
+export { store, ctx, vendor, library, manifest, draw };

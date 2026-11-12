@@ -8,7 +8,7 @@ const STYLES = new Set(['normal', 'italic', 'oblique']);
 export function fontFaceRules(fontFiles = [], fontSrc) {
   return fontFiles.map((f) => [
     '@font-face {',
-    `  font-family: ${cssString(f.family)};`,
+    `  font-family: ${cssString(f.family)};`, // ds-allow-hardcode: generated from the brand's font files
     `  font-weight: ${Number(f.weight) || 400};`,
     `  font-style: ${STYLES.has(f.style) ? f.style : 'normal'};`,
     `  src: url(${cssString(fontSrc(f))}) format("${format(f.src)}");`,

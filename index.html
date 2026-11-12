@@ -1,79 +1,65 @@
 <!doctype html>
-<html lang="en" class="no-js">
+<html lang="en" data-theme="light">
 <head>
 	<meta charset="UTF-8">
 	<meta name="viewport" content="width=device-width, initial-scale=1">
 
-	<link href='http://fonts.googleapis.com/css?family=Open+Sans:400,300,700|Merriweather' rel='stylesheet' type='text/css'>
-
 	<link rel="stylesheet" href="css/reset.css"> <!-- CSS reset -->
 	<link rel="stylesheet" href="css/style-guide.css"> <!-- Resource style -->
-	<script src="js/modernizr.js"></script> <!-- Modernizr -->
-  	
-	<title>Style Guide | CodyHouse</title>
+	<style id="brand-css"></style> <!-- generated from the brand file -->
+
+	<title>Style Guide</title>
 </head>
 <body>
 	<header>
-		<div class="cd-logo"><img src="assets/logo.svg" alt="Logo"></div>
+		<div class="cd-logo" id="cd-logo"></div>
 
-		<nav>
-			<ul class="cd-main-nav">
-				<li><a href="#branding">Branding</a></li>
-				<li><a href="#colors">Colors</a></li>
-				<li><a href="#typography">Typography</a></li>
-				<li><a href="#buttons">Buttons</a></li>
-				<li><a href="#icons">icons</a></li>
-				<li><a href="#form">Form</a></li>
-			</ul> <!-- cd-main-nav -->
+		<nav aria-label="Sections">
+			<ul class="cd-main-nav" id="cd-nav"></ul> <!-- cd-main-nav -->
 		</nav>
-		
-		<a href="assets/assets-download-file.zip" class="cd-download"><span>Download assets</span></a>
-		<a href="#0" class="cd-nav-trigger">Menu<span></span></a>
+
+		<div class="cd-actions">
+			<button type="button" class="cd-action" id="theme-toggle" aria-pressed="false">
+				<svg class="cd-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>
+				<span>Dark mode</span>
+			</button>
+			<button type="button" class="cd-action" id="edit-toggle" aria-pressed="false" aria-controls="cd-drawer">
+				<svg class="cd-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M21.17 6.81a1 1 0 0 0-3.99-3.99L3.84 16.17a2 2 0 0 0-.5.83l-1.32 4.35a.5.5 0 0 0 .62.62l4.35-1.32a2 2 0 0 0 .83-.5Z"/><path d="m15 5 4 4"/></svg>
+				<span>Edit</span>
+			</button>
+			<div class="cd-actions-more">
+				<button type="button" class="cd-action" id="load-btn">
+					<svg class="cd-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m17 8-5-5-5 5"/><path d="M12 3v12"/></svg>
+					<span>Load</span>
+				</button>
+				<button type="button" class="cd-action" id="save-btn">
+					<svg class="cd-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M15.2 3a2 2 0 0 1 1.4.6l3.8 3.8a2 2 0 0 1 .6 1.4V19a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z"/><path d="M17 21v-7a1 1 0 0 0-1-1H8a1 1 0 0 0-1 1v7"/><path d="M7 3v4a1 1 0 0 0 1 1h7"/></svg>
+					<span>Save JSON</span>
+				</button>
+			</div>
+			<button type="button" class="cd-action" id="export-btn">
+				<svg class="cd-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/><path d="M12 15V3"/></svg>
+				<span>Export ZIP</span>
+			</button>
+			<input type="file" id="load-input" multiple hidden>
+		</div>
+
+		<button type="button" class="cd-nav-trigger" aria-expanded="false" aria-controls="cd-nav">Menu<span></span></button>
 	</header>
 
 	<main>
-		<h1>Style Guide 1.0</h1>
+		<h1 id="cd-title">Style Guide</h1>
+
+		<div class="cd-panels" id="cd-panels" aria-live="polite"></div>
 
 		<section id="branding" class="cd-branding">
 			<h2>Branding</h2>
-
-			<ul>
-				<li class="cd-box"><img src="assets/branding/logo-ver-1.jpg" alt="Logo version 1"></li>
-				<li class="cd-box"><img src="assets/branding/logo-ver-2.jpg" alt="Logo version 2"></li>
-			</ul>
-
-			<ul>
-				<li><img src="assets/branding/touch-icon-1.jpg" alt="Touch Icon 1"></li>
-				<li><img src="assets/branding/touch-icon-2.jpg" alt="Touch Icon 2"></li>
-				<li><img src="assets/branding/favicon-1.jpg" alt="Favicon 1"></li>
-				<li><img src="assets/branding/favicon-2.jpg" alt="Favicon 2"></li>
-			</ul> 
+			<div class="cd-section-body"></div>
 		</section>
 
 		<section id="colors" class="cd-colors">
 			<h2>Colors</h2>
-
-			<ul>
-				<li class="cd-box">
-					<div class="cd-color-swatch"></div>
-				</li>
-
-				<li class="cd-box">
-					<div class="cd-color-swatch"></div>
-				</li>
-
-				<li class="cd-box">
-					<div class="cd-color-swatch"></div>
-				</li>
-
-				<li class="cd-box">
-					<div class="cd-color-swatch"></div>
-				</li>
-
-				<li class="cd-box">
-					<div class="cd-color-swatch"></div>
-				</li>
-			</ul>
+			<div class="cd-section-body"></div>
 		</section>
 
 		<section id="typography" class="cd-typography">
@@ -83,71 +69,81 @@
 				<h1>Heading, <span></span></h1>
 				<p>Aa - <span></span>. Lorem ipsum dolor sit amet, consectetur adipisicing elit. Omnis voluptate distinctio reprehenderit, autem deleniti ad <a href="#0">voluptatum eaque</a>. Optio ea aperiam nisi distinctio nemo repellat, voluptate fugiat. Quidem neque illum, blanditiis!</p>
 			</div>
+			<div class="cd-section-body"></div>
 		</section>
 
 		<section id="buttons" class="cd-buttons">
 			<h2>Buttons</h2>
-
-			<div class="cd-box">
-				<button class="btn">Normal</button>
-				<button class="btn btn-success">Success</button>
-				<button class="btn btn-alert">Alert</button>
-				<button class="btn btn-outline">Outline</button>
-			</div>
-
+			<div class="cd-section-body"></div>
 		</section>
 
 		<section id="icons" class="cd-icons">
 			<h2>Icons</h2>
-
-			<ul class="cd-box">
-				<li class="cd-icon-1"></li>
-				<li class="cd-icon-2"></li>
-				<li class="cd-icon-3"></li>
-				<li class="cd-icon-4"></li>
-				<li class="cd-icon-5"></li>
-				<li class="cd-icon-6"></li>
-				<li class="cd-icon-7"></li>
-				<li class="cd-icon-8"></li>
-			</ul>
+			<div class="cd-section-body"></div>
 		</section>
 
 		<section id="form" class="cd-form">
 			<h2>Form</h2>
-			
+
 			<div class="cd-box">
 				<form>
 					<fieldset>
-						<input type="text">
-						<input class="success" type="text">
-						<input class="alert" type="text">
+						<input type="text" aria-label="Default input">
+						<input class="success" type="text" aria-label="Valid input" value="Looks good">
+						<input class="alert" type="text" aria-label="Invalid input" aria-invalid="true" value="Needs a fix">
 					</fieldset>
 
 					<fieldset>
 						<div class="cd-input-wrapper">
 							<input type="radio" name="radioButton" id="radio1">
-	      					<label class="radio-label" for="radio1">Choice 1</label>
-      					</div>
+							<label class="radio-label" for="radio1">Choice 1</label>
+						</div>
 
 						<div class="cd-input-wrapper">
 							<input type="checkbox" id="checkbox1">
-	      					<label class="checkbox-label" for="checkbox1">Option 1</label>
-      					</div>
+							<label class="checkbox-label" for="checkbox1">Option 1</label>
+						</div>
 
-						<div class="cd-input-wrapper cd-select">
-	      					<select name="select-this" id="select-this">
-					          <option value="0">Select</option>
-					          <option value="1">Option 1</option>
-					          <option value="2">Option 2</option>
-					          <option value="2">Option 3</option>
-					      	</select>
-				      	</div>
+						<div class="cd-input-wrapper" id="form-listbox"></div>
 					</fieldset>
 				</form>
 			</div>
 		</section>
+
+		<section id="spacing" class="cd-spacing">
+			<h2>Spacing</h2>
+			<div class="cd-section-body"></div>
+		</section>
+
+		<section id="radius" class="cd-radius">
+			<h2>Radius</h2>
+			<div class="cd-section-body"></div>
+		</section>
+
+		<section id="shadow" class="cd-shadow">
+			<h2>Shadow</h2>
+			<div class="cd-section-body"></div>
+		</section>
+
+		<section id="css-variables" class="cd-css-variables">
+			<h2>CSS Variables</h2>
+			<div class="cd-section-body"></div>
+		</section>
 	</main>
-<script src="js/jquery-2.1.1.js"></script>
-<script src="js/main.js"></script> <!-- Resource jQuery -->
+
+	<div class="cd-drop" aria-hidden="true">Drop files to load them</div>
+
+	<aside id="cd-drawer" class="cd-drawer" role="dialog" aria-modal="true" aria-labelledby="cd-drawer-title" hidden>
+		<div class="cd-drawer-header">
+			<h2 id="cd-drawer-title">Edit brand</h2>
+			<button type="button" class="cd-action" id="drawer-close">
+				<svg class="cd-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+				<span>Close</span>
+			</button>
+		</div>
+		<div class="cd-drawer-body" id="cd-drawer-body"></div>
+	</aside>
+
+<script type="module" src="js/main.js"></script>
 </body>
 </html>
