@@ -10,6 +10,14 @@ xBackground
 
 -------------------------------- */
 
+:root {
+	color-scheme: light;
+
+	&[data-theme=dark] {
+		color-scheme: dark;
+	}
+}
+
 body {
 	/* this is the page background */
 	background-color: var(--color-page-background);

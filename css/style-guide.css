@@ -3,6 +3,13 @@
 xBackground
 
 -------------------------------- */
+:root {
+  color-scheme: light;
+}
+:root[data-theme=dark] {
+  color-scheme: dark;
+}
+
 body {
   /* this is the page background */
   background-color: var(--color-page-background);
@@ -1240,10 +1247,9 @@ xEditor - header actions, panels, drawer, listbox, token and file views
 }
 
 .cd-shadow-stage .cd-shadow-box {
-  /* an opaque tile so the shadow reads */
   border: none;
   border-radius: var(--radius-md);
-  background: var(--color-card-background);
+  background: var(--color-primary-background);
 }
 
 .cd-drawer-body .cd-hint {

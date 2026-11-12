@@ -1468,6 +1468,183 @@
                   "$value": "{color.brand.400}"
                 }
               }
+            },
+            "shadow": {
+              "$type": "shadow",
+              "sm": {
+                "$value": [
+                  {
+                    "color": {
+                      "colorSpace": "oklch",
+                      "components": [
+                        0,
+                        0,
+                        0
+                      ],
+                      "alpha": 0.4
+                    },
+                    "offsetX": {
+                      "value": 0,
+                      "unit": "px"
+                    },
+                    "offsetY": {
+                      "value": 1,
+                      "unit": "px"
+                    },
+                    "blur": {
+                      "value": 2,
+                      "unit": "px"
+                    },
+                    "spread": {
+                      "value": 0,
+                      "unit": "px"
+                    }
+                  },
+                  {
+                    "color": {
+                      "colorSpace": "oklch",
+                      "components": [
+                        1,
+                        0,
+                        0
+                      ],
+                      "alpha": 0.08
+                    },
+                    "offsetX": {
+                      "value": 0,
+                      "unit": "px"
+                    },
+                    "offsetY": {
+                      "value": 0,
+                      "unit": "px"
+                    },
+                    "blur": {
+                      "value": 0,
+                      "unit": "px"
+                    },
+                    "spread": {
+                      "value": 1,
+                      "unit": "px"
+                    }
+                  }
+                ]
+              },
+              "md": {
+                "$value": [
+                  {
+                    "color": {
+                      "colorSpace": "oklch",
+                      "components": [
+                        0,
+                        0,
+                        0
+                      ],
+                      "alpha": 0.5
+                    },
+                    "offsetX": {
+                      "value": 0,
+                      "unit": "px"
+                    },
+                    "offsetY": {
+                      "value": 2,
+                      "unit": "px"
+                    },
+                    "blur": {
+                      "value": 8,
+                      "unit": "px"
+                    },
+                    "spread": {
+                      "value": 0,
+                      "unit": "px"
+                    }
+                  },
+                  {
+                    "color": {
+                      "colorSpace": "oklch",
+                      "components": [
+                        1,
+                        0,
+                        0
+                      ],
+                      "alpha": 0.1
+                    },
+                    "offsetX": {
+                      "value": 0,
+                      "unit": "px"
+                    },
+                    "offsetY": {
+                      "value": 0,
+                      "unit": "px"
+                    },
+                    "blur": {
+                      "value": 0,
+                      "unit": "px"
+                    },
+                    "spread": {
+                      "value": 1,
+                      "unit": "px"
+                    }
+                  }
+                ]
+              },
+              "lg": {
+                "$value": [
+                  {
+                    "color": {
+                      "colorSpace": "oklch",
+                      "components": [
+                        0,
+                        0,
+                        0
+                      ],
+                      "alpha": 0.6
+                    },
+                    "offsetX": {
+                      "value": 0,
+                      "unit": "px"
+                    },
+                    "offsetY": {
+                      "value": 8,
+                      "unit": "px"
+                    },
+                    "blur": {
+                      "value": 24,
+                      "unit": "px"
+                    },
+                    "spread": {
+                      "value": 0,
+                      "unit": "px"
+                    }
+                  },
+                  {
+                    "color": {
+                      "colorSpace": "oklch",
+                      "components": [
+                        1,
+                        0,
+                        0
+                      ],
+                      "alpha": 0.12
+                    },
+                    "offsetX": {
+                      "value": 0,
+                      "unit": "px"
+                    },
+                    "offsetY": {
+                      "value": 0,
+                      "unit": "px"
+                    },
+                    "blur": {
+                      "value": 0,
+                      "unit": "px"
+                    },
+                    "spread": {
+                      "value": 1,
+                      "unit": "px"
+                    }
+                  }
+                ]
+              }
             }
           }
         ]

@@ -724,10 +724,9 @@ xEditor - header actions, panels, drawer, listbox, token and file views
 	background: var(--color-muted-background);
 
 	.cd-shadow-box {
-		/* an opaque tile so the shadow reads */
 		border: none;
 		border-radius: var(--radius-md);
-		background: var(--color-card-background);
+		background: var(--color-primary-background);
 	}
 }
 
