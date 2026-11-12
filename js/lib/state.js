@@ -1,4 +1,6 @@
 // The editor's state: the brand document, session files, autosave, undo/redo and the previous draft.
+import { createStore as idbStore, set, del, clear, entries } from '../vendor/idb-keyval.js';
+
 const DRAFT = 'styleguide:draft';
 const PREVIOUS = 'styleguide:previous';
 const BASE = 'styleguide:base';
@@ -122,34 +124,13 @@ export function createStore({ doc, storage, fileStore }) {
 }
 
 // Browser only: session files in IndexedDB (localStorage is too small for images and fonts).
+// Same database and store names as before, so files saved by earlier versions are still found.
 export function idbFileStore() {
-  const db = new Promise((res, rej) => {
-    const req = indexedDB.open('styleguide', 1);
-    req.onupgradeneeded = () => req.result.createObjectStore('files');
-    req.onsuccess = () => res(req.result);
-    req.onerror = () => rej(req.error);
-  });
-  const run = (mode, fn) => db.then((d) => new Promise((res, rej) => {
-    const tx = d.transaction('files', mode);
-    const out = fn(tx.objectStore('files'));
-    tx.oncomplete = () => res(out?.result);
-    tx.onerror = () => rej(tx.error);
-    tx.onabort = () => rej(tx.error);
-  }));
+  const db = idbStore('styleguide', 'files');
   return {
-    put: (path, data) => run('readwrite', (s) => s.put(data, path)),
-    delete: (path) => run('readwrite', (s) => s.delete(path)),
-    clear: () => run('readwrite', (s) => s.clear()),
-    getAll: () => db.then((d) => new Promise((res, rej) => {
-      const out = new Map();
-      const req = d.transaction('files').objectStore('files').openCursor();
-      req.onsuccess = () => {
-        const c = req.result;
-        if (!c) return res(out);
-        out.set(c.key, c.value);
-        c.continue();
-      };
-      req.onerror = () => rej(req.error);
-    })),
+    put: (path, data) => set(path, data, db),
+    delete: (path) => del(path, db),
+    clear: () => clear(db),
+    getAll: async () => new Map(await entries(db)),
   };
 }

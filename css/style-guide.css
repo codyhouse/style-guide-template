@@ -995,12 +995,10 @@ xEditor - header actions, panels, drawer, listbox, token and file views
 }
 
 .cd-listbox-popup {
-  position: absolute;
+  /* left, top, width and the room left on screen are set by Floating UI while open */
+  position: fixed;
   z-index: 35;
-  top: calc(100% + var(--spacing-xs));
-  left: 0;
-  right: 0;
-  max-height: 16rem;
+  max-height: min(16rem, var(--cd-popup-room, 16rem));
   overflow-y: auto;
   padding: var(--spacing-xs);
   border: 1px solid var(--color-card-border);

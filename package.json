@@ -5,15 +5,18 @@
   "scripts": {
     "test": "node --test \"tests/**/*.test.js\"",
     "build:css": "sass --no-source-map scss/style-guide.scss css/style-guide.css",
-    "vendor": "mkdir -p js/vendor && cp node_modules/fflate/esm/browser.js js/vendor/fflate.js && { echo '/*! culori (MIT) https://culorijs.org */'; cat node_modules/culori/bundled/culori.min.mjs; } > js/vendor/culori.js",
+    "vendor": "sh scripts/vendor.sh",
     "start": "python3 -m http.server 8000",
     "dev": "python3 -m http.server 8000"
   },
   "devDependencies": {
+    "esbuild": "^0.28.2",
     "sass": "^1.108.2"
   },
   "dependencies": {
+    "@floating-ui/dom": "^1.8.0",
     "culori": "^4.0.2",
-    "fflate": "^0.8.3"
+    "fflate": "^0.8.3",
+    "idb-keyval": "^6.3.0"
   }
 }

@@ -1,7 +1,9 @@
 // Listbox: a button that announces its value and opens a role="listbox" popup.
 // Keyboard: arrows, Home/End, typeahead, Enter/Space to pick, Escape to close.
 // An option may carry a swatch (any CSS color) shown as a chip next to its label.
+// The open popup is placed by Floating UI: it flips above or shrinks when there is no room below.
 import { h, icon } from './dom.js';
+import { autoUpdate, computePosition, flip, offset, shift, size } from '../vendor/floating-ui.js';
 
 const chip = (swatch) => (swatch ? h('span', { class: 'cd-chip', 'aria-hidden': 'true', style: { background: swatch } }) : null);
 
@@ -26,6 +28,18 @@ export function listbox(el, { label, options, value, onChange, typeahead = true 
   el.replaceChildren(root);
 
   const optionEls = () => [...popup.children];
+  let stopPlacing = null;
+  const place = () => computePosition(trigger, popup, {
+    strategy: 'fixed',
+    placement: 'bottom-start',
+    middleware: [offset(4), flip({ padding: 8 }), shift({ padding: 8 }), size({
+      padding: 8,
+      apply: ({ availableHeight, rects }) => {
+        popup.style.width = `${rects.reference.width}px`;
+        popup.style.setProperty('--cd-popup-room', `${availableHeight}px`);
+      },
+    })],
+  }).then(({ x, y }) => Object.assign(popup.style, { left: `${x}px`, top: `${y}px` }));
   const show = () => {
     const o = options.find((x) => x.value === current);
     valueEl.replaceChildren(chip(o?.swatch) ?? '', o?.label ?? 'Choose');
@@ -39,11 +53,14 @@ export function listbox(el, { label, options, value, onChange, typeahead = true 
   const open = () => {
     active = Math.max(0, options.findIndex((o) => o.value === current));
     popup.hidden = false;
+    stopPlacing = autoUpdate(trigger, popup, place);
     trigger.setAttribute('aria-expanded', 'true');
     show();
     popup.focus();
   };
   const close = (focus = true) => {
+    stopPlacing?.();
+    stopPlacing = null;
     popup.hidden = true;
     trigger.setAttribute('aria-expanded', 'false');
     if (focus) trigger.focus();
@@ -90,7 +107,11 @@ export function listbox(el, { label, options, value, onChange, typeahead = true 
     }
   });
   const outside = (e) => {
-    if (!root.isConnected) document.removeEventListener('pointerdown', outside); // re-rendered away
+    if (!root.isConnected) {
+      // re-rendered away
+      document.removeEventListener('pointerdown', outside);
+      stopPlacing?.();
+    }
     else if (!popup.hidden && !root.contains(e.target)) close(false);
   };
   document.addEventListener('pointerdown', outside);
