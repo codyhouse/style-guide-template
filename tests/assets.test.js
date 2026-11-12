@@ -55,3 +55,10 @@ test('empty meta when nothing is set', () => {
   delete doc.sets.foundation.$extensions;
   assert.deepEqual(brandMeta(doc, V), { assetGroups: [], fontFiles: [] });
 });
+
+test('srcs that are not plain relative paths are treated as missing', () => {
+  const ctx = { session: new Map(), library: new Set(['../secret.svg', 'https://evil.example/x.svg', '/abs.svg']) };
+  for (const src of ['../secret.svg', 'https://evil.example/x.svg', '/abs.svg', 'logos/../../x.svg', 'javascript:alert(1)']) {
+    assert.equal(resolveAsset({ src }, ctx).source, 'missing', src);
+  }
+});

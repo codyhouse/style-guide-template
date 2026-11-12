@@ -59,3 +59,15 @@ test('font-face', () => {
   assert.match(css, /@font-face \{[^}]*font-family: "Merriweather";[^}]*font-weight: 700;[^}]*src: url\("fonts\/m\.woff2"\) format\("woff2"\);[^}]*unicode-range: U\+0000-00FF;[^}]*font-display: swap;/);
   assert.match(fontFaceRules([{ family: 'X', weight: 400, style: 'italic', src: 'a.ttf' }], (e) => e.src), /format\("truetype"\)/);
 });
+
+test('font family names cannot break out of the CSS string', () => {
+  assert.equal(cssValue('fontFamily', ['A"; } body { x: y']), '"A\\"; } body { x: y"');
+  const css = fontFaceRules([{ family: 'B"}', weight: 400, style: 'normal', src: 'a".woff2' }], (e) => e.src);
+  assert.match(css, /font-family: "B\\"\}";/);
+  assert.match(css, /url\("a\\"\.woff2"\)/);
+});
+
+test('strokeStyle strings are limited to keywords', () => {
+  assert.equal(cssValue('strokeStyle', 'dashed'), 'dashed');
+  assert.equal(cssValue('strokeStyle', 'solid; } x {'), null);
+});

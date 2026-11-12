@@ -1,7 +1,7 @@
 // CSS custom properties from a DTCG resolver document.
 import { flatten, contexts, defaultInputs, mergedTree, aliasTarget } from './resolver.js';
 import { toOklchString } from './color.js';
-import { fontFaceRules } from './fonts.js';
+import { fontFaceRules, cssString } from './fonts.js';
 
 const GENERIC = new Set(['serif', 'sans-serif', 'monospace', 'cursive', 'fantasy', 'system-ui', 'ui-serif',
   'ui-sans-serif', 'ui-monospace', 'ui-rounded', 'math', 'emoji', 'fangsong']);
@@ -24,7 +24,7 @@ export function cssValue(type, value) {
     case 'color': return toOklchString(value);
     case 'dimension':
     case 'duration': return `${value.value}${value.unit}`;
-    case 'fontFamily': return [value].flat().map((f) => (GENERIC.has(f) ? f : `"${f}"`)).join(', ');
+    case 'fontFamily': return [value].flat().map((f) => (GENERIC.has(f) ? f : cssString(f))).join(', ');
     case 'fontWeight': return String(WEIGHTS[value] ?? value);
     case 'cubicBezier': return `cubic-bezier(${value.join(', ')})`;
     case 'shadow': return [value].flat().map((s) => (aliasTarget(s) ? cssValue('shadow', s) : [
@@ -32,8 +32,8 @@ export function cssValue(type, value) {
       cssValue('color', s.color)].join(' '))).join(', ');
     case 'border': return `${cssValue('dimension', value.width)} ${value.style} ${cssValue('color', value.color)}`;
     case 'transition': return `${cssValue('duration', value.duration)} ${cssValue('cubicBezier', value.timingFunction)} ${cssValue('duration', value.delay)}`;
-    case 'number':
-    case 'strokeStyle': return String(value);
+    case 'number': return Number.isFinite(value) ? String(value) : null;
+    case 'strokeStyle': return typeof value === 'string' && /^[a-z-]+$/.test(value) ? value : null;
     default: return null;
   }
 }

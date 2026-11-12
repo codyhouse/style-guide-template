@@ -32,7 +32,12 @@ export const allSrcs = (meta) => [
   ...meta.fontFiles.map((entry) => ({ src: entry.src, kind: 'font', entry })),
 ];
 
+// A src is a plain relative path: no scheme, no leading slash, no '..' segments.
+const safeSrc = (src) => typeof src === 'string' && src !== '' && !/^[a-z][a-z0-9+.-]*:|^\/|\\/i.test(src)
+  && !src.split('/').includes('..');
+
 export function resolveAsset(item, { session, library }) {
+  if (!safeSrc(item.src)) return { source: 'missing' };
   if (session.has(item.src)) return { source: 'session' };
   if (library.has(item.src)) return { source: 'library', url: `library/${item.src}` };
   if (item.provider === 'fontsource') return { source: 'fontsource', url: fileUrl(item) };
