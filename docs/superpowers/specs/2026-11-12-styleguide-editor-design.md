@@ -196,7 +196,7 @@ The page is the preview: every section is styled by the loaded brand's tokens, f
 
 ## Scripts
 
-ES modules bundled by Vite. jQuery and Modernizr removed; the behaviors in `src/main.js` (mobile nav, smooth scroll, active section, typography labels, button snippets) are ported as-is.
+Strict TypeScript, bundled by Vite. jQuery and Modernizr removed; the behaviors in `src/main.ts` (mobile nav, smooth scroll, active section, typography labels, button snippets) are ported as-is.
 
 | Module | Job |
 |---|---|

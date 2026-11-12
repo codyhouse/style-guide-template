@@ -12,13 +12,14 @@ pnpm install
 pnpm dev             # http://localhost:8000, reloads on save
 ```
 
-- `pnpm build`: the site in `dist/`, ready to host as static files
+- `pnpm build`: typecheck, then the site in `dist/`, ready to host as static files
 - `pnpm preview`: serve `dist/` on http://localhost:8000
 - `pnpm test`: unit tests (Vitest)
+- `pnpm typecheck`: TypeScript, strict for `src/`
 
 The dev and preview servers always use port 8000: the browser keeps drafts and uploaded files per address.
 
-Set the site's address in `src/config.js` (`HOSTED_URL`). The README in every exported kit links there, and the brand file's `$extensions` key is derived from it (`https://styleguide.example.com` becomes `com.example.styleguide`).
+Set the site's address in `src/config.ts` (`HOSTED_URL`). The README in every exported kit links there, and the brand file's `$extensions` key is derived from it (`https://styleguide.example.com` becomes `com.example.styleguide`).
 
 ## Using the site
 

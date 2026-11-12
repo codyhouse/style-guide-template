@@ -4,12 +4,16 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
+    "build": "pnpm typecheck && vite build",
     "preview": "vite preview",
-    "test": "vitest run"
+    "test": "vitest run",
+    "typecheck": "tsc -p . && tsc -p tests"
   },
   "devDependencies": {
+    "@types/culori": "^4.0.1",
+    "@types/node": "^26.6.6",
     "sass": "^1.108.2",
+    "typescript": "^7.0.2",
     "vite": "^8.3.8",
     "vitest": "^5.1.0"
   },
