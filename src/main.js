@@ -1,14 +1,15 @@
+import { render } from 'lit-html';
 import { HOSTED_URL } from './config.js';
 import { vendorKey } from './lib/vendor-key.js';
 import { createStore, idbFileStore } from './lib/state.js';
 import { generateCss } from './lib/css.js';
+import { resolve } from './lib/resolver.js';
 import { checkContrast } from './lib/contrast.js';
 import { brandMeta, withBrandMeta, missingAssets, matchDropped, allSrcs, adoptVendor } from './lib/assets.js';
 import { classify, parseBrandJson, loadZip, saveJson, slug, buildExport } from './lib/io.js';
 import * as E from './lib/edit.js';
-import { render, urlFor } from './ui/render.js';
-import { renderPanels } from './ui/panels.js';
-import { renderEditor, rerenderEditor } from './ui/editor.js';
+import { sections, guideView, navView, logoView, urlFor } from './ui/render.js';
+import { editorView } from './ui/editor.js';
 import { download } from './ui/dom.js';
 
 const vendor = vendorKey(HOSTED_URL);
@@ -27,9 +28,10 @@ let warnings = [];
 let pending = [];
 let ambiguous = [];
 
+const addWarnings = (messages) => { warnings = [...new Set([...warnings, ...messages])]; };
 const warn = (...messages) => {
-  warnings = [...new Set([...warnings, ...messages])];
-  drawPanels();
+  addWarnings(messages);
+  draw();
 };
 
 /*******************
@@ -113,21 +115,22 @@ async function routeFilesUnsafe(files) {
   const others = rest.filter((f) => !fonts.includes(f));
   if (fonts.length) await addFontUploads(fonts);
   if (others.length) pending = [...pending, ...(await fillMissing(others))];
-  drawPanels();
+  draw();
 }
 
 /*******************
 	drawing
 ********************/
 const panelHandlers = {
-  onMissingFiles: async (files) => { pending = [...pending, ...(await fillMissing(files))]; drawPanels(); },
+  refresh: () => draw(),
+  onMissingFiles: async (files) => { pending = [...pending, ...(await fillMissing(files))]; draw(); },
   onAssign: async (file, path) => {
     ambiguous = ambiguous.filter((a) => a.file !== file);
     await persist(new Map([[path, file]]));
   },
   onAddPending: async (groupId) => {
     let id = groupId;
-    if (id === '__new') {
+    if (!id) {
       const before = new Set(brandMeta(store.get(), vendor).assetGroups.map((g) => g.id));
       setMeta((m) => E.addGroup(m, 'Uploads'));
       id = brandMeta(store.get(), vendor).assetGroups.find((g) => !before.has(g.id)).id;
@@ -136,23 +139,9 @@ const panelHandlers = {
     pending = [];
     await addUploads(files, id);
   },
-  onDiscardPending: () => { pending = []; drawPanels(); },
-  onDismissWarnings: () => { warnings = []; drawPanels(); },
+  onDiscardPending: () => { pending = []; draw(); },
+  onDismissWarnings: () => { warnings = []; draw(); },
 };
-
-function drawPanels() {
-  const doc = store.get();
-  const meta = brandMeta(doc, vendor);
-  renderPanels(document.getElementById('cd-panels'), {
-    contrast: checkContrast(doc),
-    missing: missingAssets(meta, ctx),
-    ambiguous,
-    pending,
-    groups: meta.assetGroups,
-    warnings: store.saveError ? [...warnings, 'Your edits could not be saved in this browser. Save JSON to keep them.'] : warnings,
-    handlers: panelHandlers,
-  });
-}
 
 function checkFonts() {
   document.fonts?.ready.then(() => {
@@ -162,19 +151,41 @@ function checkFonts() {
 }
 
 let pruneTimer;
+// Every template is built before anything is rendered, so a brand that cannot be shown leaves the page as it was.
+function paint(doc) {
+  const meta = brandMeta(doc, vendor);
+  const tokens = resolve(doc, { theme });
+  const css = generateCss(doc, { vendor, fontSrc: (f) => urlFor(f, ctx) ?? f.src });
+  const list = sections({ doc, tokens, meta, ctx, vendor, refresh: draw });
+  const guide = guideView({ doc, list, panels: {
+    contrast: checkContrast(doc),
+    missing: missingAssets(meta, ctx),
+    ambiguous,
+    pending,
+    groups: meta.assetGroups,
+    warnings: store.saveError ? [...warnings, 'Your edits could not be saved in this browser. Save JSON to keep them.'] : warnings,
+    handlers: panelHandlers,
+  } });
+  const editor = drawer.hidden ? null : editorView(app);
+  document.getElementById('brand-css').textContent = css;
+  document.title = `${doc.name ?? 'Brand'} | Style Guide`;
+  render(logoView(doc, meta, ctx), document.getElementById('cd-logo'));
+  render(guide, main);
+  render(navView(list), nav);
+  if (editor) render(editor, drawerBody);
+}
+
 function draw() {
   const doc = store.get();
   try {
-    const css = generateCss(doc, { vendor, fontSrc: (f) => urlFor(f, ctx) ?? f.src });
-    render({ doc, css, theme, session: store.files, library, vendor });
+    paint(doc);
   } catch (e) {
     // A draft that cannot be shown must never lock the page: fall back, keep the draft as the previous one.
     if (doc === preset) throw e;
-    warn(`This brand could not be shown (${e.message}). Showing the default brand; your draft is under Edit > Restore previous draft.`);
+    addWarnings([`This brand could not be shown (${e.message}). Showing the default brand; your draft is under Edit > Restore previous draft.`]);
     store.load(preset, undefined, { record: false });
     return;
   }
-  drawPanels();
   // aria-disabled, not disabled: the button keeps focus after the last undo
   undoBtn.setAttribute('aria-disabled', String(!store.canUndo()));
   redoBtn.setAttribute('aria-disabled', String(!store.canRedo()));
@@ -198,23 +209,21 @@ themeToggle.addEventListener('click', () => {
   localStorage.setItem(THEME_KEY, theme);
   applyTheme();
   draw();
-  if (!drawer.hidden) renderEditor(drawerBody, app);
 });
 
 /*******************
 	typography
 ********************/
-const heading = document.querySelector('#typography > .cd-box h1');
-const body = heading.nextElementSibling;
-
 function setTypography(element) {
   const s = getComputedStyle(element);
   const family = s.fontFamily.split(',')[0].replace(/['"]/g, '');
-  element.querySelector('span').textContent = `${s.fontWeight} ${family} ${Math.round(parseFloat(s.fontSize))}px`;
+  element.querySelector('.cd-specimen-label').textContent = `${s.fontWeight} ${family} ${Math.round(parseFloat(s.fontSize))}px`;
 }
 function setTypographyLabels() {
+  const heading = document.querySelector('#typography > .cd-box h1');
+  if (!heading) return;
   setTypography(heading);
-  setTypography(body);
+  setTypography(heading.nextElementSibling);
 }
 addEventListener('resize', setTypographyLabels);
 document.fonts?.addEventListener('loadingdone', setTypographyLabels);
@@ -269,7 +278,7 @@ const main = document.querySelector('main');
 const wideDrawer = matchMedia('(min-width: 768px)'); // $S
 wideDrawer.addEventListener('change', () => { if (!drawer.hidden) main.inert = !wideDrawer.matches; });
 const app = {
-  store, vendor, library, manifest, theme: () => theme, addUploads, addFontUploads, warn,
+  store, vendor, library, manifest, theme: () => theme, addUploads, addFontUploads, warn, refresh: () => draw(),
   urlFor: (item) => urlFor(item, ctx),
   load: () => document.getElementById('load-btn').click(),
   save: () => document.getElementById('save-btn').click(),
@@ -277,8 +286,8 @@ const app = {
 };
 
 function openDrawer() {
-  renderEditor(drawerBody, app);
   drawer.hidden = false;
+  draw();
   document.body.classList.add('is-editing');
   main.inert = !wideDrawer.matches; // on phones the drawer covers the guide
   editToggle.setAttribute('aria-pressed', 'true');
@@ -298,10 +307,7 @@ editToggle.addEventListener('click', () => (drawer.hidden ? openDrawer() : close
 ********************/
 const undoBtn = document.getElementById('undo-btn');
 const redoBtn = document.getElementById('redo-btn');
-function step(redo) {
-  if (!(redo ? store.redo() : store.undo())) return;
-  if (!drawer.hidden) rerenderEditor(drawerBody, app);
-}
+const step = (redo) => (redo ? store.redo() : store.undo());
 undoBtn.addEventListener('click', () => step(false));
 redoBtn.addEventListener('click', () => step(true));
 addEventListener('keydown', (e) => {

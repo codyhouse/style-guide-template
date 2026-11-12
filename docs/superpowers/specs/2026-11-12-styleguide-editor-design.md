@@ -184,7 +184,8 @@ The page is the preview: every section is styled by the loaded brand's tokens, f
 - **Header:** light / dark toggle (sets `data-theme` on `<html>`), Edit toggle, Load, Save JSON, Export ZIP, and the section links as one row that scrolls sideways when it does not fit (its own row under the logo on narrow screens).
 - **Contrast panel:** the required pairs in every `theme` context, pass / fail, live.
 - **Edit mode:** a drawer under the header with forms per area (palette, roles, fonts and type, scales, shadow, assets: add / rename / reorder / remove groups, add files to a group by upload or from the library). On wide screens the guide moves aside so edits show beside it. Undo and Redo (Ctrl/Cmd+Z, Ctrl/Cmd+Shift+Z, Ctrl+Y) step through every change of the brand this session. Color fields take any CSS color or the system color picker.
-- Editor UI follows house rules: pickers use the kit's Listbox pattern, lucide icons as inline SVG, mobile-first.
+- Editor UI follows house rules: pickers use the kit's Listbox pattern (the `<cd-listbox>` element), lucide icons as inline SVG, mobile-first.
+- The guide, its nav, the panels and the drawer are lit-html templates rendered from the document on every change, so focus, typing and open sections survive edits, undo and redo.
 
 ## Styles
 
@@ -208,10 +209,12 @@ ES modules bundled by Vite. jQuery and Modernizr removed; the behaviors in `src/
 | `fonts.js` | registers loaded font files (`FontFace` API) and builds `@font-face` rules |
 | `fontsource.js` | family list (cached), file URLs per variant, license fetch |
 | `assets.js` | the resolution rule |
-| `render.js` | state -> DOM; injects generated CSS into one `<style>` |
+| `render.js` | the guide's sections and nav as lit-html templates; object URLs for session files |
+| `editor.js` | the drawer's forms as a lit-html template |
+| `listbox.js`, `fontsource-picker.js` | `<cd-listbox>` and `<cd-fontsource-picker>` custom elements |
 | `io.js` | load resolver / tokens JSON, ZIP, single files (drop anywhere or Load); missing-file matching by name; save JSON; export ZIP |
 
-Dependencies from npm, bundled by Vite: `fflate` (ZIP read / write), `culori` (color conversion and CSS color parsing), `idb-keyval` (session files in IndexedDB), `@floating-ui/dom` (listbox popup placement).
+Dependencies from npm, bundled by Vite: `lit-html` (rendering), `fflate` (ZIP read / write), `culori` (color conversion and CSS color parsing), `idb-keyval` (session files in IndexedDB), `@floating-ui/dom` (listbox popup placement).
 
 ## Export ZIP
 

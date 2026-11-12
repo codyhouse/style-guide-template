@@ -1,7 +1,10 @@
-// Renders every section of the guide from the brand document.
-import { h, icon } from './dom.js';
-import { resolve } from '../lib/resolver.js';
-import { brandMeta, resolveAsset } from '../lib/assets.js';
+// The guide: every section rendered from the brand document, and the nav built from the same list.
+import { html, nothing } from 'lit-html';
+import { repeat } from 'lit-html/directives/repeat.js';
+import { styleMap } from 'lit-html/directives/style-map.js';
+import { icon } from './dom.js';
+import { panelsView } from './panels.js';
+import { resolveAsset } from '../lib/assets.js';
 import { toHex, toRgbaString, toOklchString, cmyk } from '../lib/color.js';
 import { cssName, cssValue, generateCss } from '../lib/css.js';
 import { tailwindCss, shadcnCss } from '../lib/exports.js';
@@ -48,97 +51,85 @@ export function urlFor(entry, ctx) {
 const dim = (v) => (v && typeof v === 'object' ? `${v.value}${v.unit}` : String(v));
 // 9999px and up is the convention for fully round
 const radiusText = (v) => (v.value * (v.unit === 'rem' ? 16 : 1) >= 9999 ? 'full' : dim(v));
-const tokenLabel = (path, value) => [h('code', {}, cssName(path)), ...(value ? [' ', h('span', { class: 'cd-token-value' }, value)] : [])];
+const tokenLabel = (path, value) => html`<code>${cssName(path)}</code>${value ? html` <span class="cd-token-value">${value}</span>` : nothing}`;
 const sizeOf = (data) => (data ? (data.size ?? data.byteLength) : null);
 const formatSize = (n) => (n === null ? '' : n < 1024 ? `${n} B` : n < 1048576 ? `${(n / 1024).toFixed(1)} KB` : `${(n / 1048576).toFixed(1)} MB`);
+const group = (meta, id) => meta.assetGroups.find((g) => g.id === id) ?? { items: [] };
 
-function missing(src) {
-  return h('div', { class: 'cd-missing' }, icon('alert'), h('span', {}, 'Missing file'), h('code', {}, src));
-}
+const missing = (src) => html`<div class="cd-missing">${icon('alert')}<span>Missing file</span><code>${src}</code></div>`;
 
-function image(item, ctx, attrs = {}) {
+function image(item, ctx, alt = item.label ?? '') {
   const url = urlFor(item, ctx);
-  return url ? h('img', { src: url, alt: item.label ?? '', ...attrs }) : missing(item.src);
+  return url ? html`<img src=${url} alt=${alt}>` : missing(item.src);
 }
 
 function fileView(item, ctx) {
   const url = urlFor(item, ctx);
-  if (!url) return h('figure', { class: 'cd-file' }, missing(item.src), h('figcaption', {}, item.label));
+  if (!url) return html`<figure class="cd-file">${missing(item.src)}<figcaption>${item.label}</figcaption></figure>`;
   const ext = extOf(item.src);
   const name = item.src.split('/').pop();
-  return h('figure', { class: 'cd-file' },
-    IMAGE.has(ext) ? h('img', { src: url, alt: item.label ?? name }) : h('div', { class: 'cd-file-card', 'aria-hidden': 'true' }, ext),
-    h('figcaption', {},
-      h('b', {}, item.label ?? name),
-      item.description ? h('small', {}, item.description) : null,
-      h('small', {}, `${name} ${ext.toUpperCase()} ${formatSize(sizeOf(ctx.session.get(item.src)))}`.trim()),
-      h('a', { href: ctx.session.has(item.src) ? downloadUrl(item.src, ctx.session.get(item.src)) : url, download: name }, 'Download')));
+  const data = ctx.session.get(item.src);
+  return html`<figure class="cd-file">
+    ${IMAGE.has(ext) ? html`<img src=${url} alt=${item.label ?? name}>` : html`<div class="cd-file-card" aria-hidden="true">${ext}</div>`}
+    <figcaption>
+      <b>${item.label ?? name}</b>
+      ${item.description ? html`<small>${item.description}</small>` : nothing}
+      <small>${`${name} ${ext.toUpperCase()} ${formatSize(sizeOf(data))}`.trim()}</small>
+      <a href=${data ? downloadUrl(item.src, data) : url} download=${name}>Download</a>
+    </figcaption>
+  </figure>`;
 }
 
-const group = (meta, id) => meta.assetGroups.find((g) => g.id === id) ?? { items: [] };
-
-function renderBranding(body, meta, ctx) {
-  const logos = group(meta, 'logos').items; // the first one also sits in the header
-  body.replaceChildren(
-    h('ul', { class: 'cd-logos' }, logos.map((l) => h('li', { class: 'cd-box' }, image(l, ctx)))),
-    h('ul', { class: 'cd-favicons' }, group(meta, 'favicons').items.map((f) => h('li', {}, image(f, ctx)))),
-  );
+// Click to copy: the button briefly says "Copied" in its live region. That span has no binding,
+// so a re-render in the meantime leaves the message alone.
+async function copy(e, text) {
+  const status = e.currentTarget.querySelector('.cd-copy-status');
+  try {
+    await navigator.clipboard.writeText(text);
+    status.textContent = 'Copied';
+  } catch {
+    status.textContent = 'Copy failed';
+  }
+  setTimeout(() => { status.textContent = ''; }, 1500);
 }
 
-// Click to copy: the button briefly says "Copied" (announced through its live region).
-function copyable(text, content, attrs = {}) {
-  const status = h('span', { class: 'cd-copy-status', 'aria-live': 'polite' });
-  const btn = h('button', { type: 'button', class: 'cd-copy', title: `Copy ${text}`, ...attrs }, content, status);
-  btn.addEventListener('click', async () => {
-    try {
-      await navigator.clipboard.writeText(text);
-      status.textContent = 'Copied';
-    } catch {
-      status.textContent = 'Copy failed';
-    }
-    setTimeout(() => { status.textContent = ''; }, 1500);
-  });
-  return btn;
-}
+const copyable = (text, content, { cls = 'cd-copy', label, tabindex, title = `Copy ${text}` } = {}) => html`<button type="button"
+  class=${cls} title=${title} aria-label=${label ?? nothing} tabindex=${tabindex ?? nothing} @click=${(e) => copy(e, text)}
+  >${content}<span class="cd-copy-status" aria-live="polite"></span></button>`;
 
-function swatch(path, token, vendor) {
+function swatch(path, token, vendor, first) {
   const ext = token.extensions?.[vendor] ?? {};
   const c = token.resolved;
   const name = path.replace(/^color\./, '').replace('.', '-');
   const hex = toHex(c);
-  const cmykText = Array.isArray(ext.cmyk) ? `CMYK ${ext.cmyk.join(' ')}` : `CMYK ${cmyk(c).join(' ')}`;
-  return h('li', {},
-    copyable(hex, h('span', { class: 'cd-color-swatch', style: { background: `var(${cssName(path)})` } }), { 'aria-label': `${name}: copy ${hex}`, class: 'cd-copy cd-copy-swatch' }),
-    h('b', {}, name),
-    // value lines copy on click; keyboard users get one stop per swatch (the hex) instead of five
-    copyable(hex, h('small', {}, hex), { tabindex: '-1' }),
-    copyable(toRgbaString(c), h('small', {}, toRgbaString(c)), { tabindex: '-1' }),
-    copyable(toOklchString(c), h('small', {}, toOklchString(c)), { tabindex: '-1' }),
-    copyable(cmykText, h('small', {}, Array.isArray(ext.cmyk) ? cmykText : `${cmykText} (approx.)`), { tabindex: '-1' }),
-    ext.pantone ? copyable(String(ext.pantone), h('small', {}, String(ext.pantone)), { tabindex: '-1' }) : null);
+  const cmykText = `CMYK ${(Array.isArray(ext.cmyk) ? ext.cmyk : cmyk(c)).join(' ')}`;
+  // value lines copy on click; keyboard users get one stop per swatch (the hex) instead of five
+  const line = (text, shown = text) => copyable(text, html`<small>${shown}</small>`, { tabindex: '-1' });
+  return html`<li>
+    ${copyable(hex, html`<span class="cd-color-swatch" style=${styleMap({ background: `var(${cssName(path)})` })}></span>`,
+      { cls: 'cd-copy cd-copy-swatch', label: `${name}: copy ${hex}`, tabindex: first ? '0' : '-1' })}
+    <b>${name}</b>
+    ${line(hex)}${line(toRgbaString(c))}${line(toOklchString(c))}
+    ${line(cmykText, Array.isArray(ext.cmyk) ? cmykText : `${cmykText} (approx.)`)}
+    ${ext.pantone ? line(String(ext.pantone)) : nothing}
+  </li>`;
 }
 
 // One Tab stop per hue row; arrow keys, Home and End move between its shades.
-function scaleRow(hue, items) {
-  const row = h('ul', { class: 'cd-scale', 'aria-labelledby': `hue-${hue}` }, items);
-  const stops = () => [...row.querySelectorAll('.cd-copy-swatch')];
-  stops().forEach((b, i) => { b.tabIndex = i === 0 ? 0 : -1; });
-  row.addEventListener('keydown', (e) => {
-    const list = stops();
-    const i = list.indexOf(document.activeElement);
-    if (i < 0) return;
-    const next = { ArrowRight: i + 1, ArrowDown: i + 1, ArrowLeft: i - 1, ArrowUp: i - 1, Home: 0, End: list.length - 1 }[e.key];
-    if (next === undefined) return;
-    e.preventDefault();
-    const j = Math.max(0, Math.min(list.length - 1, next));
-    list[i].tabIndex = -1;
-    list[j].tabIndex = 0;
-    list[j].focus();
-  });
-  return row;
+function roveSwatches(e) {
+  const list = [...e.currentTarget.querySelectorAll('.cd-copy-swatch')];
+  const i = list.indexOf(document.activeElement);
+  if (i < 0) return;
+  const next = { ArrowRight: i + 1, ArrowDown: i + 1, ArrowLeft: i - 1, ArrowUp: i - 1, Home: 0, End: list.length - 1 }[e.key];
+  if (next === undefined) return;
+  e.preventDefault();
+  const j = Math.max(0, Math.min(list.length - 1, next));
+  list[i].tabIndex = -1;
+  list[j].tabIndex = 0;
+  list[j].focus();
 }
 
-function renderColors(body, tokens, vendor) {
+function colorsView(tokens, vendor) {
   const hues = new Map();
   const roles = [];
   const other = [];
@@ -149,68 +140,56 @@ function renderColors(body, tokens, vendor) {
     else if (/^\d+$/.test(b) && !rest.length) hues.set(a, [...(hues.get(a) ?? []), [path, t]]);
     else other.push([path, t]);
   }
-  const roleRow = ([path, t]) => h('tr', {},
-    h('td', {}, h('span', { class: 'cd-chip', style: { background: `var(${cssName(path)})` } }), h('code', {}, cssName(path))),
-    h('td', {}, h('code', {}, typeof t.value === 'string' ? t.value : t.value?.$ref ?? toOklchString(t.value))),
-    h('td', {}, toHex(t.resolved)));
-  const table = (rows) => h('div', { class: 'cd-box' }, h('table', { class: 'cd-roles' },
-    h('thead', {}, h('tr', {}, h('th', {}, 'Token'), h('th', {}, 'Value'), h('th', {}, 'Hex'))),
-    h('tbody', {}, rows.map(roleRow))));
-  body.replaceChildren(
-    ...[...hues].flatMap(([hue, shades]) => [h('h3', { id: `hue-${hue}` }, hue), scaleRow(hue, shades.map(([p, t]) => swatch(p, t, vendor)))]),
-    h('h3', {}, 'Roles'), table(roles),
-    ...(other.length ? [h('h3', {}, 'Other tokens'), table(other)] : []),
-  );
+  const table = (rows) => html`<div class="cd-box"><table class="cd-roles">
+    <thead><tr><th>Token</th><th>Value</th><th>Hex</th></tr></thead>
+    <tbody>${rows.map(([path, t]) => html`<tr>
+      <td><span class="cd-chip" style=${styleMap({ background: `var(${cssName(path)})` })}></span><code>${cssName(path)}</code></td>
+      <td><code>${typeof t.value === 'string' ? t.value : t.value?.$ref ?? toOklchString(t.value)}</code></td>
+      <td>${toHex(t.resolved)}</td></tr>`)}</tbody>
+  </table></div>`;
+  return html`
+    ${[...hues].map(([hue, shades]) => html`<h3 id="hue-${hue}">${hue}</h3>
+      <ul class="cd-scale" aria-labelledby="hue-${hue}" @keydown=${roveSwatches}>${shades.map(([p, t], i) => swatch(p, t, vendor, i === 0))}</ul>`)}
+    <h3>Roles</h3>${table(roles)}
+    ${other.length ? html`<h3>Other tokens</h3>${table(other)}` : nothing}`;
 }
 
-function renderTypography(body, tokens, meta) {
+function typographyView(tokens, meta) {
   const sizes = [...tokens].filter(([p, t]) => p.startsWith('font-size.') && t.type === 'dimension');
   const styles = [...tokens].filter(([, t]) => t.type === 'typography');
   const families = new Map();
   for (const f of meta.fontFiles) families.set(f.family, [...(families.get(f.family) ?? []), f]);
   const prop = (path, field) => `var(${cssName(path)}-${field})`;
-  body.replaceChildren(
-    h('div', { class: 'cd-box' }, h('h3', {}, 'Font sizes'),
-      sizes.map(([p, t]) => h('p', { class: 'cd-type-sample', style: { 'font-size': `var(${cssName(p)})` } },
-        'Aa ', h('span', { class: 'cd-type-meta' }, tokenLabel(p, dim(t.resolved)))))),
-    h('div', { class: 'cd-box' }, h('h3', {}, 'Text styles'),
-      styles.map(([p, t]) => h('p', {
-        class: 'cd-type-sample',
-        style: {
-          'font-family': prop(p, 'font-family'), 'font-size': prop(p, 'font-size'), 'font-weight': prop(p, 'font-weight'),
-          'letter-spacing': prop(p, 'letter-spacing'), 'line-height': prop(p, 'line-height'),
-        },
-      }, p.replace(/^typography\./, ''), h('span', { class: 'cd-type-meta' },
-        `${[t.resolved.fontFamily].flat()[0]} ${t.resolved.fontWeight} ${dim(t.resolved.fontSize)} / ${t.resolved.lineHeight}`)))),
-    h('div', { class: 'cd-box' }, h('h3', {}, 'Fonts'),
-      families.size ? [...families].map(([family, files]) => h('div', { class: 'cd-specimen' },
-        h('b', {}, family),
-        files.map((f) => h('p', { style: { 'font-family': cssString(family), 'font-weight': String(f.weight), 'font-style': f.style } },
-          `${f.weight} ${f.style}: The quick brown fox jumps over the lazy dog`,
-          h('span', { class: 'cd-type-meta' }, f.src))))) : h('p', {}, 'No font files loaded yet.')),
-  );
+  return html`
+    <div class="cd-box"><h3>Font sizes</h3>
+      ${sizes.map(([p, t]) => html`<p class="cd-type-sample" style=${styleMap({ 'font-size': `var(${cssName(p)})` })}>Aa
+        <span class="cd-type-meta">${tokenLabel(p, dim(t.resolved))}</span></p>`)}</div>
+    <div class="cd-box"><h3>Text styles</h3>
+      ${styles.map(([p, t]) => html`<p class="cd-type-sample" style=${styleMap({
+        'font-family': prop(p, 'font-family'), 'font-size': prop(p, 'font-size'), 'font-weight': prop(p, 'font-weight'),
+        'letter-spacing': prop(p, 'letter-spacing'), 'line-height': prop(p, 'line-height'),
+      })}>${p.replace(/^typography\./, '')}<span class="cd-type-meta">${[t.resolved.fontFamily].flat()[0]} ${t.resolved.fontWeight} ${dim(t.resolved.fontSize)} / ${t.resolved.lineHeight}</span></p>`)}</div>
+    <div class="cd-box"><h3>Fonts</h3>
+      ${families.size ? [...families].map(([family, files]) => html`<div class="cd-specimen"><b>${family}</b>
+        ${files.map((f) => html`<p style=${styleMap({ 'font-family': cssString(family), 'font-weight': String(f.weight), 'font-style': f.style })}>
+          ${f.weight} ${f.style}: The quick brown fox jumps over the lazy dog<span class="cd-type-meta">${f.src}</span></p>`)}</div>`)
+        : html`<p>No font files loaded yet.</p>`}</div>`;
 }
 
-function renderIcons(body, meta, ctx) {
-  body.replaceChildren(h('ul', { class: 'cd-box' },
-    group(meta, 'icons').items.map((i) => h('li', {}, h('figure', {}, image(i, ctx, { alt: '' }), h('figcaption', {}, i.label ?? i.src.split('/').pop()))))));
-}
-
-function renderScale(body, tokens, prefix, kind) {
+function scaleView(tokens, prefix, kind) {
   const list = [...tokens].filter(([p]) => p.startsWith(`${prefix}.`));
   if (kind === 'spacing') {
-    body.replaceChildren(h('div', { class: 'cd-box cd-token-list' }, list.map(([p, t]) => h('div', { class: 'cd-token-row' },
-      h('span', {}, tokenLabel(p, dim(t.resolved))), h('div', { class: 'cd-bar', style: { width: `var(${cssName(p)})` } })))));
-    return;
+    return html`<div class="cd-box cd-token-list">${list.map(([p, t]) => html`<div class="cd-token-row">
+      <span>${tokenLabel(p, dim(t.resolved))}</span><div class="cd-bar" style=${styleMap({ width: `var(${cssName(p)})` })}></div></div>`)}</div>`;
   }
-  const style = (p) => (kind === 'radius' ? { 'border-radius': `var(${cssName(p)})` } : { 'box-shadow': `var(${cssName(p)})` });
-  body.replaceChildren(h('div', { class: `cd-swatch-grid${kind === 'shadow' ? ' cd-shadow-stage' : ''}` }, list.map(([p, t]) => h('figure', {},
-    h('div', { class: kind === 'radius' ? 'cd-radius-box' : 'cd-shadow-box', style: style(p) }),
-    h('figcaption', {}, tokenLabel(p, kind === 'radius' ? radiusText(t.resolved) : null))))));
+  const style = (p) => styleMap(kind === 'radius' ? { 'border-radius': `var(${cssName(p)})` } : { 'box-shadow': `var(${cssName(p)})` });
+  return html`<div class="cd-swatch-grid ${kind === 'shadow' ? 'cd-shadow-stage' : ''}">${list.map(([p, t]) => html`<figure>
+    <div class=${kind === 'radius' ? 'cd-radius-box' : 'cd-shadow-box'} style=${style(p)}></div>
+    <figcaption>${tokenLabel(p, kind === 'radius' ? radiusText(t.resolved) : null)}</figcaption></figure>`)}</div>`;
 }
 
 let codeTab = 'css';
-function renderCode(body, doc, vendor) {
+function codeView(doc, vendor, refresh) {
   const fontSrc = (f) => `../${f.src}`; // same layout as the brand kit's css/ folder
   const tabs = [
     ['css', 'CSS variables', () => generateCss(doc, { vendor, fontSrc })],
@@ -218,90 +197,81 @@ function renderCode(body, doc, vendor) {
     ['shadcn', 'shadcn/ui', () => shadcnCss(doc)],
   ];
   const id = (k) => `cd-code-${k}`;
-  const list = h('div', { role: 'tablist', class: 'cd-tabs', 'aria-label': 'Code format' });
-  const panel = h('div', { role: 'tabpanel', class: 'cd-code', id: 'cd-code-panel' });
-  const copySlot = h('div', {});
+  const [, label, make] = tabs.find((t) => t[0] === codeTab);
+  const code = make();
   const show = (key, focus) => {
     codeTab = key;
-    const [, label, make] = tabs.find((t) => t[0] === key);
-    const code = make();
-    for (const btn of list.children) {
-      const on = btn.dataset.tab === key;
-      btn.setAttribute('aria-selected', String(on));
-      btn.tabIndex = on ? 0 : -1;
-      if (on && focus) btn.focus();
-    }
-    panel.setAttribute('aria-labelledby', id(key));
-    copySlot.replaceChildren(copyable(code, h('span', {}, icon('copy'), 'Copy'), { class: 'btn btn-secondary btn-small cd-copy', 'aria-label': `Copy ${label}`, title: `Copy ${label}` }));
-    panel.replaceChildren(h('pre', { tabindex: '0', 'aria-label': label }, h('code', {}, code)));
+    refresh();
+    if (focus) document.getElementById(id(key))?.focus();
   };
-  for (const [key, label] of tabs) {
-    list.append(h('button', { type: 'button', role: 'tab', id: id(key), 'data-tab': key, 'aria-controls': 'cd-code-panel', onclick: () => show(key) }, label));
-  }
-  list.addEventListener('keydown', (e) => {
+  const onKey = (e) => {
     const i = tabs.findIndex((t) => t[0] === codeTab);
     const next = { ArrowRight: i + 1, ArrowLeft: i - 1, Home: 0, End: tabs.length - 1 }[e.key];
     if (next === undefined) return;
     e.preventDefault();
     show(tabs[(next + tabs.length) % tabs.length][0], true);
-  });
-  body.replaceChildren(h('div', { class: 'cd-code-bar' }, list, copySlot), panel);
-  show(codeTab);
+  };
+  return html`<div class="cd-code-bar">
+      <div role="tablist" class="cd-tabs" aria-label="Code format" @keydown=${onKey}>
+        ${tabs.map(([key, text]) => html`<button type="button" role="tab" id=${id(key)} aria-controls="cd-code-panel"
+          aria-selected=${String(key === codeTab)} tabindex=${key === codeTab ? '0' : '-1'} @click=${() => show(key)}>${text}</button>`)}
+      </div>
+      <div>${copyable(code, html`<span>${icon('copy')}Copy</span>`, { cls: 'btn btn-secondary btn-small cd-copy', label: `Copy ${label}`, title: `Copy ${label}` })}</div>
+    </div>
+    <div role="tabpanel" class="cd-code" id="cd-code-panel" aria-labelledby=${id(codeTab)}>
+      <pre tabindex="0" aria-label=${label}><code>${code}</code></pre>
+    </div>`;
 }
 
 const SHOWN = ['color.', 'spacing.', 'radius.', 'shadow.', 'font-size.', 'typography.', 'font.'];
-function renderOther(main, tokens) {
-  main.querySelector('#other-tokens')?.remove();
+function otherTokensView(rest) {
+  return html`<div class="cd-box"><table class="cd-roles">
+    <thead><tr><th>Token</th><th>Type</th><th>CSS value</th></tr></thead>
+    <tbody>${rest.map(([p, t]) => html`<tr><td><code>${cssName(p)}</code></td><td>${t.type}</td><td><code>${cssValue(t.type, t.value) ?? ''}</code></td></tr>`)}</tbody>
+  </table></div>`;
+}
+
+// The specimen's labels ("300 Open Sans 31px") are measured after rendering; their spans have no binding.
+const specimen = html`<div class="cd-box">
+  <h1 role="none">Heading, <span class="cd-specimen-label"></span></h1>
+  <p>Aa - <span class="cd-specimen-label"></span>. Lorem ipsum dolor sit amet, consectetur adipisicing elit. Omnis voluptate distinctio reprehenderit, autem deleniti ad <a href="#0">voluptatum eaque</a>. Optio ea aperiam nisi distinctio nemo repellat, voluptate fugiat. Quidem neque illum, blanditiis!</p>
+</div>`;
+
+// Sections in page order: { id, title, cls, body }.
+export function sections({ doc, tokens, meta, ctx, vendor, refresh }) {
   const rest = [...tokens].filter(([p]) => !SHOWN.some((x) => p.startsWith(x)));
-  if (!rest.length) return;
-  main.insertBefore(h('section', { id: 'other-tokens' }, h('h2', {}, 'Other tokens'),
-    h('div', { class: 'cd-box' }, h('table', { class: 'cd-roles' },
-      h('thead', {}, h('tr', {}, h('th', {}, 'Token'), h('th', {}, 'Type'), h('th', {}, 'CSS value'))),
-      h('tbody', {}, rest.map(([p, t]) => h('tr', {}, h('td', {}, h('code', {}, cssName(p))), h('td', {}, t.type), h('td', {}, h('code', {}, cssValue(t.type, t.value) ?? '')))))))),
-  main.querySelector('#css-variables'));
+  const customs = meta.assetGroups.filter((g) => !BUILT_IN_GROUPS.has(g.id)).map((g) => ({
+    id: `group-${g.id}`, title: g.label ?? g.id, cls: 'cd-group',
+    body: g.items.length ? html`<div class="cd-files">${g.items.map((i) => fileView(i, ctx))}</div>` : html`<p>No files in this group yet.</p>`,
+  }));
+  return [
+    { id: 'branding', title: 'Branding', cls: 'cd-branding', body: html`
+      <ul class="cd-logos">${group(meta, 'logos').items.map((l) => html`<li class="cd-box">${image(l, ctx)}</li>`)}</ul>
+      <ul class="cd-favicons">${group(meta, 'favicons').items.map((f) => html`<li>${image(f, ctx)}</li>`)}</ul>` },
+    { id: 'colors', title: 'Colors', cls: 'cd-colors', body: colorsView(tokens, vendor) },
+    { id: 'typography', title: 'Typography', cls: 'cd-typography', lead: specimen, body: typographyView(tokens, meta) },
+    { id: 'icons', title: 'Icons', cls: 'cd-icons', body: html`<ul class="cd-box">${group(meta, 'icons').items.map((i) => html`<li><figure>
+      ${image(i, ctx, '')}<figcaption>${i.label ?? i.src.split('/').pop()}</figcaption></figure></li>`)}</ul>` },
+    ...customs,
+    { id: 'spacing', title: 'Spacing', cls: 'cd-spacing', body: scaleView(tokens, 'spacing', 'spacing') },
+    { id: 'radius', title: 'Radius', cls: 'cd-radius', body: scaleView(tokens, 'radius', 'radius') },
+    { id: 'shadow', title: 'Shadow', cls: 'cd-shadow', body: scaleView(tokens, 'shadow', 'shadow') },
+    ...(rest.length ? [{ id: 'other-tokens', title: 'Other tokens', body: otherTokensView(rest) }] : []),
+    { id: 'css-variables', title: 'Code', cls: 'cd-css-variables', body: codeView(doc, vendor, refresh) },
+  ];
 }
 
-function renderCustomGroups(main, meta, ctx) {
-  for (const s of main.querySelectorAll('section[data-group]')) s.remove();
-  const before = main.querySelector('#spacing');
-  for (const g of meta.assetGroups.filter((x) => !BUILT_IN_GROUPS.has(x.id))) {
-    main.insertBefore(h('section', { id: `group-${g.id}`, 'data-group': g.id, class: 'cd-group' },
-      h('h2', {}, g.label ?? g.id),
-      g.items.length ? h('div', { class: 'cd-files' }, g.items.map((i) => fileView(i, ctx))) : h('p', {}, 'No files in this group yet.')), before);
-  }
-}
+export const guideView = ({ doc, list, panels }) => html`
+  <h1>${doc.name ?? 'Style Guide'}</h1>
+  <div class="cd-panels" aria-live="polite">${panelsView(panels)}</div>
+  ${repeat(list, (s) => s.id, (s) => html`<section id=${s.id} class=${s.cls ?? nothing}>
+    <h2>${s.title}</h2>${s.lead ?? nothing}<div class="cd-section-body">${s.body}</div>
+  </section>`)}`;
 
-function renderNav(nav, main) {
-  nav.replaceChildren(...[...main.querySelectorAll(':scope > section')].map((s) =>
-    h('li', {}, h('a', { href: `#${s.id}` }, s.querySelector('h2').textContent))));
-}
+export const navView = (list) => list.map((s) => html`<li><a href="#${s.id}">${s.title}</a></li>`);
 
-function renderHeader(doc, meta, ctx) {
+export function logoView(doc, meta, ctx) {
   const [logo] = group(meta, 'logos').items;
-  document.getElementById('cd-logo').replaceChildren(logo && urlFor(logo, ctx)
-    ? h('img', { src: urlFor(logo, ctx), alt: doc.name ?? 'Logo' })
-    : h('span', { class: 'cd-sr-only' }, doc.name ?? 'Logo'));
-  document.getElementById('cd-title').textContent = doc.name ?? 'Style Guide';
-  document.title = `${doc.name ?? 'Brand'} | Style Guide`;
-}
-
-export function render({ doc, css, theme, session, library, vendor }) {
-  const ctx = { session, library };
-  const meta = brandMeta(doc, vendor);
-  const tokens = resolve(doc, { theme });
-  const main = document.querySelector('main');
-  const body = (id) => main.querySelector(`#${id} .cd-section-body`);
-  document.getElementById('brand-css').textContent = css;
-  renderHeader(doc, meta, ctx);
-  renderBranding(body('branding'), meta, ctx);
-  renderColors(body('colors'), tokens, vendor);
-  renderTypography(body('typography'), tokens, meta);
-  renderIcons(body('icons'), meta, ctx);
-  renderScale(body('spacing'), tokens, 'spacing', 'spacing');
-  renderScale(body('radius'), tokens, 'radius', 'radius');
-  renderScale(body('shadow'), tokens, 'shadow', 'shadow');
-  renderCode(body('css-variables'), doc, vendor);
-  renderCustomGroups(main, meta, ctx);
-  renderOther(main, tokens);
-  renderNav(document.getElementById('cd-nav'), main);
+  const url = logo && urlFor(logo, ctx);
+  return url ? html`<img src=${url} alt=${doc.name ?? 'Logo'}>` : html`<span class="cd-sr-only">${doc.name ?? 'Logo'}</span>`;
 }
