@@ -97,3 +97,54 @@ test('prune deletes files no draft refers to', async () => {
   assert.deepEqual([...s.files.keys()], ['g/keep.svg']);
   assert.deepEqual([...(await fileStore.getAll()).keys()], ['g/keep.svg']);
 });
+
+test('undo and redo step through edits; a new edit drops the redo steps', () => {
+  const s = createStore({ doc: a, storage: mem(), fileStore: memFiles() });
+  assert.equal(s.canUndo(), false);
+  s.set(b);
+  s.update(edit);
+  assert.equal(s.undo(), true);
+  assert.deepEqual(s.get(), b);
+  assert.equal(s.undo(), true);
+  assert.deepEqual(s.get(), a);
+  assert.equal(s.undo(), false);
+  assert.equal(s.redo(), true);
+  assert.deepEqual(s.get(), b);
+  s.set(a);
+  assert.equal(s.canRedo(), false);
+});
+
+test('loading and clearing can be undone; a load that skips history cannot', () => {
+  const s = createStore({ doc: a, storage: mem(), fileStore: memFiles() });
+  s.load(b);
+  s.clearDraft();
+  assert.deepEqual(s.get(), b);
+  s.update(edit);
+  s.clearDraft();
+  s.undo();
+  assert.deepEqual(s.get(), edit(b));
+  s.load(a, undefined, { record: false });
+  s.undo();
+  assert.notDeepEqual(s.get(), a);
+  assert.deepEqual(s.get(), b);
+});
+
+test('undo history is capped', () => {
+  const s = createStore({ doc: { n: 0 }, storage: mem(), fileStore: memFiles() });
+  for (let n = 1; n <= 60; n++) s.set({ n });
+  let steps = 0;
+  while (s.undo()) steps++;
+  assert.equal(steps, 50);
+  assert.deepEqual(s.get(), { n: 10 });
+});
+
+test('subscribers see the history as it is after an undo or redo', () => {
+  const s = createStore({ doc: a, storage: mem(), fileStore: memFiles() });
+  s.set(b);
+  let seen;
+  s.subscribe(() => { seen = [s.canUndo(), s.canRedo()]; });
+  s.undo();
+  assert.deepEqual(seen, [false, true]);
+  s.redo();
+  assert.deepEqual(seen, [true, false]);
+});

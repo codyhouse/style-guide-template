@@ -1,7 +1,8 @@
-// The editor's state: the brand document, session files, autosave and the previous draft.
+// The editor's state: the brand document, session files, autosave, undo/redo and the previous draft.
 const DRAFT = 'styleguide:draft';
 const PREVIOUS = 'styleguide:previous';
 const BASE = 'styleguide:base';
+const HISTORY = 50;
 
 const read = (storage, key) => {
   try { return JSON.parse(storage.getItem(key) ?? 'null'); } catch { return null; }
@@ -13,6 +14,19 @@ export function createStore({ doc, storage, fileStore }) {
   let timer = null;
   const subs = new Set();
   const files = new Map();
+  // undo history is per session, not saved
+  let past = [];
+  let future = [];
+  const record = () => {
+    past = [...past, current].slice(-HISTORY);
+    future = [];
+  };
+  const show = (next) => {
+    current = next;
+    clearTimeout(timer);
+    timer = setTimeout(store.flush, 300);
+    for (const fn of subs) fn(current);
+  };
 
   const store = {
     files,
@@ -20,10 +34,27 @@ export function createStore({ doc, storage, fileStore }) {
     get: () => current,
     subscribe(fn) { subs.add(fn); return () => subs.delete(fn); },
     set(next) {
-      current = next;
-      clearTimeout(timer);
-      timer = setTimeout(store.flush, 300);
-      for (const fn of subs) fn(current);
+      if (next !== current) record();
+      show(next);
+    },
+    canUndo: () => past.length > 0,
+    canRedo: () => future.length > 0,
+    // history is settled before subscribers run, so they see the right canUndo / canRedo
+    undo() {
+      if (!past.length) return false;
+      const prev = past.at(-1);
+      future = [current, ...future];
+      past = past.slice(0, -1);
+      show(prev);
+      return true;
+    },
+    redo() {
+      if (!future.length) return false;
+      const next = future[0];
+      past = [...past, current];
+      future = future.slice(1);
+      show(next);
+      return true;
     },
     update: (fn) => store.set(fn(current)),
     flush() {
@@ -35,12 +66,14 @@ export function createStore({ doc, storage, fileStore }) {
         store.saveError = e;
       }
     },
-    load(next, newFiles) {
+    // record: false keeps the replaced document out of undo (used when it cannot be shown at all).
+    load(next, newFiles, { record: undoable = true } = {}) {
       storage.setItem(PREVIOUS, JSON.stringify(current));
       base = next;
       storage.setItem(BASE, JSON.stringify(base));
       if (newFiles) store.addFiles(newFiles);
-      store.set(next);
+      if (undoable) record();
+      show(next);
       store.flush();
     },
     hasPrevious: () => storage.getItem(PREVIOUS) !== null,
@@ -57,6 +90,7 @@ export function createStore({ doc, storage, fileStore }) {
       clearTimeout(timer);
       storage.setItem(PREVIOUS, JSON.stringify(current));
       storage.removeItem(DRAFT);
+      record();
       current = base;
       for (const fn of subs) fn(current);
     },

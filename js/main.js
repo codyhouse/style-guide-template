@@ -8,7 +8,7 @@ import { classify, parseBrandJson, loadZip, saveJson, slug, buildExport } from '
 import * as E from './lib/edit.js';
 import { render, urlFor } from './ui/render.js';
 import { renderPanels } from './ui/panels.js';
-import { renderEditor } from './ui/editor.js';
+import { renderEditor, rerenderEditor } from './ui/editor.js';
 import { download } from './ui/dom.js';
 
 const vendor = vendorKey(HOSTED_URL);
@@ -168,13 +168,16 @@ function draw() {
     const css = generateCss(doc, { vendor, fontSrc: (f) => urlFor(f, ctx) ?? f.src });
     render({ doc, css, theme, session: store.files, library, vendor });
   } catch (e) {
-    // A draft that cannot be shown must never lock the page: fall back, keep the draft under Undo.
+    // A draft that cannot be shown must never lock the page: fall back, keep the draft as the previous one.
     if (doc === preset) throw e;
-    warn(`This brand could not be shown (${e.message}). Showing the default brand; your draft is under Edit > Undo.`);
-    store.load(preset);
+    warn(`This brand could not be shown (${e.message}). Showing the default brand; your draft is under Edit > Restore previous draft.`);
+    store.load(preset, undefined, { record: false });
     return;
   }
   drawPanels();
+  // aria-disabled, not disabled: the button keeps focus after the last undo
+  undoBtn.setAttribute('aria-disabled', String(!store.canUndo()));
+  redoBtn.setAttribute('aria-disabled', String(!store.canRedo()));
   setTypographyLabels();
   updateNavigation();
   checkFonts();
@@ -289,6 +292,28 @@ function closeDrawer() {
   editToggle.focus();
 }
 editToggle.addEventListener('click', () => (drawer.hidden ? openDrawer() : closeDrawer()));
+
+/*******************
+	undo and redo
+********************/
+const undoBtn = document.getElementById('undo-btn');
+const redoBtn = document.getElementById('redo-btn');
+function step(redo) {
+  if (!(redo ? store.redo() : store.undo())) return;
+  if (!drawer.hidden) rerenderEditor(drawerBody, app);
+}
+undoBtn.addEventListener('click', () => step(false));
+redoBtn.addEventListener('click', () => step(true));
+addEventListener('keydown', (e) => {
+  if (!(e.ctrlKey || e.metaKey) || e.altKey) return;
+  const key = e.key.toLowerCase();
+  const redo = (key === 'z' && e.shiftKey) || (key === 'y' && !e.shiftKey);
+  if (key !== 'z' && !redo) return;
+  // text fields keep their own undo
+  if (e.target.closest?.('input, textarea, [contenteditable], [role=listbox]')) return;
+  e.preventDefault();
+  step(redo);
+});
 document.getElementById('drawer-close').addEventListener('click', closeDrawer);
 drawer.addEventListener('keydown', (e) => {
   if (e.key === 'Escape' && !e.target.closest('[role=listbox]')) closeDrawer();

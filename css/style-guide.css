@@ -753,6 +753,11 @@ xEditor - header actions, panels, drawer, listbox, token and file views
   content: none;
 }
 
+.cd-drawer-actions {
+  display: flex;
+  gap: var(--spacing-xs);
+}
+
 .cd-drawer-body {
   flex: 1;
   overflow-y: auto;

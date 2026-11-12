@@ -87,13 +87,18 @@ function colorError(input, ok) {
   }
 }
 
+// A listbox's data-key is on its wrapper, so focus goes to the button inside.
+export function rerenderEditor(body, app) {
+  const key = document.activeElement?.closest('[data-key]')?.dataset.key;
+  renderEditor(body, app);
+  if (!key) return;
+  const sel = `[data-key="${CSS.escape(key)}"]`;
+  (body.querySelector(`${sel} button`) ?? body.querySelector(sel))?.focus();
+}
+
 export function renderEditor(body, app) {
   const { store, vendor, library, manifest } = app;
-  const rerender = () => {
-    const key = document.activeElement?.closest('[data-key]')?.dataset.key;
-    renderEditor(body, app);
-    if (key) body.querySelector(`[data-key="${CSS.escape(key)}"] button, [data-key="${CSS.escape(key)}"]`)?.focus();
-  };
+  const rerender = () => rerenderEditor(body, app);
   const doc = store.get();
   const tree = E.foundation(doc);
   const tokens = resolve(doc, { theme: app.theme() });
@@ -126,8 +131,8 @@ export function renderEditor(body, app) {
     }),
     h('div', { class: 'cd-field-row' },
       h('button', { type: 'button', class: 'btn btn-secondary btn-small', onclick: () => { store.clearDraft(); rerender(); } }, 'Clear local draft'),
-      store.hasPrevious() ? h('button', { type: 'button', class: 'btn btn-secondary btn-small', onclick: () => { store.restorePrevious(); rerender(); } }, 'Undo: restore previous draft') : null),
-    h('p', { class: 'cd-hint' }, 'Clearing or replacing keeps your previous draft, so it can be undone.'));
+      store.hasPrevious() ? h('button', { type: 'button', class: 'btn btn-secondary btn-small', onclick: () => { store.restorePrevious(); rerender(); } }, 'Restore previous draft') : null),
+    h('p', { class: 'cd-hint' }, 'Clearing or replacing keeps your previous draft, so it can be restored. Undo (Ctrl+Z) steps back through every edit.'));
 
   /* palette */
   const hues = Object.keys(tree.color ?? {}).filter((k) => !k.startsWith('$') && !ROLES.includes(k)

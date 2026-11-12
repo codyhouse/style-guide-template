@@ -24,6 +24,7 @@ Set the site's address in `js/config.js` (`HOSTED_URL`). The README in every exp
 - **Edit:** palette (11 OKLCH shades per hue, with CMYK and Pantone), roles per theme, fonts and text styles, spacing / radius / font-size scales, shadows, and asset groups.
 - **Fonts:** pick from [Fontsource](https://fontsource.org) (no API key), upload font files, or use the library.
 - **Save JSON** downloads the brand file. **Export ZIP** downloads the kit: the brand file, `css/theme.css`, fonts with their licenses, and one folder per asset group.
+- Undo and Redo (Ctrl/Cmd+Z, Ctrl/Cmd+Shift+Z) step back and forward through every edit.
 - Edits are kept in the browser (localStorage and IndexedDB) until you clear the draft.
 - The Contrast panel checks every role's text against its background, and input and focus borders against the page, in both themes. Failures are warnings.
 

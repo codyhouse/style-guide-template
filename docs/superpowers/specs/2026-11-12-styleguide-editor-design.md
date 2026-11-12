@@ -183,7 +183,7 @@ The page is the preview: every section is styled by the loaded brand's tokens, f
 - **New sections:** CSS Variables (the live generated CSS, copyable), Spacing, Radius, Shadow (each scale shown visually with its token name and value), and one section per custom asset group, added to the nav. Images preview inline; other files show as a file card (name, type, size); every item downloads.
 - **Header:** light / dark toggle (sets `data-theme` on `<html>`), Edit toggle, Load, Save JSON, Export ZIP, and the section links as one row that scrolls sideways when it does not fit (its own row under the logo on narrow screens).
 - **Contrast panel:** the required pairs in every `theme` context, pass / fail, live.
-- **Edit mode:** a drawer with forms per area (palette, roles, fonts and type, scales, shadow, assets: add / rename / reorder / remove groups, add files to a group by upload or from the library).
+- **Edit mode:** a drawer under the header with forms per area (palette, roles, fonts and type, scales, shadow, assets: add / rename / reorder / remove groups, add files to a group by upload or from the library). On wide screens the guide moves aside so edits show beside it. Undo and Redo (Ctrl/Cmd+Z, Ctrl/Cmd+Shift+Z, Ctrl+Y) step through every change of the brand this session. Color fields take any CSS color or the system color picker.
 - Editor UI follows house rules: pickers use the kit's Listbox pattern, lucide icons as inline SVG, mobile-first.
 
 ## Styles

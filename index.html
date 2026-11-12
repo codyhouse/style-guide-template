@@ -102,10 +102,20 @@
 	<aside id="cd-drawer" class="cd-drawer" aria-labelledby="cd-drawer-title" hidden>
 		<div class="cd-drawer-header">
 			<h2 id="cd-drawer-title">Edit brand</h2>
-			<button type="button" class="cd-action" id="drawer-close">
-				<svg class="cd-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
-				<span>Close</span>
-			</button>
+			<div class="cd-drawer-actions">
+				<button type="button" class="cd-action" id="undo-btn" title="Undo (Ctrl+Z)" aria-keyshortcuts="Control+Z Meta+Z" aria-disabled="true">
+					<svg class="cd-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 5.5 5.5 5.5 5.5 0 0 1-5.5 5.5H11"/></svg>
+					<span>Undo</span>
+				</button>
+				<button type="button" class="cd-action" id="redo-btn" title="Redo (Ctrl+Shift+Z)" aria-keyshortcuts="Control+Shift+Z Meta+Shift+Z Control+Y" aria-disabled="true">
+					<svg class="cd-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m15 14 5-5-5-5"/><path d="M20 9H9.5A5.5 5.5 0 0 0 4 14.5 5.5 5.5 0 0 0 9.5 20H13"/></svg>
+					<span>Redo</span>
+				</button>
+				<button type="button" class="cd-action" id="drawer-close" title="Close the editor (Esc)">
+					<svg class="cd-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+					<span>Close</span>
+				</button>
+			</div>
 		</div>
 		<div class="cd-drawer-body" id="cd-drawer-body"></div>
 	</aside>
