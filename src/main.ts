@@ -1,5 +1,7 @@
 import { render } from 'lit-html';
+import * as z from 'zod/mini';
 import { HOSTED_URL } from './config.js';
+import { manifest as manifestSchema } from './lib/schema.js';
 import { vendorKey } from './lib/vendor-key.js';
 import { createStore, idbFileStore } from './lib/state.js';
 import { generateCss } from './lib/css.js';
@@ -13,7 +15,7 @@ import { editorView } from './ui/editor.js';
 import { download } from './ui/dom.js';
 import type { EditorApp } from './ui/editor.js';
 import type { PanelHandlers, PanelsState } from './ui/panels.js';
-import type { BrandMeta, Manifest, ResolverDoc, SessionFiles } from './lib/types.js';
+import type { BrandMeta, ResolverDoc, SessionFiles } from './lib/types.js';
 
 // The page's fixed elements: a missing one is a broken index.html, not a state to handle.
 function required<T extends HTMLElement = HTMLElement>(selector: string): T {
@@ -26,7 +28,7 @@ const vendor = vendorKey(HOSTED_URL);
 const THEME_KEY = 'styleguide:theme';
 const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)');
 
-const manifest: Manifest = await fetch('library/manifest.json').then((r) => r.json());
+const manifest = z.parse(manifestSchema, await fetch('library/manifest.json').then((r) => r.json()));
 const library = new Set<string>(manifest.files);
 const preset: ResolverDoc = await fetch(`library/${manifest.brands[0].path}`).then((r) => r.json());
 const store = createStore({ doc: preset, storage: localStorage, fileStore: idbFileStore() });

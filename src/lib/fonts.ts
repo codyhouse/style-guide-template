@@ -20,19 +20,3 @@ export function fontFaceRules(fontFiles: FontFile[] = [], fontSrc: (f: FontFile)
     '}',
   ].join('\n')).join('\n');
 }
-
-// Browser only. Resolves with the entries the browser could not load.
-export async function registerFonts(fontFiles: FontFile[] = [], urlFor: (f: FontFile) => string) {
-  const failed: FontFile[] = [];
-  await Promise.all(fontFiles.map(async (f) => {
-    try {
-      const face = new FontFace(f.family, `url("${urlFor(f)}")`, {
-        weight: String(f.weight), style: f.style, ...(f.unicodeRange ? { unicodeRange: f.unicodeRange } : {}),
-      });
-      document.fonts.add(await face.load());
-    } catch {
-      failed.push(f);
-    }
-  }));
-  return { failed };
-}

@@ -2,7 +2,8 @@
 // Fires "pick" with the chosen font file entries as detail.
 import { html, nothing, render } from 'lit-html';
 import { keyed } from 'lit-html/directives/keyed.js';
-import { fetchList, fetchFont, fontEntries, type FontDetail, type FontListing } from '../lib/fontsource.js';
+import { fetchList, fetchFont, fontEntries } from '../lib/fontsource.js';
+import type { FontDetail, FontListing } from '../lib/types.js';
 import './listbox.js';
 
 type Detail =

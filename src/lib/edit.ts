@@ -97,7 +97,7 @@ export function uniquePath(path: string, taken: Set<string>): string {
 const WEIGHT_WORDS: Array<[string, number]> = [['extrabold', 800], ['ultrabold', 800], ['semibold', 600], ['demibold', 600], ['extralight', 200],
   ['ultralight', 200], ['thin', 100], ['light', 300], ['regular', 400], ['medium', 500], ['bold', 700], ['black', 900], ['heavy', 900]];
 
-export function fontFromFileName(name: string): { family: string; weight: number; style: string } {
+export function fontFromFileName(name: string): Pick<FontFile, 'family' | 'weight' | 'style'> {
   const stem = name.replace(/\.[^.]+$/, '');
   const [family, variant = ''] = stem.split(/[-]/);
   const v = variant.toLowerCase();

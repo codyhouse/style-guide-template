@@ -1,11 +1,11 @@
 // Loading brand files and ZIPs, saving JSON, and exporting the brand kit ZIP.
 import { zipSync, unzipSync } from 'fflate';
-import { validateResolver, toResolver } from './schema.js';
+import { validateBrandMeta, validateResolver, toResolver } from './schema.js';
 import { resolve, contexts, defaultInputs } from './resolver.js';
 import { generateCss } from './css.js';
 import { checkContrast } from './contrast.js';
 import { licenseUrl } from './fontsource.js';
-import { brandMeta, withBrandMeta, resolveAsset, validateBrandMeta } from './assets.js';
+import { brandMeta, withBrandMeta, resolveAsset } from './assets.js';
 import { extension, fileName } from './path.js';
 import type { AssetItem, BrandMeta, ContrastResult, FileData, Problem, ResolverDoc, SessionFiles } from './types.js';
 

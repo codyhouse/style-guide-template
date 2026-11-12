@@ -1,5 +1,6 @@
 import { test } from 'vitest';
 import assert from 'node:assert/strict';
+import { present } from './helpers.js';
 import { readFileSync } from 'node:fs';
 import { validateResolver, toResolver, isResolver } from '../src/lib/schema.js';
 
@@ -20,7 +21,7 @@ test('missing $type is an error', () => {
   const doc = load();
   delete tree(doc).spacing.$type;
   const r = validateResolver(doc);
-  assert.ok(r.errors.some((e) => e.path.endsWith('spacing.md') && /\$type/.test(e.message)), JSON.stringify(r.errors));
+  assert.ok(r.errors.some((e) => e.path?.endsWith('spacing.md') && /\$type/.test(e.message)), JSON.stringify(r.errors));
 });
 
 test('$type inherited from group is valid', () => {
@@ -38,7 +39,7 @@ test('bad dimension unit', () => {
 test('bad color space', () => {
   const doc = load();
   tree(doc).color.brand['700'].$value.colorSpace = 'cmyk';
-  assert.ok(validateResolver(doc).errors.some((e) => e.path.endsWith('color.brand.700') && /colorSpace/.test(e.message)));
+  assert.ok(validateResolver(doc).errors.some((e) => e.path?.endsWith('color.brand.700') && /colorSpace/.test(e.message)));
 });
 
 test('unknown $ key is an error', () => {
@@ -65,7 +66,7 @@ test('plain tokens become a resolver', () => {
   assert.equal(isResolver(r), true);
   assert.equal(r.version, '2025.10');
   assert.equal(r.name, 'X');
-  assert.deepEqual(Object.keys(r.modifiers.theme.contexts), ['light', 'dark']);
+  assert.deepEqual(Object.keys(present(r.modifiers).theme.contexts), ['light', 'dark']);
   assert.deepEqual(r.sets.foundation.sources, [{ color: { $type: 'color' } }]);
   assert.equal(validateResolver(r).ok, true);
 });
@@ -86,8 +87,8 @@ test('border and transition sub-values are validated', () => {
   tree(doc).border = { $type: 'border', bad: { $value: { color: '{color.brand.600}', width: { value: 1, unit: 'px' }, style: 'solid;}html{x:y' } } };
   tree(doc).transition = { $type: 'transition', bad: { $value: { duration: { value: 1, unit: 'em' }, delay: { value: 0, unit: 'ms' }, timingFunction: [0, 0, 1, 1] } } };
   const errors = validateResolver(doc).errors;
-  assert.ok(errors.some((e) => e.path.endsWith('border.bad')));
-  assert.ok(errors.some((e) => e.path.endsWith('transition.bad')));
+  assert.ok(errors.some((e) => e.path?.endsWith('border.bad')));
+  assert.ok(errors.some((e) => e.path?.endsWith('transition.bad')));
 });
 
 test('names with { } . are rejected (DTCG)', () => {

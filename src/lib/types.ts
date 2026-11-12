@@ -1,73 +1,36 @@
-// Shapes of the brand file (a DTCG 2025.10 resolver document) and of what the app derives from it.
-// Token trees come from users' files: the schema check (schema.ts) validates them before anything
-// reads them, so the raw tree is typed loosely and the derived values precisely.
+// Types the app derives from a brand. The shapes of loaded data come from the zod schemas in schema.ts.
+import type * as z from 'zod/mini';
+import type { color } from './schema.js';
+
+export type { AssetGroup, AssetItem, BrandMeta, FontDetail, FontFile, FontListing, Manifest, ResolverDoc } from './schema.js';
+
+// A token tree is user JSON that schema.ts has checked; its values are as varied as DTCG allows
+// (colors, dimensions, aliases, composites), so they are read where used instead of typed up front.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export type Json = any;
 
 /** A node of a raw token tree: a group or a token, as loaded. */
-export type TokenNode = Record<string, any>;
+export type TokenNode = Record<string, Json>;
 
-export interface DtcgColor {
-  colorSpace: string;
-  components: Array<number | 'none'>;
-  alpha?: number;
-  hex?: string;
-}
+export type DtcgColor = z.infer<typeof color>;
 
 export interface Dimension {
   value: number;
   unit: string;
 }
 
-export interface ResolverDoc {
-  $schema?: string;
-  version?: string;
-  name?: string;
-  description?: string;
-  sets: Record<string, { sources: TokenNode[]; $extensions?: Record<string, any> }>;
-  modifiers?: Record<string, { contexts: Record<string, TokenNode[]>; default?: string }>;
-  resolutionOrder: Array<{ $ref: string }>;
-}
-
 export interface FlatToken {
   type?: string;
-  value: any;
-  extensions?: Record<string, any>;
+  value: Json;
+  extensions?: Record<string, Json>;
   description?: string;
 }
 
 export interface ResolvedToken extends FlatToken {
-  resolved: any;
+  resolved: Json;
 }
 
 export type Tokens = Map<string, ResolvedToken>;
-
-export interface AssetItem {
-  src: string;
-  label?: string;
-  description?: string;
-  provider?: string;
-}
-
-export interface AssetGroup {
-  id: string;
-  label?: string;
-  items: AssetItem[];
-}
-
-export interface FontFile extends AssetItem {
-  family: string;
-  weight: number;
-  style: string;
-  subset?: string;
-  unicodeRange?: string;
-  fontsourceId?: string;
-  version?: string;
-}
-
-export interface BrandMeta {
-  assetGroups: AssetGroup[];
-  fontFiles: FontFile[];
-  [key: string]: unknown;
-}
 
 export type FileData = Blob | Uint8Array;
 export type SessionFiles = Map<string, FileData>;
@@ -90,9 +53,4 @@ export interface ContrastResult {
   label: string;
   ratio: number;
   pass: boolean;
-}
-
-export interface Manifest {
-  files: string[];
-  brands: Array<{ name: string; path: string }>;
 }

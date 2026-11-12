@@ -1,5 +1,6 @@
 import { test } from 'vitest';
 import assert from 'node:assert/strict';
+import { present } from './helpers.js';
 import { readFileSync } from 'node:fs';
 import { checkContrast, requiredPairs, ROLES } from '../src/lib/contrast.js';
 import { resolve } from '../src/lib/resolver.js';
@@ -21,14 +22,14 @@ test('a dark override can fix it', () => {
   const doc = load();
   tree(doc).color.primary = { foreground: { $value: srgb(1) }, background: { $value: srgb(0x77 / 255) } };
   doc.modifiers.theme.contexts.dark.push({ color: { primary: { background: { $type: 'color', $value: srgb(0) } } } });
-  const dark = checkContrast(doc).find((r) => r.context === 'dark' && r.fg === 'color.primary.foreground');
+  const dark = present(checkContrast(doc).find((r) => r.context === 'dark' && r.fg === 'color.primary.foreground'));
   assert.equal(dark.pass, true);
 });
 
 test('borders of input and focus on the page background need 3:1', () => {
   const doc = load();
   tree(doc).color.input = { border: { $value: srgb(0.5) } };
-  const pair = requiredPairs(resolve(doc)).find((p) => p.fg === 'color.input.border');
+  const pair = present(requiredPairs(resolve(doc)).find((p) => p.fg === 'color.input.border'));
   assert.deepEqual([pair.bg, pair.min], ['color.page.background', 3]);
 });
 

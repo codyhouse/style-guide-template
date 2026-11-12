@@ -1,5 +1,6 @@
 import { test } from 'vitest';
 import assert from 'node:assert/strict';
+import { token } from './helpers.js';
 import { readFileSync } from 'node:fs';
 import { ResolveError, resolve, contexts, defaultInputs, aliasTarget, flatten } from '../src/lib/resolver.js';
 import { toHex } from '../src/lib/color.js';
@@ -10,12 +11,12 @@ const tree = (doc) => doc.sets.foundation.sources[0];
 test('dark overrides light', () => {
   const doc = load();
   const n = tree(doc).color.neutral;
-  assert.equal(toHex(resolve(doc, { theme: 'dark' }).get('color.page.background').resolved), n['950'].$value.hex);
-  assert.equal(toHex(resolve(doc).get('color.page.background').resolved), n['50'].$value.hex);
+  assert.equal(toHex(token(resolve(doc, { theme: 'dark' }), 'color.page.background').resolved), n['950'].$value.hex);
+  assert.equal(toHex(token(resolve(doc), 'color.page.background').resolved), n['50'].$value.hex);
 });
 
 test('raw value keeps the alias, type is inherited', () => {
-  const t = resolve(load()).get('color.primary.background');
+  const t = token(resolve(load()), 'color.primary.background');
   assert.equal(t.value, '{color.brand.600}');
   assert.equal(t.type, 'color');
 });
@@ -23,17 +24,17 @@ test('raw value keeps the alias, type is inherited', () => {
 test('chained alias', () => {
   const doc = load();
   tree(doc).color.link = { $value: '{color.primary.background}' };
-  assert.equal(resolve(doc).get('color.link').resolved.hex, tree(doc).color.brand['600'].$value.hex);
+  assert.equal(token(resolve(doc), 'color.link').resolved.hex, tree(doc).color.brand['600'].$value.hex);
 });
 
 test('$ref pointer resolves like a curly alias', () => {
   const doc = load();
   tree(doc).color.ref = { $value: { $ref: '#/color/brand/600/$value' } };
-  assert.deepEqual(resolve(doc).get('color.ref').resolved, tree(doc).color.brand['600'].$value);
+  assert.deepEqual(token(resolve(doc), 'color.ref').resolved, tree(doc).color.brand['600'].$value);
 });
 
 test('composite alias', () => {
-  const t = resolve(load()).get('typography.heading-1').resolved;
+  const t = token(resolve(load()), 'typography.heading-1').resolved;
   assert.deepEqual(t.fontSize, { value: 3.0518, unit: 'rem' });
   assert.deepEqual(t.fontFamily, ['Merriweather', 'serif']);
 });
@@ -73,5 +74,5 @@ test('an unknown context falls back to the default one', () => {
   const doc = load();
   delete doc.modifiers.theme.contexts.dark;
   assert.doesNotThrow(() => resolve(doc, { theme: 'dark' }));
-  assert.equal(resolve(doc, { theme: 'dark' }).get('color.page.background').value, '{color.neutral.50}');
+  assert.equal(token(resolve(doc, { theme: 'dark' }), 'color.page.background').value, '{color.neutral.50}');
 });

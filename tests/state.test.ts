@@ -11,7 +11,7 @@ const memFiles = (fail = false) => {
     getAll: async () => new Map(m), delete: async (p) => m.delete(p), clear: async () => m.clear(),
   };
 };
-const doc = (name: string): ResolverDoc => ({ name, sets: {}, resolutionOrder: [] });
+const doc = (name: string): ResolverDoc => ({ version: '2025.10', name, sets: {}, resolutionOrder: [] });
 const a = doc('A');
 const b = doc('B');
 const edit = (d: ResolverDoc): ResolverDoc => ({ ...d, description: 'edited' });

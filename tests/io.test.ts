@@ -1,5 +1,6 @@
 import { test } from 'vitest';
 import assert from 'node:assert/strict';
+import { present } from './helpers.js';
 import { readFileSync } from 'node:fs';
 import { unzipSync } from 'fflate';
 import { classify, parseBrandJson, loadZip, saveJson, slug, exportLayout, buildExport, readme } from '../src/lib/io.js';
@@ -48,12 +49,12 @@ test('schema and alias errors are reported with paths', () => {
 test('a plain tokens file loads as a resolver named after the file', () => {
   const r = parseBrandJson(JSON.stringify(load().sets.foundation.sources[0]), 'acme.tokens.json');
   assert.deepEqual(r.errors, []);
-  assert.equal(r.doc.name, 'acme');
+  assert.equal(present(r.doc).name, 'acme');
 });
 
 test('saveJson', () => {
-  const s = saveJson({ name: 'A', sets: {}, resolutionOrder: [] });
-  assert.equal(s, '{\n  "name": "A",\n  "sets": {},\n  "resolutionOrder": []\n}\n');
+  const s = saveJson({ version: '2025.10', sets: {}, resolutionOrder: [] });
+  assert.equal(s, '{\n  "version": "2025.10",\n  "sets": {},\n  "resolutionOrder": []\n}\n');
 });
 
 test('export layout: one folder per group, fonts in fonts/, duplicates numbered', () => {
@@ -80,8 +81,9 @@ test('round trip', async () => {
   const { zip } = await buildExport(doc, ctx());
   const back = loadZip(zip);
   assert.deepEqual(back.errors, []);
-  assert.deepEqual(resolve(back.doc), resolve(doc));
-  assert.deepEqual(brandMeta(back.doc, V).assetGroups.map((g) => g.id), ['logos', 'patterns']);
+  const loaded = present(back.doc);
+  assert.deepEqual(resolve(loaded), resolve(doc));
+  assert.deepEqual(brandMeta(loaded, V).assetGroups.map((g) => g.id), ['logos', 'patterns']);
   assert.equal(text(back.files.get('patterns/dots.svg')), '<svg/>');
   assert.equal(back.files.has('README.md'), false);
   assert.equal(back.files.has('css/theme.css'), false);
@@ -92,9 +94,9 @@ test('foreign tokens and extensions round-trip unchanged', async () => {
   const t = doc.sets.foundation.sources[0];
   t.color.accent = { $root: { $value: '{color.brand.600}', $extensions: { 'org.tool.x': { k: 1 } } } };
   doc.sets.foundation.$extensions['org.tool.x'] = { keep: true };
-  const back = loadZip((await buildExport(doc, ctx())).zip).doc;
+  const back = present(loadZip((await buildExport(doc, ctx())).zip).doc);
   assert.deepEqual(back.sets.foundation.sources[0].color.accent, t.color.accent);
-  assert.deepEqual(back.sets.foundation.$extensions['org.tool.x'], { keep: true });
+  assert.deepEqual(back.sets.foundation.$extensions?.['org.tool.x'], { keep: true });
 });
 
 test('a failed download is a warning listed in the README', async () => {

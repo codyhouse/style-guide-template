@@ -201,7 +201,7 @@ Strict TypeScript, bundled by Vite. jQuery and Modernizr removed; the behaviors 
 | Module | Job |
 |---|---|
 | `state.js` | holds the resolver document; notifies on change; autosaves the document to localStorage and session files to IndexedDB |
-| `schema.js` | validates loaded files against DTCG 2025.10 (trust boundary): types, value shapes, alias targets, circular references, resolver structure; readable errors |
+| `schema.ts` | zod schemas for everything loaded from outside (trust boundary): DTCG 2025.10 resolver structure and value shapes per `$type`, this site's brand metadata, the library manifest, Fontsource responses; the types of that data are inferred from them; readable errors |
 | `resolver.js` | applies `resolutionOrder` for a chosen set of modifier inputs; resolves `{}` aliases and `$ref` pointers |
 | `css.js` | the CSS generation above |
 | `scale.js` | spacing / radius / font-size generation from `base`, `steps`, `ratio`; keeps hand overrides |
@@ -214,7 +214,7 @@ Strict TypeScript, bundled by Vite. jQuery and Modernizr removed; the behaviors 
 | `listbox.js`, `fontsource-picker.js` | `<cd-listbox>` and `<cd-fontsource-picker>` custom elements |
 | `io.js` | load resolver / tokens JSON, ZIP, single files (drop anywhere or Load); missing-file matching by name; save JSON; export ZIP |
 
-Dependencies from npm, bundled by Vite: `lit-html` (rendering), `fflate` (ZIP read / write), `culori` (color conversion and CSS color parsing), `idb-keyval` (session files in IndexedDB), `@floating-ui/dom` (listbox popup placement).
+Dependencies from npm, bundled by Vite: `lit-html` (rendering), `zod` (validation of loaded data), `fflate` (ZIP read / write), `culori` (color conversion and CSS color parsing), `idb-keyval` (session files in IndexedDB), `@floating-ui/dom` (listbox popup placement).
 
 ## Export ZIP
 

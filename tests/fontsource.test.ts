@@ -1,5 +1,6 @@
 import { test } from 'vitest';
 import assert from 'node:assert/strict';
+import { present } from './helpers.js';
 import { readFileSync } from 'node:fs';
 import { parseList, fontEntries, licenseUrl, fileUrl, fetchList } from '../src/lib/fontsource.js';
 
@@ -7,7 +8,7 @@ const fixture = (n) => JSON.parse(readFileSync(new URL(`./fixtures/${n}`, import
 const detail = fixture('fontsource-merriweather.json');
 
 test('parseList keeps what the picker needs', () => {
-  const m = parseList(fixture('fontsource-list.json')).find((f) => f.id === 'merriweather');
+  const m = present(parseList(fixture('fontsource-list.json')).find((f) => f.id === 'merriweather'));
   assert.deepEqual(Object.keys(m).sort(), ['category', 'defSubset', 'family', 'id', 'license', 'styles', 'weights']);
   assert.equal(m.family, 'Merriweather');
 });

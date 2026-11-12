@@ -1,5 +1,6 @@
 import { test } from 'vitest';
 import assert from 'node:assert/strict';
+import { present, token } from './helpers.js';
 import { readFileSync } from 'node:fs';
 import type { BrandMeta } from '../src/lib/types.js';
 import * as E from '../src/lib/edit.js';
@@ -21,10 +22,10 @@ test('setHue regenerates 11 shades and keeps shade extensions', () => {
 
 test('setRole in light writes the foundation, in dark writes the dark context', () => {
   let doc = E.setRole(load(), 'light', 'primary.foreground', '{color.neutral.900}');
-  assert.equal(resolve(doc).get('color.primary.foreground').value, '{color.neutral.900}');
+  assert.equal(token(resolve(doc), 'color.primary.foreground').value, '{color.neutral.900}');
   doc = E.setRole(doc, 'dark', 'primary.foreground', '{color.neutral.50}');
-  assert.equal(resolve(doc, { theme: 'dark' }).get('color.primary.foreground').value, '{color.neutral.50}');
-  assert.equal(resolve(doc).get('color.primary.foreground').value, '{color.neutral.900}');
+  assert.equal(token(resolve(doc, { theme: 'dark' }), 'color.primary.foreground').value, '{color.neutral.50}');
+  assert.equal(token(resolve(doc), 'color.primary.foreground').value, '{color.neutral.900}');
 });
 
 test('setToken writes a path, creating groups', () => {
@@ -77,7 +78,7 @@ test('fontFromFileName guesses family, weight and style', () => {
 
 test('setHue keeps the typed color and records which shade it is', async () => {
   const { parseCssColor } = await import('../src/lib/color.js');
-  const out = E.setHue(load(), 'brand', parseCssColor('#f0941d'), V);
+  const out = E.setHue(load(), 'brand', present(parseCssColor('#f0941d')), V);
   const brand = E.foundation(out).color.brand;
   assert.equal(brand.$extensions[V].base, '300');
   assert.equal(brand['300'].$value.hex, '#f0941d');

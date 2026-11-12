@@ -1,5 +1,6 @@
 import { test } from 'vitest';
 import assert from 'node:assert/strict';
+import { present } from './helpers.js';
 import { readFileSync } from 'node:fs';
 import { brandMeta, withBrandMeta, allSrcs, resolveAsset, missingAssets, matchDropped } from '../src/lib/assets.js';
 
@@ -12,7 +13,7 @@ test('resolution order: session, library, fontsource, missing', () => {
   assert.equal(resolveAsset({ src: 'logos/a.svg' }, ctx).source, 'session');
   assert.deepEqual(resolveAsset({ src: 'logos/b.svg' }, ctx), { source: 'library', url: 'library/logos/b.svg' });
   assert.equal(resolveAsset(font, ctx).source, 'fontsource');
-  assert.match(resolveAsset(font, ctx).url, /^https:\/\/cdn\.jsdelivr\.net\//);
+  assert.match(present(resolveAsset(font, ctx).url), /^https:\/\/cdn\.jsdelivr\.net\//);
   assert.equal(resolveAsset({ src: 'logos/c.svg' }, ctx).source, 'missing');
 });
 
@@ -47,7 +48,7 @@ test('a file saved under another origin key is read and moved, other extensions 
   const meta = brandMeta(doc, V);
   assert.equal(meta.assetGroups.length, 2);
   const out = withBrandMeta(doc, V, meta);
-  assert.deepEqual(Object.keys(out.sets.foundation.$extensions).sort(), [V, 'org.tool.x']);
+  assert.deepEqual(Object.keys(present(out.sets.foundation.$extensions)).sort(), [V, 'org.tool.x']);
   assert.equal(doc.sets.foundation.$extensions['com.other.site'] !== undefined, true, 'input not mutated');
 });
 
@@ -65,7 +66,7 @@ test('srcs that are not plain relative paths are treated as missing', () => {
 });
 
 test('brand metadata is validated', async () => {
-  const { validateBrandMeta } = await import('../src/lib/assets.js');
+  const { validateBrandMeta } = await import('../src/lib/schema.js');
   assert.deepEqual(validateBrandMeta({ assetGroups: [{ id: 'logos', label: 'L', items: [{ label: 'a', src: 'logos/a.svg' }] }], fontFiles: [] }), []);
   const bad = validateBrandMeta({
     assetGroups: [{ id: 'x"y', items: [] }, { id: 'ok' }, { id: '../up', items: [] }],

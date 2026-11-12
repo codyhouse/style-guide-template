@@ -1,23 +1,81 @@
-// Validation of DTCG 2025.10 token trees and resolver documents.
+// Validation of what comes from outside: brand files (DTCG 2025.10 resolver documents and token trees,
+// plus this site's metadata), the library manifest, and Fontsource responses.
 // https://www.designtokens.org/tr/2025.10/format/ , /color/ , /resolver/
-
-import type { Problem, ResolverDoc, TokenNode } from './types.js';
+import * as z from 'zod/mini';
+import type { Json, Problem, TokenNode } from './types.js';
 
 export const RESOLVER_SCHEMA = 'https://www.designtokens.org/schemas/2025.10/resolver.json';
 
-const TYPES = new Set(['color', 'dimension', 'fontFamily', 'fontWeight', 'duration', 'cubicBezier', 'number',
-  'strokeStyle', 'border', 'transition', 'shadow', 'gradient', 'typography']);
+const COLOR_SPACES = ['srgb', 'srgb-linear', 'hsl', 'hwb', 'lab', 'lch', 'oklab', 'oklch', 'display-p3',
+  'a98-rgb', 'prophoto-rgb', 'rec2020', 'xyz-d65', 'xyz-d50'] as const;
+const WEIGHTS = ['thin', 'hairline', 'extra-light', 'ultra-light', 'light', 'normal', 'regular', 'book', 'medium',
+  'semi-bold', 'demi-bold', 'bold', 'extra-bold', 'ultra-bold', 'black', 'heavy', 'extra-black', 'ultra-black'] as const;
+const STROKES = ['solid', 'dashed', 'dotted', 'double', 'groove', 'ridge', 'outset', 'inset'] as const;
 const TOKEN_KEYS = new Set(['$type', '$value', '$description', '$extensions', '$deprecated']);
 const GROUP_KEYS = new Set(['$type', '$description', '$extensions', '$deprecated', '$extends', '$root']);
-const COLOR_SPACES = new Set(['srgb', 'srgb-linear', 'hsl', 'hwb', 'lab', 'lch', 'oklab', 'oklch', 'display-p3',
-  'a98-rgb', 'prophoto-rgb', 'rec2020', 'xyz-d65', 'xyz-d50']);
-const WEIGHTS = new Set(['thin', 'hairline', 'extra-light', 'ultra-light', 'light', 'normal', 'regular', 'book',
-  'medium', 'semi-bold', 'demi-bold', 'bold', 'extra-bold', 'ultra-bold', 'black', 'heavy', 'extra-black', 'ultra-black']);
 
-const STROKES = new Set(['solid', 'dashed', 'dotted', 'double', 'groove', 'ridge', 'outset', 'inset']);
 const isObj = (v: unknown): v is TokenNode => v !== null && typeof v === 'object' && !Array.isArray(v);
 const isAlias = (v: unknown) => (typeof v === 'string' && /^\{[^{}]+\}$/.test(v)) || (isObj(v) && typeof v.$ref === 'string');
-const join = (path: string, key: string) => (path ? `${path}.${key}` : key);
+const join = (path: string, key: string | number) => (path ? `${path}.${key}` : String(key));
+
+/** zod issues as this app's problems, with the issue path appended to `base`. */
+export const problems = (error: z.core.$ZodError, base = ''): Problem[] =>
+  error.issues.map((i) => ({ path: i.path.reduce<string>((p, k) => join(p, String(k)), base), message: i.message }));
+
+/* token values, one schema per $type; an alias is accepted wherever a value is */
+
+const alias = z.custom<string>(isAlias, 'must be an alias');
+const orAlias = <T extends z.core.SomeType>(schema: T) => z.union([alias, schema]);
+const dimension = (units: readonly [string, ...string[]]) => z.object({
+  value: z.number({ error: 'must be { value: number, unit }' }),
+  unit: z.enum(units, { error: `unit must be ${units.join('|')}` }),
+});
+const size = dimension(['px', 'rem']);
+const duration = dimension(['ms', 's']);
+const component = z.union([z.number(), z.literal('none')]);
+export const color = z.object({
+  colorSpace: z.enum(COLOR_SPACES, { error: (iss) => `colorSpace "${String(iss.input)}" is not a DTCG color space` }),
+  components: z.tuple([component, component, component], { error: 'components must be an array of 3 numbers or "none"' }),
+  alpha: z.optional(z.number().check(z.gte(0), z.lte(1))),
+  hex: z.optional(z.string().check(z.regex(/^#[0-9a-fA-F]{6}$/, 'hex must be 6-digit #rrggbb'))),
+});
+const cubicBezier = z.tuple([z.number(), z.number(), z.number(), z.number()], { error: 'must be [x1, y1, x2, y2]' });
+const fontFamily = z.union([z.string(), z.array(z.string()).check(z.minLength(1))], { error: 'must be a string or an array of strings' });
+const fontWeight = z.union([z.number().check(z.gte(1), z.lte(1000)), z.enum(WEIGHTS)], { error: 'must be 1..1000 or a weight keyword' });
+const strokeStyle = z.union([z.enum(STROKES), z.looseObject({})], { error: `stroke style must be one of ${STROKES.join(', ')}` });
+const shadowLayer = z.object({
+  color: orAlias(color), offsetX: orAlias(size), offsetY: orAlias(size), blur: orAlias(size), spread: orAlias(size),
+  inset: z.optional(z.boolean()),
+});
+
+const VALUES: Record<string, z.core.$ZodType> = {
+  color,
+  dimension: size,
+  duration,
+  number: z.number({ error: 'must be a number' }),
+  fontFamily,
+  fontWeight,
+  cubicBezier,
+  strokeStyle,
+  shadow: z.union([shadowLayer, z.array(orAlias(shadowLayer))]),
+  border: z.object({ color: orAlias(color), width: orAlias(size), style: orAlias(strokeStyle) }),
+  transition: z.object({ duration: orAlias(duration), delay: orAlias(duration), timingFunction: orAlias(cubicBezier) }),
+  typography: z.object({
+    fontFamily: orAlias(fontFamily), fontSize: orAlias(size), fontWeight: orAlias(fontWeight),
+    letterSpacing: orAlias(size), lineHeight: orAlias(z.number()),
+  }),
+  gradient: z.array(z.looseObject({})),
+};
+
+// Problems point at the token; the message names the part of its value that is wrong.
+function checkValue(type: string, value: unknown, path: string): Problem[] {
+  if (isAlias(value)) return [];
+  const result = z.safeParse(VALUES[type], value);
+  if (result.success) return [];
+  return result.error.issues.map((i) => ({ path, message: i.path.length ? `${i.path.join(' ')}: ${i.message}` : i.message }));
+}
+
+/* token trees: groups, tokens, $type inherited from the enclosing group */
 
 export function deepMerge(target: TokenNode, source: TokenNode): TokenNode {
   const out = { ...target };
@@ -28,155 +86,73 @@ export function deepMerge(target: TokenNode, source: TokenNode): TokenNode {
   return out;
 }
 
-const checkDimension = (v: unknown, units = ['px', 'rem']): string | null => {
-  if (isAlias(v)) return null;
-  if (!isObj(v) || typeof v.value !== 'number') return 'must be { value: number, unit }';
-  if (!units.includes(v.unit)) return `unit must be ${units.join('|')}`;
-  return null;
-};
-
-function checkColor(v: unknown): string | null {
-  if (isAlias(v)) return null;
-  if (!isObj(v)) return 'color must be an object { colorSpace, components }';
-  if (!COLOR_SPACES.has(v.colorSpace)) return `colorSpace "${v.colorSpace}" is not a DTCG color space`;
-  if (!Array.isArray(v.components) || v.components.length !== 3 || v.components.some((c: unknown) => c !== 'none' && typeof c !== 'number')) {
-    return 'components must be an array of 3 numbers or "none"';
-  }
-  if (v.alpha !== undefined && (typeof v.alpha !== 'number' || v.alpha < 0 || v.alpha > 1)) return 'alpha must be 0..1';
-  if (v.hex !== undefined && !/^#[0-9a-fA-F]{6}$/.test(v.hex)) return 'hex must be 6-digit #rrggbb';
-  return null;
-}
-
-function checkShadow(v: unknown): string | null {
-  if (isAlias(v)) return null;
-  for (const s of Array.isArray(v) ? v : [v]) {
-    if (isAlias(s)) continue;
-    if (!isObj(s)) return 'shadow must be an object or an array of objects';
-    const color = checkColor(s.color);
-    if (color) return `shadow color: ${color}`;
-    for (const k of ['offsetX', 'offsetY', 'blur', 'spread']) {
-      const e = checkDimension(s[k]);
-      if (e) return `shadow ${k}: ${e}`;
-    }
-  }
-  return null;
-}
-
-function checkValue(type: string, v: any): string | null {
-  if (isAlias(v)) return null;
-  switch (type) {
-    case 'color': return checkColor(v);
-    case 'dimension': return checkDimension(v);
-    case 'duration': return checkDimension(v, ['ms', 's']);
-    case 'number': return typeof v === 'number' ? null : 'must be a number';
-    case 'fontFamily':
-      return typeof v === 'string' || (Array.isArray(v) && v.length && v.every((f: unknown) => typeof f === 'string'))
-        ? null : 'must be a string or an array of strings';
-    case 'fontWeight':
-      return (typeof v === 'number' && v >= 1 && v <= 1000) || WEIGHTS.has(v) ? null : 'must be 1..1000 or a weight keyword';
-    case 'cubicBezier':
-      return Array.isArray(v) && v.length === 4 && v.every((n: unknown) => typeof n === 'number') ? null : 'must be [x1, y1, x2, y2]';
-    case 'shadow': return checkShadow(v);
-    case 'strokeStyle':
-      return STROKES.has(v) || isObj(v) ? null : `stroke style must be one of ${[...STROKES].join(', ')}`;
-    case 'border': {
-      if (!isObj(v)) return 'border must be { color, width, style }';
-      return (checkColor(v.color) && `border color: ${checkColor(v.color)}`)
-        || (checkDimension(v.width) && `border width: ${checkDimension(v.width)}`)
-        || checkValue('strokeStyle', v.style);
-    }
-    case 'transition': {
-      if (!isObj(v)) return 'transition must be { duration, delay, timingFunction }';
-      return (checkDimension(v.duration, ['ms', 's']) && `transition duration: ${checkDimension(v.duration, ['ms', 's'])}`)
-        || (checkDimension(v.delay, ['ms', 's']) && `transition delay: ${checkDimension(v.delay, ['ms', 's'])}`)
-        || checkValue('cubicBezier', v.timingFunction);
-    }
-    case 'typography': {
-      if (!isObj(v)) return 'typography must be an object';
-      const parts = [['fontFamily', 'fontFamily'], ['fontSize', 'dimension'], ['fontWeight', 'fontWeight'],
-        ['letterSpacing', 'dimension'], ['lineHeight', 'number']];
-      for (const [k, t] of parts) {
-        if (v[k] === undefined) return `typography is missing ${k}`;
-        const e = checkValue(t, v[k]);
-        if (e) return `typography ${k}: ${e}`;
-      }
-      return null;
-    }
-    default: return isObj(v) || Array.isArray(v) || typeof v === 'string' ? null : 'invalid value';
-  }
-}
-
-// Walks a token tree. `only` limits reported errors to paths that exist in that tree.
-export function validateTokens(tree: TokenNode, path = '', inherited?: string, errors: Problem[] = [], only?: TokenNode): Problem[] {
+// `only` limits reported problems to paths that exist in that tree.
+export function validateTokens(tree: TokenNode, path = '', inherited?: string, only?: TokenNode): Problem[] {
+  const errors: Problem[] = [];
   const groupType = tree.$type ?? inherited;
-  if (tree.$type !== undefined && !TYPES.has(tree.$type)) errors.push({ path, message: `unknown $type "${tree.$type}"` });
+  if (tree.$type !== undefined && !(tree.$type in VALUES)) errors.push({ path, message: `unknown $type "${tree.$type}"` });
   for (const [key, node] of Object.entries(tree)) {
     const p = join(path, key);
     if (key.startsWith('$') && key !== '$root') {
       if (!GROUP_KEYS.has(key)) errors.push({ path: p, message: `unknown reserved key ${key}` });
       continue;
     }
-    if (/[{}.]/.test(key)) { errors.push({ path: p, message: `name "${key}" must not contain {, } or .` }); continue; }
-    if (!isObj(node)) { errors.push({ path: p, message: 'must be a token or a group' }); continue; }
-    const onlyNode = only?.[key];
-    if (only && onlyNode === undefined) continue;
-    if ('$value' in node) {
-      for (const k of Object.keys(node)) {
-        if (k.startsWith('$') && !TOKEN_KEYS.has(k)) errors.push({ path: p, message: `unknown reserved key ${k}` });
-      }
+    if (/[{}.]/.test(key)) errors.push({ path: p, message: `name "${key}" must not contain {, } or .` });
+    else if (!isObj(node)) errors.push({ path: p, message: 'must be a token or a group' });
+    else if (only && only[key] === undefined) continue;
+    else if (!('$value' in node)) errors.push(...validateTokens(node, p, groupType, only?.[key]));
+    else {
+      for (const k of Object.keys(node)) if (k.startsWith('$') && !TOKEN_KEYS.has(k)) errors.push({ path: p, message: `unknown reserved key ${k}` });
       const type = node.$type ?? groupType;
       if (!type) errors.push({ path: p, message: 'token has no $type (own or inherited from a group)' });
-      else if (!TYPES.has(type)) errors.push({ path: p, message: `unknown $type "${type}"` });
-      else {
-        const e = checkValue(type, node.$value);
-        if (e) errors.push({ path: p, message: e });
-      }
-    } else validateTokens(node, p, groupType, errors, onlyNode);
+      else if (!(type in VALUES)) errors.push({ path: p, message: `unknown $type "${type}"` });
+      else errors.push(...checkValue(type, node.$value, p));
+    }
   }
   return errors;
 }
 
-const mergeSources = (sources: TokenNode[]) => sources.reduce((acc, s) => deepMerge(acc, s), {});
+/* resolver documents */
 
-export function validateResolver(doc: unknown): { ok: boolean; errors: Problem[] } {
+const tokenTree = z.record(z.string(), z.custom<Json>()).check(z.refine((s) => typeof s.$ref !== 'string',
+  'file references are not supported here; inline the tokens'));
+const sources = z.array(tokenTree, { error: 'must be an array of token objects' });
+
+export const resolverDoc = z.object({
+  $schema: z.optional(z.string()),
+  version: z.literal('2025.10', { error: 'version must be "2025.10"' }),
+  name: z.optional(z.string()),
+  description: z.optional(z.string()),
+  sets: z.record(z.string(), z.looseObject({ sources, $extensions: z.optional(z.record(z.string(), z.custom<Json>())) })),
+  modifiers: z.optional(z.record(z.string(), z.object({ contexts: z.record(z.string(), sources), default: z.optional(z.string()) }))),
+  resolutionOrder: z.array(z.object({ $ref: z.string() }), { error: 'resolutionOrder must be an array' }),
+});
+
+export type ResolverDoc = z.infer<typeof resolverDoc>;
+
+const mergeSources = (list: TokenNode[]) => list.reduce((acc, s) => deepMerge(acc, s), {});
+
+export function validateResolver(input: unknown): { ok: boolean; errors: Problem[] } {
+  const parsed = z.safeParse(resolverDoc, input);
+  if (!parsed.success) return { ok: false, errors: problems(parsed.error) };
+  const doc = parsed.data;
+  const modifiers = doc.modifiers ?? {};
   const errors: Problem[] = [];
-  if (!isObj(doc)) return { ok: false, errors: [{ path: '', message: 'document must be a JSON object' }] };
-  if (doc.version !== '2025.10') errors.push({ path: 'version', message: 'version must be "2025.10"' });
-  const sets = isObj(doc.sets) ? doc.sets : {};
-  const modifiers = isObj(doc.modifiers) ? doc.modifiers : {};
-  const checkSources = (list: unknown, path: string): TokenNode[] => {
-    if (!Array.isArray(list)) { errors.push({ path, message: 'must be an array of token objects' }); return []; }
-    return list.filter((s, i) => {
-      if (!isObj(s)) { errors.push({ path: `${path}[${i}]`, message: 'must be a token object' }); return false; }
-      if (typeof s.$ref === 'string') {
-        errors.push({ path: `${path}[${i}]`, message: 'file references are not supported here; inline the tokens' });
-        return false;
-      }
-      return true;
-    });
-  };
-  if (!Array.isArray(doc.resolutionOrder)) {
-    errors.push({ path: 'resolutionOrder', message: 'resolutionOrder must be an array' });
-  } else {
-    doc.resolutionOrder.forEach((r: any, i: number) => {
-      const m = typeof r?.$ref === 'string' && r.$ref.match(/^#\/(sets|modifiers)\/(.+)$/);
-      const target = m && (m[1] === 'sets' ? sets : modifiers)[m[2]];
-      if (!target) errors.push({ path: `resolutionOrder[${i}]`, message: `${r?.$ref ?? 'entry'} does not point to a set or modifier` });
-    });
-  }
-  let base: TokenNode = {};
-  for (const [name, set] of Object.entries(sets)) {
-    base = deepMerge(base, mergeSources(checkSources(set?.sources, `sets.${name}.sources`)));
-  }
-  validateTokens(base, '', undefined, errors);
+  doc.resolutionOrder.forEach(({ $ref }, i) => {
+    const [, kind, name] = $ref.match(/^#\/(sets|modifiers)\/(.+)$/) ?? [];
+    if (!(kind === 'sets' ? name in doc.sets : kind === 'modifiers' && name in modifiers)) {
+      errors.push({ path: `resolutionOrder.${i}`, message: `${$ref} does not point to a set or modifier` });
+    }
+  });
+  const base = mergeSources(Object.values(doc.sets).flatMap((s) => s.sources));
+  errors.push(...validateTokens(base));
   for (const [name, mod] of Object.entries(modifiers)) {
-    if (!isObj(mod?.contexts)) { errors.push({ path: `modifiers.${name}`, message: 'modifier needs contexts' }); continue; }
     if (mod.default !== undefined && !(mod.default in mod.contexts)) {
       errors.push({ path: `modifiers.${name}.default`, message: `default "${mod.default}" is not a context` });
     }
-    for (const [ctx, list] of Object.entries(mod.contexts)) {
-      const own = mergeSources(checkSources(list, `modifiers.${name}.contexts.${ctx}`));
-      validateTokens(deepMerge(base, own), `modifiers.${name}.contexts.${ctx}`, undefined, errors, own);
+    for (const [context, list] of Object.entries(mod.contexts)) {
+      const own = mergeSources(list);
+      errors.push(...validateTokens(deepMerge(base, own), `modifiers.${name}.contexts.${context}`, undefined, own));
     }
   }
   return { ok: errors.length === 0, errors };
@@ -190,8 +166,87 @@ export function toResolver(json: unknown, name: string): ResolverDoc {
     $schema: RESOLVER_SCHEMA,
     version: '2025.10',
     name,
-    sets: { foundation: { sources: [json as TokenNode] } },
+    sets: { foundation: { sources: [json as Json] } },
     modifiers: { theme: { contexts: { light: [], dark: [] }, default: 'light' } },
     resolutionOrder: [{ $ref: '#/sets/foundation' }, { $ref: '#/modifiers/theme' }],
   };
 }
+
+/* this site's brand metadata, in the foundation set's $extensions */
+
+// A src is a plain relative path: no scheme, no leading slash, no backslash, no '..' segments.
+export const isSafeSrc = (src: unknown): src is string => typeof src === 'string' && src !== ''
+  && !/^[a-z][a-z0-9+.-]*:|^\/|\\/i.test(src) && !src.split('/').includes('..');
+
+export const fontStyle = z.enum(['normal', 'italic', 'oblique'], { error: 'style must be normal, italic or oblique' });
+export type FontStyle = z.infer<typeof fontStyle>;
+export const isFontStyle = (s: string): s is FontStyle => z.safeParse(fontStyle, s).success;
+
+const src = z.custom<string>(isSafeSrc, { error: (iss) => `src "${String(iss.input)}" must be a relative path` });
+const assetItem = z.looseObject({
+  src,
+  label: z.optional(z.string()),
+  description: z.optional(z.string()),
+  provider: z.optional(z.string()),
+});
+const assetGroup = z.looseObject({
+  id: z.string().check(z.regex(/^[a-z0-9][a-z0-9-]*$/, { error: (iss) => `group id "${String(iss.input)}" must use a-z, 0-9 and -` })),
+  label: z.optional(z.string()),
+  items: z.array(assetItem, { error: 'group needs an items array' }),
+});
+const fontFile = z.looseObject({
+  ...assetItem.shape,
+  family: z.string({ error: 'font file needs a family' }).check(z.minLength(1, 'font file needs a family')),
+  weight: z._default(z.number().check(z.gte(1, 'weight must be 1..1000'), z.lte(1000, 'weight must be 1..1000')), 400),
+  style: z._default(fontStyle, 'normal'),
+  subset: z.optional(z.string()),
+  unicodeRange: z.optional(z.string()),
+  fontsourceId: z.optional(z.string().check(z.regex(/^[a-z0-9-]+$/, 'fontsourceId must use a-z, 0-9 and -'))),
+  version: z.optional(z.string().check(z.regex(/^[0-9][0-9a-z.-]*$/, 'version must look like 5.3.0'))),
+}).check(z.refine((f) => f.provider !== 'fontsource' || (f.fontsourceId !== undefined && f.version !== undefined),
+  'a Fontsource font needs fontsourceId and version'));
+
+export const brandMeta = z.looseObject({
+  assetGroups: z._default(z.array(assetGroup), []),
+  fontFiles: z._default(z.array(fontFile), []),
+});
+
+export type AssetItem = z.infer<typeof assetItem>;
+export type AssetGroup = z.infer<typeof assetGroup>;
+export type FontFile = z.infer<typeof fontFile>;
+export type BrandMeta = z.infer<typeof brandMeta>;
+
+export function validateBrandMeta(meta: unknown, path = 'brand'): Problem[] {
+  const result = z.safeParse(brandMeta, meta);
+  return result.success ? [] : problems(result.error, path);
+}
+
+/* the site library and Fontsource */
+
+export const manifest = z.object({
+  files: z.array(z.string()),
+  brands: z.array(z.object({ name: z.string(), path: z.string() })).check(z.minLength(1, 'the manifest lists no brands')),
+});
+export type Manifest = z.infer<typeof manifest>;
+
+export const fontListing = z.object({
+  id: z.string(),
+  family: z.string(),
+  category: z.string(),
+  weights: z.array(z.number()),
+  styles: z.array(z.string()),
+  defSubset: z.string(),
+  license: z.string(),
+});
+export type FontListing = z.infer<typeof fontListing>;
+
+const variant = z.object({ url: z.optional(z.object({ woff2: z.optional(z.string()) })) });
+export const fontDetail = z.object({
+  ...fontListing.shape,
+  subsets: z.array(z.string()),
+  npmVersion: z.string(),
+  unicodeRange: z.optional(z.record(z.string(), z.string())),
+  // weight -> style -> subset -> files
+  variants: z.optional(z.record(z.string(), z.record(z.string(), z.record(z.string(), variant)))),
+});
+export type FontDetail = z.infer<typeof fontDetail>;
