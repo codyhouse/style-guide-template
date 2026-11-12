@@ -1,0 +1,57 @@
+import { test } from 'node:test';
+import assert from 'node:assert/strict';
+import {
+  oklch, toOklch, toHex, inGamut, toOklchString, toRgbaString, cmyk, contrastRatio, shadeScale,
+} from '../js/lib/color.js';
+
+const srgb = (r, g, b) => ({ colorSpace: 'srgb', components: [r, g, b] });
+
+test('srgb red <-> oklch', () => {
+  const [l, c, h] = toOklch(srgb(1, 0, 0));
+  assert.ok(Math.abs(l - 0.62796) < 1e-4, `l=${l}`);
+  assert.ok(Math.abs(c - 0.25768) < 1e-4, `c=${c}`);
+  assert.ok(Math.abs(h - 29.2339) < 1e-2, `h=${h}`);
+  assert.equal(toHex(oklch(l, c, h)), '#ff0000');
+});
+
+test('white and black', () => {
+  assert.equal(toHex(oklch(1, 0, 0)), '#ffffff');
+  assert.equal(toHex(oklch(0, 0, 0)), '#000000');
+  assert.equal(contrastRatio(oklch(1, 0, 0), oklch(0, 0, 0)), 21);
+});
+
+test('contrast #777 on white is 4.48', () => {
+  const grey = srgb(0x77 / 255, 0x77 / 255, 0x77 / 255);
+  assert.equal(contrastRatio(grey, oklch(1, 0, 0)).toFixed(2), '4.48');
+});
+
+test('out-of-gamut keeps oklch, hex is clipped', () => {
+  const c = oklch(0.7, 0.4, 150);
+  assert.equal(inGamut(c), false);
+  assert.match(c.hex, /^#[0-9a-f]{6}$/);
+  assert.deepEqual(c.components, [0.7, 0.4, 150]);
+});
+
+test('alpha omitted when 1', () => {
+  assert.equal('alpha' in oklch(0.5, 0.1, 10), false);
+  assert.equal(oklch(0.5, 0.1, 10, 0.5).alpha, 0.5);
+});
+
+test('none component reads as 0', () => {
+  assert.deepEqual(toOklch({ colorSpace: 'oklch', components: [0.5, 'none', 'none'] }), [0.5, 0, 0, 1]);
+});
+
+test('strings', () => {
+  assert.equal(toOklchString(oklch(0.55, 0.18, 260)), 'oklch(0.55 0.18 260)');
+  assert.equal(toOklchString(oklch(0.55, 0.18, 260, 0.5)), 'oklch(0.55 0.18 260 / 0.5)');
+  assert.equal(toRgbaString(srgb(1, 0, 0)), 'rgba(255, 0, 0, 1)');
+  assert.deepEqual(cmyk(srgb(1, 0, 0)), [0, 100, 100, 0]);
+});
+
+test('shade scale', () => {
+  const s = shadeScale(260, 0.18);
+  assert.deepEqual(Object.keys(s), ['50', '100', '200', '300', '400', '500', '600', '700', '800', '900', '950']);
+  assert.equal(s['50'].components[0], 0.97);
+  assert.equal(s['950'].components[0], 0.15);
+  for (const v of Object.values(s)) assert.ok(inGamut(v));
+});
