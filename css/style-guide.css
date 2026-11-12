@@ -190,15 +190,8 @@ xButtons
     background: var(--color-primary-background-hover);
   }
 }
-.btn[data-state=hover] {
-  background: var(--color-primary-background-hover);
-}
-.btn:active, .btn[data-state=active] {
+.btn:active {
   background: var(--color-primary-background-active);
-}
-.btn[data-state=focus] {
-  outline: 0.125rem solid var(--color-focus-border);
-  outline-offset: 0.125rem;
 }
 .btn.btn-secondary {
   color: var(--color-secondary-foreground);
@@ -210,75 +203,13 @@ xButtons
     background: var(--color-secondary-background-hover);
   }
 }
-.btn.btn-secondary[data-state=hover] {
-  background: var(--color-secondary-background-hover);
-}
-.btn.btn-secondary:active, .btn.btn-secondary[data-state=active] {
+.btn.btn-secondary:active {
   background: var(--color-secondary-background-active);
-}
-.btn.btn-destructive {
-  color: var(--color-destructive-foreground);
-  background: var(--color-destructive-background);
-}
-@media (hover: hover) {
-  .btn.btn-destructive:hover {
-    background: var(--color-destructive-background-hover);
-  }
-}
-.btn.btn-destructive[data-state=hover] {
-  background: var(--color-destructive-background-hover);
-}
-.btn.btn-destructive:active, .btn.btn-destructive[data-state=active] {
-  background: var(--color-destructive-background-active);
 }
 .btn:disabled {
   cursor: not-allowed;
   opacity: 0.5;
   pointer-events: none;
-}
-.btn[aria-busy=true] {
-  /* the label is visually hidden; the spinner in the button's text color shows the state */
-  cursor: progress;
-  position: relative;
-  min-width: 6.5rem;
-  min-height: 2.5rem;
-}
-.btn[aria-busy=true]::after {
-  /* loading spinner */
-  content: "";
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  width: 1em;
-  height: 1em;
-  margin: -0.5em 0 0 -0.5em;
-  border-radius: 50%;
-  border: 0.125rem solid var(--color-primary-foreground);
-  border-right-color: transparent;
-  animation: cd-spin calc(var(--duration-normal) * 3) linear infinite;
-}
-.btn[aria-busy=true].btn-secondary::after {
-  border-color: var(--color-secondary-foreground);
-  border-right-color: transparent;
-}
-.btn[aria-busy=true].btn-destructive::after {
-  border-color: var(--color-destructive-foreground);
-  border-right-color: transparent;
-}
-
-@keyframes cd-spin {
-  to {
-    transform: rotate(360deg);
-  }
-}
-@media (prefers-reduced-motion: reduce) {
-  .btn[aria-busy=true]::after {
-    animation: none;
-  }
-}
-.cd-buttons .cd-box:last-of-type span {
-  /* CSS class name color */
-  color: var(--color-primary-background);
 }
 
 /* --------------------------------
@@ -290,97 +221,6 @@ xIcons
   /* icons size */
   width: 2rem;
   height: 2rem;
-}
-
-/* --------------------------------
-
-xForm
-
--------------------------------- */
-input[type=text] {
-  border: 1px solid var(--color-input-border);
-  border-radius: var(--radius-sm);
-  background: var(--color-input-background);
-  color: var(--color-input-foreground);
-  padding: 0.6em 1em;
-}
-input[type=text].success {
-  border-color: var(--color-success-border);
-  box-shadow: 0 0 0 0.125rem var(--color-success-border);
-}
-input[type=text].alert {
-  border-color: var(--color-destructive-border);
-  box-shadow: 0 0 0 0.125rem var(--color-destructive-border);
-}
-input[type=text]:focus {
-  outline: none;
-  border-color: var(--color-focus-border);
-  box-shadow: 0 0 0 0.125rem var(--color-focus-border);
-}
-
-input[type=radio],
-input[type=checkbox] {
-  position: absolute;
-  left: 0;
-  top: 0;
-  margin: 0;
-  padding: 0;
-  opacity: 0;
-}
-
-.radio-label,
-.checkbox-label {
-  padding-left: 1.5rem;
-  user-select: none;
-}
-.radio-label::before, .radio-label::after,
-.checkbox-label::before,
-.checkbox-label::after {
-  /* custom radio and check boxes */
-  content: "";
-  display: block;
-  width: 1rem;
-  height: 1rem;
-  position: absolute;
-  top: 50%;
-  transform: translateY(-50%);
-}
-.radio-label::before,
-.checkbox-label::before {
-  left: 0;
-  border: 1px solid var(--color-input-border);
-  background: var(--color-input-background);
-}
-.radio-label::after,
-.checkbox-label::after {
-  left: 0.1875rem;
-  background: url("../assets/form/icon-check.svg") no-repeat center center;
-  display: none;
-}
-
-.radio-label::before {
-  border-radius: 50%;
-}
-
-.checkbox-label::before {
-  border-radius: var(--radius-sm);
-}
-
-input[type=radio]:checked + label::before,
-input[type=checkbox]:checked + label::before {
-  background-color: var(--color-primary-background);
-  border-color: var(--color-primary-background);
-}
-
-input[type=radio]:checked + label::after,
-input[type=checkbox]:checked + label::after {
-  display: block;
-}
-
-input[type=radio]:focus-visible + label::before,
-input[type=checkbox]:focus-visible + label::before {
-  outline: 0.125rem solid var(--color-focus-border);
-  outline-offset: 0.125rem;
 }
 
 /* --------------------------------
@@ -714,17 +554,13 @@ section h2::before {
 }
 
 .cd-typography .cd-box,
-.cd-buttons .cd-box,
-.cd-icons .cd-box,
-.cd-form .cd-box {
+.cd-icons .cd-box {
   padding: var(--spacing-lg);
 }
 
 @media only screen and (min-width: 768px) {
   .cd-typography .cd-box,
-  .cd-buttons .cd-box,
-  .cd-icons .cd-box,
-  .cd-form .cd-box {
+  .cd-icons .cd-box {
     padding: var(--spacing-xl);
   }
 }
@@ -752,37 +588,6 @@ section h2::before {
   text-transform: none;
 }
 
-.cd-buttons .cd-box:first-of-type {
-  border-bottom-left-radius: 0;
-  border-bottom-right-radius: 0;
-}
-
-.cd-buttons .cd-box:last-of-type {
-  margin-top: -1px;
-  border-top-left-radius: 0;
-  border-top-right-radius: 0;
-  overflow-x: auto;
-}
-
-.cd-buttons .cd-button-row {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--spacing-sm);
-  margin-bottom: var(--spacing-md);
-}
-
-.cd-buttons .cd-button-row > b {
-  flex-basis: 100%;
-  font-size: var(--font-size-sm);
-}
-
-.cd-buttons p {
-  font-family: monospace;
-  font-size: var(--font-size-sm);
-  white-space: nowrap;
-}
-
 /* xIcons section - basic style */
 .cd-icons ul {
   display: flex;
@@ -798,21 +603,6 @@ section h2::before {
   display: block;
   width: 100%;
   height: 100%;
-}
-
-/* xForm section - basic style */
-.cd-form fieldset {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--spacing-lg);
-  margin-bottom: var(--spacing-lg);
-  border: none;
-}
-
-.cd-form .cd-input-wrapper {
-  position: relative;
-  display: inline-block;
 }
 
 /* --------------------------------

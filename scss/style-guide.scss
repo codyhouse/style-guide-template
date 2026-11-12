@@ -203,17 +203,8 @@ xButtons
 		background: var(--color-primary-background-hover);
 	}
 
-	&[data-state=hover] {
-		background: var(--color-primary-background-hover);
-	}
-
-	&:active, &[data-state=active] {
+	&:active {
 		background: var(--color-primary-background-active);
-	}
-
-	&[data-state=focus] {
-		outline: 0.125rem solid var(--color-focus-border);
-		outline-offset: 0.125rem;
 	}
 
 	&.btn-secondary {
@@ -225,29 +216,8 @@ xButtons
 			background: var(--color-secondary-background-hover);
 		}
 
-		&[data-state=hover] {
-			background: var(--color-secondary-background-hover);
-		}
-
-		&:active, &[data-state=active] {
+		&:active {
 			background: var(--color-secondary-background-active);
-		}
-	}
-
-	&.btn-destructive {
-		color: var(--color-destructive-foreground);
-		background: var(--color-destructive-background);
-
-		@include hover {
-			background: var(--color-destructive-background-hover);
-		}
-
-		&[data-state=hover] {
-			background: var(--color-destructive-background-hover);
-		}
-
-		&:active, &[data-state=active] {
-			background: var(--color-destructive-background-active);
 		}
 	}
 
@@ -256,54 +226,6 @@ xButtons
 		opacity: .5;
 		pointer-events: none;
 	}
-
-	&[aria-busy=true] {
-		/* the label is visually hidden; the spinner in the button's text color shows the state */
-		cursor: progress;
-		position: relative;
-		min-width: 6.5rem;
-		min-height: 2.5rem;
-
-		&::after {
-			/* loading spinner */
-			content: '';
-			position: absolute;
-			top: 50%;
-			left: 50%;
-			width: 1em;
-			height: 1em;
-			margin: -.5em 0 0 -.5em;
-			border-radius: 50%;
-			border: 0.125rem solid var(--color-primary-foreground);
-			border-right-color: transparent;
-			animation: cd-spin calc(var(--duration-normal) * 3) linear infinite;
-		}
-
-		&.btn-secondary::after {
-			border-color: var(--color-secondary-foreground);
-			border-right-color: transparent;
-		}
-
-		&.btn-destructive::after {
-			border-color: var(--color-destructive-foreground);
-			border-right-color: transparent;
-		}
-	}
-}
-
-@keyframes cd-spin {
-	to { transform: rotate(360deg); }
-}
-
-@media (prefers-reduced-motion: reduce) {
-	.btn[aria-busy=true]::after {
-		animation: none;
-	}
-}
-
-.cd-buttons .cd-box:last-of-type span {
-	/* CSS class name color */
-	color: var(--color-primary-background);
 }
 
 /* --------------------------------
@@ -316,101 +238,6 @@ xIcons
 	/* icons size */
 	width: 2rem;
 	height: 2rem;
-}
-
-/* --------------------------------
-
-xForm
-
--------------------------------- */
-
-input[type=text] {
-	border: 1px solid var(--color-input-border); // ds-allow-hardcode: hairline
-	border-radius: var(--radius-sm);
-	background: var(--color-input-background);
-	color: var(--color-input-foreground);
-	padding: .6em 1em;
-
-	&.success {
-		border-color: var(--color-success-border);
-		box-shadow: 0 0 0 0.125rem var(--color-success-border);
-	}
-
-	&.alert {
-		border-color: var(--color-destructive-border);
-		box-shadow: 0 0 0 0.125rem var(--color-destructive-border);
-	}
-
-	&:focus {
-		outline: none;
-		border-color: var(--color-focus-border);
-		box-shadow: 0 0 0 0.125rem var(--color-focus-border);
-	}
-}
-
-input[type=radio],
-input[type=checkbox] {
-	position: absolute;
-	left: 0;
-	top: 0;
-	margin: 0;
-	padding: 0;
-	opacity: 0;
-}
-
-.radio-label,
-.checkbox-label {
-	padding-left: 1.5rem;
-	user-select: none;
-
-	&::before,
-	&::after {
-		/* custom radio and check boxes */
-		content: '';
-		display: block;
-		width: 1rem;
-		height: 1rem;
-		position: absolute;
-		top: 50%;
-		transform: translateY(-50%);
-	}
-
-	&::before {
-		left: 0;
-		border: 1px solid var(--color-input-border); // ds-allow-hardcode: hairline
-		background: var(--color-input-background);
-	}
-
-	&::after {
-		left: 0.1875rem;
-		background: url('../assets/form/icon-check.svg') no-repeat center center;
-		display: none;
-	}
-}
-
-.radio-label::before {
-	border-radius: 50%;
-}
-
-.checkbox-label::before {
-	border-radius: var(--radius-sm);
-}
-
-input[type=radio]:checked + label::before,
-input[type=checkbox]:checked + label::before {
-	background-color: var(--color-primary-background);
-	border-color: var(--color-primary-background);
-}
-
-input[type=radio]:checked + label::after,
-input[type=checkbox]:checked + label::after {
-	display: block;
-}
-
-input[type=radio]:focus-visible + label::before,
-input[type=checkbox]:focus-visible + label::before {
-	outline: 0.125rem solid var(--color-focus-border);
-	outline-offset: 0.125rem;
 }
 
 @include meta.load-css('../partials/basic-style');

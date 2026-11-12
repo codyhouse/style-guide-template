@@ -339,9 +339,7 @@ section {
 }
 
 .cd-typography .cd-box,
-.cd-buttons .cd-box,
-.cd-icons .cd-box,
-.cd-form .cd-box {
+.cd-icons .cd-box {
 	padding: var(--spacing-lg);
 
 	@include MQ(S) {
@@ -377,39 +375,6 @@ section {
 	}
 }
 
-.cd-buttons {
-	.cd-box:first-of-type {
-		border-bottom-left-radius: 0;
-		border-bottom-right-radius: 0;
-	}
-
-	.cd-box:last-of-type {
-		margin-top: -1px; // ds-allow-hardcode: overlap the shared hairline
-		border-top-left-radius: 0;
-		border-top-right-radius: 0;
-		overflow-x: auto;
-	}
-
-	.cd-button-row {
-		display: flex;
-		flex-wrap: wrap;
-		align-items: center;
-		gap: var(--spacing-sm);
-		margin-bottom: var(--spacing-md);
-
-		> b {
-			flex-basis: 100%;
-			font-size: var(--font-size-sm);
-		}
-	}
-
-	p {
-		font-family: monospace; // ds-allow-hardcode: code sample, not a brand font
-		font-size: var(--font-size-sm);
-		white-space: nowrap;
-	}
-}
-
 /* xIcons section - basic style */
 
 .cd-icons {
@@ -427,23 +392,5 @@ section {
 		display: block;
 		width: 100%;
 		height: 100%;
-	}
-}
-
-/* xForm section - basic style */
-
-.cd-form {
-	fieldset {
-		display: flex;
-		flex-wrap: wrap;
-		align-items: center;
-		gap: var(--spacing-lg);
-		margin-bottom: var(--spacing-lg);
-		border: none;
-	}
-
-	.cd-input-wrapper {
-		position: relative;
-		display: inline-block;
 	}
 }

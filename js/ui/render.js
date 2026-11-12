@@ -136,24 +136,6 @@ function renderTypography(body, tokens, meta) {
   );
 }
 
-let buttonsDone = false;
-function renderButtons(body) {
-  if (buttonsDone) return;
-  buttonsDone = true;
-  const variants = [['Primary', 'btn'], ['Secondary', 'btn btn-secondary'], ['Destructive', 'btn btn-destructive']];
-  const states = [['Default', {}], ['Hover', { 'data-state': 'hover' }], ['Focus', { 'data-state': 'focus' }],
-    ['Active', { 'data-state': 'active' }], ['Disabled', { disabled: true }], ['Loading', { 'aria-busy': 'true' }]];
-  body.replaceChildren(
-    h('div', { class: 'cd-box' }, variants.map(([name, cls]) => h('div', { class: 'cd-button-row' },
-      h('b', {}, name),
-      states.map(([state, attrs]) => h('button', { type: 'button', class: cls, ...attrs },
-        state === 'Loading' ? h('span', { class: 'cd-sr-only' }, 'Loading') : state))))),
-    // the original guide's code snippet: each button's markup with its class names highlighted
-    h('div', { class: 'cd-box' }, variants.map(([name, cls]) =>
-      h('p', {}, '<button class="', h('span', {}, cls), `">${name}</button>`))),
-  );
-}
-
 function renderIcons(body, meta, ctx) {
   body.replaceChildren(h('ul', { class: 'cd-box' },
     group(meta, 'icons').items.map((i) => h('li', { title: i.label }, image(i, ctx)))));
@@ -221,7 +203,6 @@ export function render({ doc, css, theme, session, library, vendor }) {
   renderBranding(body('branding'), meta, ctx);
   renderColors(body('colors'), tokens, vendor);
   renderTypography(body('typography'), tokens, meta);
-  renderButtons(body('buttons'));
   renderIcons(body('icons'), meta, ctx);
   renderScale(body('spacing'), tokens, 'spacing', 'spacing');
   renderScale(body('radius'), tokens, 'radius', 'radius');

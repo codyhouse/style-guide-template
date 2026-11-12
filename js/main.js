@@ -9,7 +9,6 @@ import * as E from './lib/edit.js';
 import { render, urlFor } from './ui/render.js';
 import { renderPanels } from './ui/panels.js';
 import { renderEditor } from './ui/editor.js';
-import { listbox } from './ui/listbox.js';
 import { download } from './ui/dom.js';
 
 const vendor = vendorKey(HOSTED_URL);
@@ -316,15 +315,6 @@ addEventListener('drop', (e) => {
   if (!hasFiles(e)) return;
   e.preventDefault();
   routeFiles([...e.dataTransfer.files]);
-});
-
-/*******************
-	form section listbox (replaces the native select)
-********************/
-listbox(document.getElementById('form-listbox'), {
-  label: 'Select an option',
-  options: [{ value: '0', label: 'Select' }, { value: '1', label: 'Option 1' }, { value: '2', label: 'Option 2' }, { value: '3', label: 'Option 3' }],
-  value: '0',
 });
 
 applyTheme();
