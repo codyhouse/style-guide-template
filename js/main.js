@@ -220,22 +220,13 @@ document.fonts?.addEventListener('loadingdone', setTypographyLabels);
 	main navigation
 ********************/
 const header = document.querySelector('header');
-const trigger = document.querySelector('.cd-nav-trigger');
 const nav = document.getElementById('cd-nav');
-
-// open navigation on mobile
-trigger.addEventListener('click', () => {
-  const open = header.classList.toggle('nav-is-visible');
-  trigger.setAttribute('aria-expanded', String(open));
-});
 
 // smooth scroll to the selected section
 nav.addEventListener('click', (event) => {
   const link = event.target.closest('a[href^="#"]');
   if (!link) return;
   event.preventDefault();
-  header.classList.remove('nav-is-visible');
-  trigger.setAttribute('aria-expanded', 'false');
   const target = document.getElementById(decodeURIComponent(link.hash.slice(1)));
   if (!target) return;
   const topMargin = parseFloat(getComputedStyle(target).marginTop);
@@ -250,12 +241,20 @@ function updateNavigation() {
     const topMargin = parseFloat(getComputedStyle(section).marginTop);
     const anchor = nav.querySelector(`a[href="#${CSS.escape(section.id)}"]`);
     const inView = top - header.offsetHeight - topMargin <= scrollY && top + section.offsetHeight - topMargin > scrollY + 1;
+    if (inView && anchor && !anchor.classList.contains('selected')) {
+      nav.scrollTo({ left: anchor.offsetLeft - (nav.clientWidth - anchor.offsetWidth) / 2, behavior: reduceMotion.matches ? 'auto' : 'smooth' });
+    }
     anchor?.classList.toggle('selected', inView);
     if (inView) anchor?.setAttribute('aria-current', 'true');
     else anchor?.removeAttribute('aria-current');
   }
 }
 addEventListener('scroll', updateNavigation, { passive: true });
+nav.addEventListener('wheel', (e) => {
+  if (nav.scrollWidth <= nav.clientWidth || Math.abs(e.deltaX) > Math.abs(e.deltaY)) return;
+  e.preventDefault();
+  nav.scrollLeft += e.deltaY;
+}, { passive: false });
 
 /*******************
 	editor drawer
@@ -263,6 +262,9 @@ addEventListener('scroll', updateNavigation, { passive: true });
 const drawer = document.getElementById('cd-drawer');
 const drawerBody = document.getElementById('cd-drawer-body');
 const editToggle = document.getElementById('edit-toggle');
+const main = document.querySelector('main');
+const wideDrawer = matchMedia('(min-width: 768px)'); // $S
+wideDrawer.addEventListener('change', () => { if (!drawer.hidden) main.inert = !wideDrawer.matches; });
 const app = {
   store, vendor, library, manifest, theme: () => theme, addUploads, addFontUploads, warn,
   urlFor: (item) => urlFor(item, ctx),
@@ -274,11 +276,15 @@ const app = {
 function openDrawer() {
   renderEditor(drawerBody, app);
   drawer.hidden = false;
+  document.body.classList.add('is-editing');
+  main.inert = !wideDrawer.matches; // on phones the drawer covers the guide
   editToggle.setAttribute('aria-pressed', 'true');
-  drawer.querySelector('input, button')?.focus();
+  drawerBody.querySelector('input, button')?.focus();
 }
 function closeDrawer() {
   drawer.hidden = true;
+  document.body.classList.remove('is-editing');
+  main.inert = false;
   editToggle.setAttribute('aria-pressed', 'false');
   editToggle.focus();
 }

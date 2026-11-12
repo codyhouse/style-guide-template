@@ -63,52 +63,17 @@ header {
 }
 
 .cd-main-nav {
-	/* main navigation background color - full screen on small devices */
-	background: var(--color-page-background);
-
 	li a {
-		color: var(--color-page-foreground);
-		border-color: var(--color-page-border);
-	}
+		color: var(--color-muted-foreground);
 
-	@include MQ(M) {
-		li a {
-			color: var(--color-muted-foreground);
-
-			&.selected {
-				color: var(--color-page-foreground);
-				box-shadow: 0 0.125rem 0 var(--color-primary-background);
-			}
-
-			@include hover {
-				color: var(--color-page-foreground);
-			}
+		&.selected {
+			color: var(--color-page-foreground);
+			box-shadow: inset 0 -0.125rem 0 var(--color-primary-background);
 		}
-	}
-}
 
-.cd-nav-trigger {
-	color: var(--color-page-foreground);
-}
-
-.cd-nav-trigger span {
-	/* hamburger menu */
-	background-color: var(--color-page-foreground);
-
-	&::before,
-	&::after {
-		/* upper and lower lines */
-		background-color: var(--color-page-foreground);
-	}
-}
-
-.nav-is-visible .cd-nav-trigger span {
-	/* hide line in the center on mobile when nav is visible */
-	background-color: transparent;
-
-	&::before, &::after {
-		/* preserve visibility of upper and lower lines - close icon */
-		background-color: var(--color-page-foreground);
+		@include hover {
+			color: var(--color-page-foreground);
+		}
 	}
 }
 

@@ -30,6 +30,7 @@ xEditor - header actions, panels, drawer, listbox, token and file views
 	gap: 0;
 	padding: 0;
 	flex: none;
+	margin-left: auto;
 
 	@include MQ(S) {
 		gap: var(--spacing-xs);
@@ -75,7 +76,13 @@ xEditor - header actions, panels, drawer, listbox, token and file views
 		background: var(--color-secondary-background-active);
 	}
 
-	@include MQ(M) {
+	&[aria-disabled=true] {
+		opacity: .4;
+		cursor: default;
+		background: transparent;
+	}
+
+	@include MQ(L) {
 		span {
 			position: static;
 			width: auto;
@@ -181,7 +188,7 @@ xEditor - header actions, panels, drawer, listbox, token and file views
 
 .cd-drawer {
 	position: fixed;
-	top: 0;
+	top: var(--header-h);
 	right: 0;
 	bottom: 0;
 	z-index: 30;
@@ -198,6 +205,15 @@ xEditor - header actions, panels, drawer, listbox, token and file views
 
 	@include MQ(S) {
 		width: 30rem;
+		border-left: 1px solid var(--color-card-border); // ds-allow-hardcode: hairline
+	}
+}
+
+.is-editing main {
+	@include MQ(M) {
+		width: auto;
+		max-width: none;
+		margin: 0 calc(30rem + var(--spacing-xl)) 0 var(--spacing-xl);
 	}
 }
 

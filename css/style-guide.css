@@ -55,49 +55,17 @@ header {
   }
 }
 
-.cd-main-nav {
-  /* main navigation background color - full screen on small devices */
-  background: var(--color-page-background);
-}
 .cd-main-nav li a {
+  color: var(--color-muted-foreground);
+}
+.cd-main-nav li a.selected {
   color: var(--color-page-foreground);
-  border-color: var(--color-page-border);
+  box-shadow: inset 0 -0.125rem 0 var(--color-primary-background);
 }
-@media only screen and (min-width: 1024px) {
-  .cd-main-nav li a {
-    color: var(--color-muted-foreground);
-  }
-  .cd-main-nav li a.selected {
-    color: var(--color-page-foreground);
-    box-shadow: 0 0.125rem 0 var(--color-primary-background);
-  }
-}
-@media only screen and (min-width: 1024px) and (hover: hover) {
+@media (hover: hover) {
   .cd-main-nav li a:hover {
     color: var(--color-page-foreground);
   }
-}
-
-.cd-nav-trigger {
-  color: var(--color-page-foreground);
-}
-
-.cd-nav-trigger span {
-  /* hamburger menu */
-  background-color: var(--color-page-foreground);
-}
-.cd-nav-trigger span::before, .cd-nav-trigger span::after {
-  /* upper and lower lines */
-  background-color: var(--color-page-foreground);
-}
-
-.nav-is-visible .cd-nav-trigger span {
-  /* hide line in the center on mobile when nav is visible */
-  background-color: transparent;
-}
-.nav-is-visible .cd-nav-trigger span::before, .nav-is-visible .cd-nav-trigger span::after {
-  /* preserve visibility of upper and lower lines - close icon */
-  background-color: var(--color-page-foreground);
 }
 
 /* --------------------------------
@@ -231,6 +199,10 @@ xBasic style
   box-sizing: border-box;
 }
 
+html {
+  scroll-padding-top: var(--header-h);
+}
+
 html * {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
@@ -263,11 +235,21 @@ input, textarea, button {
   white-space: nowrap;
 }
 
+:root {
+  --header-h: 5.875rem;
+}
+
+@media only screen and (min-width: 1024px) {
+  :root {
+    --header-h: 5rem;
+  }
+}
 header {
   position: fixed;
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  height: 3.125rem;
+  height: var(--header-h);
   width: 100%;
   top: 0;
   left: 0;
@@ -276,12 +258,12 @@ header {
 
 @media only screen and (min-width: 1024px) {
   header {
-    height: 5rem;
+    flex-wrap: nowrap;
   }
 }
 .cd-logo {
   flex: none;
-  height: 100%;
+  height: 3.125rem;
   position: relative;
 }
 
@@ -295,128 +277,67 @@ header {
   transform: translateX(-50%) translateY(-50%);
 }
 
+@media only screen and (min-width: 1024px) {
+  .cd-logo {
+    height: 100%;
+  }
+}
 @media only screen and (min-width: 1600px) {
   .cd-logo {
     margin-left: 5%;
   }
 }
-.cd-nav-trigger {
-  display: block;
-  position: relative;
-  flex: none;
-  height: 100%;
-  width: 3.125rem;
-  overflow: hidden;
-  background: none;
-  border: none;
-  cursor: pointer;
-}
-
-.cd-nav-trigger span {
-  position: absolute;
-  height: 0.125rem;
-  width: 1.25rem;
-  top: 50%;
-  margin-top: -0.0625rem;
-  left: 50%;
-  margin-left: -0.625rem;
-  transition: background-color var(--duration-normal) var(--duration-normal);
-}
-
-.cd-nav-trigger span::before, .cd-nav-trigger span::after {
-  content: "";
-  position: absolute;
-  width: 100%;
-  height: 100%;
-  left: 0;
-  backface-visibility: hidden;
-  will-change: transform;
-  transition: transform var(--duration-normal) var(--duration-normal);
-}
-
-.cd-nav-trigger span::before {
-  transform: translateY(-0.375rem);
-}
-
-.cd-nav-trigger span::after {
-  transform: translateY(0.375rem);
+nav {
+  order: 1;
+  flex: 1 0 100%;
+  min-width: 0;
 }
 
 @media only screen and (min-width: 1024px) {
-  .cd-nav-trigger {
-    display: none;
+  nav {
+    order: 0;
+    flex: 1 1 auto;
   }
 }
 .cd-main-nav {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100vh;
-  padding: 3.125rem 0;
-  overflow-y: auto;
-  text-align: center;
-  transform: translateY(-100%);
-  transition: transform var(--duration-normal);
+  position: relative;
+  display: flex;
+  align-items: center;
+  height: 2.75rem;
+  padding: 0 var(--spacing-sm);
+  overflow-x: auto;
+  scrollbar-width: none;
+  white-space: nowrap;
+}
+
+.cd-main-nav li {
+  flex: none;
+  padding: 0 var(--spacing-xs);
 }
 
 .cd-main-nav li a {
-  display: block;
-  font-size: var(--font-size-lg);
-  padding: 1em 0;
-  border-bottom-width: 1px;
-  border-style: solid;
+  display: inline-flex;
+  align-items: center;
+  min-height: 2.75rem;
+  font-size: var(--font-size-sm);
+  padding: 0 0.2em;
+  transition: color var(--duration-fast), box-shadow var(--duration-fast);
 }
 
 @media only screen and (min-width: 1024px) {
   .cd-main-nav {
-    position: static;
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    transform: none;
-    width: auto;
-    height: auto;
-    background: transparent;
+    height: 100%;
     padding: 0 var(--spacing-lg);
-    text-align: left;
-    overflow: visible;
   }
   .cd-main-nav li {
     padding: 0 var(--spacing-sm);
   }
-  .cd-main-nav li a {
-    display: inline-flex;
-    align-items: center;
-    min-height: 1.5rem;
-    font-size: var(--font-size-sm);
-    padding: 0.4em 0.2em;
-    border-bottom: none;
-    transition: color var(--duration-fast), box-shadow var(--duration-fast);
-  }
 }
-nav {
-  flex: 1;
-  min-width: 0;
-}
-
-.nav-is-visible .cd-nav-trigger span::before {
-  transform: translateY(0) rotate(-45deg);
-}
-
-.nav-is-visible .cd-nav-trigger span::after {
-  transform: translateY(0) rotate(45deg);
-}
-
-.nav-is-visible .cd-main-nav {
-  transform: translateY(0);
-}
-
 main {
   width: 90%;
   max-width: 1024px;
   margin: 0 auto;
-  padding: 3.125rem 0;
+  padding: var(--header-h) 0 3.125rem;
   counter-reset: section;
 }
 
@@ -425,18 +346,13 @@ main > h1 {
   margin: 3em 0;
 }
 
-@media only screen and (min-width: 1024px) {
-  main {
-    padding-top: 5rem;
-  }
-}
 @media only screen and (min-width: 1600px) {
   main {
     max-width: none;
     display: grid;
     grid-template-columns: 1fr 1fr;
     column-gap: 4%;
-    padding: 7.5rem 0 3.125rem;
+    padding-top: calc(var(--header-h) + 2.5rem);
   }
   main > h1, main > .cd-panels {
     grid-column: 1/-1;
@@ -634,6 +550,7 @@ xEditor - header actions, panels, drawer, listbox, token and file views
   gap: 0;
   padding: 0;
   flex: none;
+  margin-left: auto;
 }
 
 @media only screen and (min-width: 768px) {
@@ -683,7 +600,13 @@ xEditor - header actions, panels, drawer, listbox, token and file views
   background: var(--color-secondary-background-active);
 }
 
-@media only screen and (min-width: 1024px) {
+.cd-action[aria-disabled=true] {
+  opacity: 0.4;
+  cursor: default;
+  background: transparent;
+}
+
+@media only screen and (min-width: 1600px) {
   .cd-action span {
     position: static;
     width: auto;
@@ -783,7 +706,7 @@ xEditor - header actions, panels, drawer, listbox, token and file views
 /* drawer */
 .cd-drawer {
   position: fixed;
-  top: 0;
+  top: var(--header-h);
   right: 0;
   bottom: 0;
   z-index: 30;
@@ -802,6 +725,14 @@ xEditor - header actions, panels, drawer, listbox, token and file views
 @media only screen and (min-width: 768px) {
   .cd-drawer {
     width: 30rem;
+    border-left: 1px solid var(--color-card-border);
+  }
+}
+@media only screen and (min-width: 1024px) {
+  .is-editing main {
+    width: auto;
+    max-width: none;
+    margin: 0 calc(30rem + var(--spacing-xl)) 0 var(--spacing-xl);
   }
 }
 .cd-drawer-header {
