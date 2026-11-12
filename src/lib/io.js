@@ -1,5 +1,5 @@
 // Loading brand files and ZIPs, saving JSON, and exporting the brand kit ZIP.
-import { zipSync, unzipSync } from '../vendor/fflate.js';
+import { zipSync, unzipSync } from 'fflate';
 import { validateResolver, toResolver } from './schema.js';
 import { resolve, contexts, defaultInputs } from './resolver.js';
 import { generateCss } from './css.js';

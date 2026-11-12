@@ -1,7 +1,7 @@
-import { test } from 'node:test';
+import { test } from 'vitest';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { brandMeta, withBrandMeta, allSrcs, resolveAsset, missingAssets, matchDropped } from '../js/lib/assets.js';
+import { brandMeta, withBrandMeta, allSrcs, resolveAsset, missingAssets, matchDropped } from '../src/lib/assets.js';
 
 const V = 'com.example.styleguide';
 const load = () => JSON.parse(readFileSync(new URL('./fixtures/minimal.resolver.json', import.meta.url), 'utf8'));
@@ -64,7 +64,7 @@ test('srcs that are not plain relative paths are treated as missing', () => {
 });
 
 test('brand metadata is validated', async () => {
-  const { validateBrandMeta } = await import('../js/lib/assets.js');
+  const { validateBrandMeta } = await import('../src/lib/assets.js');
   assert.deepEqual(validateBrandMeta({ assetGroups: [{ id: 'logos', label: 'L', items: [{ label: 'a', src: 'logos/a.svg' }] }], fontFiles: [] }), []);
   const bad = validateBrandMeta({
     assetGroups: [{ id: 'x"y', items: [] }, { id: 'ok' }, { id: '../up', items: [] }],
@@ -77,7 +77,7 @@ test('brand metadata is validated', async () => {
 });
 
 test('adoptVendor moves every foreign extension (tokens and groups) to this site', async () => {
-  const { adoptVendor } = await import('../js/lib/assets.js');
+  const { adoptVendor } = await import('../src/lib/assets.js');
   const doc = load();
   const t = doc.sets.foundation.sources[0];
   const move = (o) => { o['com.other.site'] = o[V]; delete o[V]; };

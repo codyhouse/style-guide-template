@@ -1,6 +1,6 @@
-import { test } from 'node:test';
+import { test } from 'vitest';
 import assert from 'node:assert/strict';
-import { vendorKey } from '../js/lib/vendor-key.js';
+import { vendorKey } from '../src/lib/vendor-key.js';
 
 test('reverse-domain vendor key from the hosted URL', () => {
   assert.equal(vendorKey('https://styleguide.example.com'), 'com.example.styleguide');

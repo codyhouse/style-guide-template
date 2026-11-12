@@ -1,14 +1,14 @@
-import { test } from 'node:test';
+import { test } from 'vitest';
 import assert from 'node:assert/strict';
 import { readFileSync, readdirSync, statSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
-import { validateResolver } from '../js/lib/schema.js';
-import { resolve } from '../js/lib/resolver.js';
-import { checkContrast, ROLES } from '../js/lib/contrast.js';
-import { brandMeta, missingAssets } from '../js/lib/assets.js';
+import { validateResolver } from '../src/lib/schema.js';
+import { resolve } from '../src/lib/resolver.js';
+import { checkContrast, ROLES } from '../src/lib/contrast.js';
+import { brandMeta, missingAssets } from '../src/lib/assets.js';
 
 const V = 'com.example.styleguide';
-const root = new URL('../library/', import.meta.url).pathname;
+const root = new URL('../public/library/', import.meta.url).pathname;
 const manifest = JSON.parse(readFileSync(join(root, 'manifest.json'), 'utf8'));
 const walk = (dir, base = '') => readdirSync(dir).flatMap((n) => {
   const rel = base ? `${base}/${n}` : n;

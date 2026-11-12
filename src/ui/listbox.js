@@ -3,7 +3,7 @@
 // An option may carry a swatch (any CSS color) shown as a chip next to its label.
 // The open popup is placed by Floating UI: it flips above or shrinks when there is no room below.
 import { h, icon } from './dom.js';
-import { autoUpdate, computePosition, flip, offset, shift, size } from '../vendor/floating-ui.js';
+import { autoUpdate, computePosition, flip, offset, shift, size } from '@floating-ui/dom';
 
 const chip = (swatch) => (swatch ? h('span', { class: 'cd-chip', 'aria-hidden': 'true', style: { background: swatch } }) : null);
 

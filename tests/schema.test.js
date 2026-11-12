@@ -1,7 +1,7 @@
-import { test } from 'node:test';
+import { test } from 'vitest';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { validateResolver, toResolver, isResolver } from '../js/lib/schema.js';
+import { validateResolver, toResolver, isResolver } from '../src/lib/schema.js';
 
 const load = () => JSON.parse(readFileSync(new URL('./fixtures/minimal.resolver.json', import.meta.url), 'utf8'));
 const tree = (doc) => doc.sets.foundation.sources[0];

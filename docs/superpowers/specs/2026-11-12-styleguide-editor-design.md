@@ -160,7 +160,7 @@ Required pairs come from the role structure: for every role, `foreground` on `ba
 One rule, used by the page and by the exporter:
 
 1. Session files (from a loaded ZIP or single uploads), keyed by path.
-2. Site library: `library/`, listed in `library/manifest.json`, maintained in the site's repo by its maintainers.
+2. Site library: `public/library/` in the repo, served at `library/` and listed in `library/manifest.json`, maintained in the site's repo by its maintainers.
 3. Font entries with `"provider": "fontsource"`: fetched from Fontsource by `fontsourceId`, `version`, weight and style.
 4. None of these: a visible "missing asset" placeholder with the path.
 
@@ -191,11 +191,11 @@ The page is the preview: every section is styled by the loaded brand's tokens, f
 - SCSS keeps its files, structure and selectors. Values become `var(--...)` role, scale and font tokens.
 - `lighten()` / `darken()` calls are replaced by the matching state tokens (`-hover`, `-active`).
 - `MQ()` (already min-width) and the grid mixin stay. Bourbon is removed. The `http://` Google Fonts link is removed; fonts come from the generated `@font-face` rules.
-- Build: `sass` via npm, output to `css/style-guide.css` as today.
+- Build: Vite compiles the SCSS with the scripts; `vite build` writes the site to `dist/`.
 
 ## Scripts
 
-Vanilla ES modules. jQuery and Modernizr removed; the behaviors in `js/main.js` (mobile nav, smooth scroll, active section, typography labels, button snippets) are ported as-is.
+ES modules bundled by Vite. jQuery and Modernizr removed; the behaviors in `src/main.js` (mobile nav, smooth scroll, active section, typography labels, button snippets) are ported as-is.
 
 | Module | Job |
 |---|---|
@@ -204,14 +204,14 @@ Vanilla ES modules. jQuery and Modernizr removed; the behaviors in `js/main.js` 
 | `resolver.js` | applies `resolutionOrder` for a chosen set of modifier inputs; resolves `{}` aliases and `$ref` pointers |
 | `css.js` | the CSS generation above |
 | `scale.js` | spacing / radius / font-size generation from `base`, `steps`, `ratio`; keeps hand overrides |
-| `color.js` | conversions between DTCG color spaces used here (oklch, srgb) and hex / rgba; approximate CMYK; 11-shade generation; WCAG contrast ratio |
+| `color.js` | conversions between DTCG color spaces (through culori) and hex / rgba; CSS color parsing; approximate CMYK; 11-shade generation; WCAG contrast ratio |
 | `fonts.js` | registers loaded font files (`FontFace` API) and builds `@font-face` rules |
 | `fontsource.js` | family list (cached), file URLs per variant, license fetch |
 | `assets.js` | the resolution rule |
 | `render.js` | state -> DOM; injects generated CSS into one `<style>` |
 | `io.js` | load resolver / tokens JSON, ZIP, single files (drop anywhere or Load); missing-file matching by name; save JSON; export ZIP |
 
-One new dependency: `fflate` for ZIP read / write, vendored.
+Dependencies from npm, bundled by Vite: `fflate` (ZIP read / write), `culori` (color conversion and CSS color parsing), `idb-keyval` (session files in IndexedDB), `@floating-ui/dom` (listbox popup placement).
 
 ## Export ZIP
 
@@ -241,7 +241,7 @@ One new dependency: `fflate` for ZIP read / write, vendored.
 ## Testing
 
 Browser-free (CI and local):
-- `node --test`: color conversions against known values, shade generation, scale generation with overrides, contrast ratio, resolver order and alias resolution (including `$ref` and chained aliases), circular-reference errors, CSS generation snapshots (names and values), vendor key derivation and foreign-key load, Fontsource response parsing and variant selection (against a recorded API response), foreign `$extensions` preserved, export -> load round trip.
+- Vitest: color conversions against known values, shade generation, scale generation with overrides, contrast ratio, resolver order and alias resolution (including `$ref` and chained aliases), circular-reference errors, CSS generation snapshots (names and values), vendor key derivation and foreign-key load, Fontsource response parsing and variant selection (against a recorded API response), foreign `$extensions` preserved, export -> load round trip.
 - `lint_hardcodes.py`, `check_no_emoji.py` on the site code.
 
 Render gates (need `npm install && npx playwright install chrome`; not installed today, so unmeasured until then): `verify_states.mjs` (light and dark), axe, `verify_responsive.mjs` at 280 / 320 / 414, `verify_mobile_first.mjs`, plus screenshots of both themes.

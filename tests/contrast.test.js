@@ -1,8 +1,8 @@
-import { test } from 'node:test';
+import { test } from 'vitest';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { checkContrast, requiredPairs, ROLES } from '../js/lib/contrast.js';
-import { resolve } from '../js/lib/resolver.js';
+import { checkContrast, requiredPairs, ROLES } from '../src/lib/contrast.js';
+import { resolve } from '../src/lib/resolver.js';
 
 const load = () => JSON.parse(readFileSync(new URL('./fixtures/minimal.resolver.json', import.meta.url), 'utf8'));
 const tree = (doc) => doc.sets.foundation.sources[0];

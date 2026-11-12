@@ -1,5 +1,5 @@
 // The editor's state: the brand document, session files, autosave, undo/redo and the previous draft.
-import { createStore as idbStore, set, del, clear, entries } from '../vendor/idb-keyval.js';
+import { createStore as idbStore, set, del, clear, entries } from 'idb-keyval';
 
 const DRAFT = 'styleguide:draft';
 const PREVIOUS = 'styleguide:previous';

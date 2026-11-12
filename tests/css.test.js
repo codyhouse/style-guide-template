@@ -1,8 +1,8 @@
-import { test } from 'node:test';
+import { test } from 'vitest';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { cssName, cssValue, generateCss } from '../js/lib/css.js';
-import { fontFaceRules } from '../js/lib/fonts.js';
+import { cssName, cssValue, generateCss } from '../src/lib/css.js';
+import { fontFaceRules } from '../src/lib/fonts.js';
 
 const V = 'com.example.styleguide';
 const load = () => JSON.parse(readFileSync(new URL('./fixtures/minimal.resolver.json', import.meta.url), 'utf8'));

@@ -1,10 +1,10 @@
-import { test } from 'node:test';
+import { test } from 'vitest';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { unzipSync } from '../js/vendor/fflate.js';
-import { classify, parseBrandJson, loadZip, saveJson, slug, exportLayout, buildExport, readme } from '../js/lib/io.js';
-import { resolve } from '../js/lib/resolver.js';
-import { brandMeta } from '../js/lib/assets.js';
+import { unzipSync } from 'fflate';
+import { classify, parseBrandJson, loadZip, saveJson, slug, exportLayout, buildExport, readme } from '../src/lib/io.js';
+import { resolve } from '../src/lib/resolver.js';
+import { brandMeta } from '../src/lib/assets.js';
 
 const V = 'com.example.styleguide';
 const load = () => JSON.parse(readFileSync(new URL('./fixtures/minimal.resolver.json', import.meta.url), 'utf8'));

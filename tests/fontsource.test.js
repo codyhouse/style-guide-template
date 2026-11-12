@@ -1,7 +1,7 @@
-import { test } from 'node:test';
+import { test } from 'vitest';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { parseList, fontEntries, licenseUrl, fileUrl, fetchList } from '../js/lib/fontsource.js';
+import { parseList, fontEntries, licenseUrl, fileUrl, fetchList } from '../src/lib/fontsource.js';
 
 const fixture = (n) => JSON.parse(readFileSync(new URL(`./fixtures/${n}`, import.meta.url), 'utf8'));
 const detail = fixture('fontsource-merriweather.json');

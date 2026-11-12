@@ -1,7 +1,7 @@
-import { test } from 'node:test';
+import { test } from 'vitest';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { tailwindCss, shadcnCss } from '../js/lib/exports.js';
+import { tailwindCss, shadcnCss } from '../src/lib/exports.js';
 
 const V = 'com.example.styleguide';
 const load = () => JSON.parse(readFileSync(new URL('./fixtures/minimal.resolver.json', import.meta.url), 'utf8'));

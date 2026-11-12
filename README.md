@@ -9,14 +9,16 @@ Everything runs in the browser. There is no backend.
 
 ```
 pnpm install
-pnpm dev             # http://localhost:8000
+pnpm dev             # http://localhost:8000, reloads on save
 ```
 
-- `pnpm test`: unit tests (Node's built-in test runner)
-- `pnpm build:css`: compile `scss/style-guide.scss` to `css/style-guide.css`
-- `pnpm vendor`: refresh the vendored libraries in `js/vendor/`: `fflate` (ZIP), `culori` (color), `idb-keyval` (stored files) and Floating UI (dropdown placement)
+- `pnpm build`: the site in `dist/`, ready to host as static files
+- `pnpm preview`: serve `dist/` on http://localhost:8000
+- `pnpm test`: unit tests (Vitest)
 
-Set the site's address in `js/config.js` (`HOSTED_URL`). The README in every exported kit links there, and the brand file's `$extensions` key is derived from it (`https://styleguide.example.com` becomes `com.example.styleguide`).
+The dev and preview servers always use port 8000: the browser keeps drafts and uploaded files per address.
+
+Set the site's address in `src/config.js` (`HOSTED_URL`). The README in every exported kit links there, and the brand file's `$extensions` key is derived from it (`https://styleguide.example.com` becomes `com.example.styleguide`).
 
 ## Using the site
 
@@ -44,11 +46,11 @@ The full design is in `docs/superpowers/specs/2026-11-12-styleguide-editor-desig
 
 ## For maintainers: the library
 
-Files under `library/` are offered to every user of the site. To add some:
+Files under `public/library/` are offered to every user of the site (served at `library/`). To add some:
 
-1. Put the files under `library/` (for example `library/logos/acme.svg`).
-2. List each path in `library/manifest.json` under `files`.
-3. To add a brand preset, put its resolver file in `library/brands/` and add `{ "name": ..., "path": "brands/..." }` under `brands`. The first brand is the one a new visitor sees.
+1. Put the files under `public/library/` (for example `public/library/logos/acme.svg`).
+2. List each path, relative to `public/library/`, in `public/library/manifest.json` under `files`.
+3. To add a brand preset, put its resolver file in `public/library/brands/` and add `{ "name": ..., "path": "brands/..." }` under `brands`. The first brand is the one a new visitor sees.
 
 `pnpm test` checks that the manifest matches the files on disk and that every preset is valid, resolves, and passes contrast.
 

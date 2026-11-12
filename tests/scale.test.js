@@ -1,6 +1,6 @@
-import { test } from 'node:test';
+import { test } from 'vitest';
 import assert from 'node:assert/strict';
-import { generateScale, applyScale, setStep } from '../js/lib/scale.js';
+import { generateScale, applyScale, setStep } from '../src/lib/scale.js';
 
 const V = 'com.example.styleguide';
 const spacing = { base: { value: 4, unit: 'px' }, steps: { xs: 1, sm: 2, md: 4, lg: 6, xl: 8, '2xl': 12, '3xl': 16 } };

@@ -1,5 +1,5 @@
 // Color math for DTCG color values. Conversions and CSS parsing come from culori.
-import { converter, parse } from '../vendor/culori.js';
+import { converter, parse } from 'culori';
 
 const SHADES = ['50', '100', '200', '300', '400', '500', '600', '700', '800', '900', '950'];
 const round = (n, d = 4) => Math.round(n * 10 ** d) / 10 ** d;

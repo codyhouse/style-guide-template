@@ -1,9 +1,9 @@
-import { test } from 'node:test';
+import { test } from 'vitest';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import * as E from '../js/lib/edit.js';
-import { resolve } from '../js/lib/resolver.js';
-import { oklch } from '../js/lib/color.js';
+import * as E from '../src/lib/edit.js';
+import { resolve } from '../src/lib/resolver.js';
+import { oklch } from '../src/lib/color.js';
 
 const V = 'com.example.styleguide';
 const load = () => JSON.parse(readFileSync(new URL('./fixtures/minimal.resolver.json', import.meta.url), 'utf8'));
@@ -75,7 +75,7 @@ test('fontFromFileName guesses family, weight and style', () => {
 });
 
 test('setHue keeps the typed color and records which shade it is', async () => {
-  const { parseCssColor } = await import('../js/lib/color.js');
+  const { parseCssColor } = await import('../src/lib/color.js');
   const out = E.setHue(load(), 'brand', parseCssColor('#f0941d'), V);
   const brand = E.foundation(out).color.brand;
   assert.equal(brand.$extensions[V].base, '300');
