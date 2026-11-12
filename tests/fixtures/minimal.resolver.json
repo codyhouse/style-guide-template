@@ -1,0 +1,317 @@
+{
+  "$schema": "https://www.designtokens.org/schemas/2025.10/resolver.json",
+  "version": "2025.10",
+  "name": "Brand Name",
+  "sets": {
+    "foundation": {
+      "sources": [
+        {
+          "color": {
+            "$type": "color",
+            "brand": {
+              "600": {
+                "$value": {
+                  "colorSpace": "oklch",
+                  "components": [
+                    0.55,
+                    0.18,
+                    260
+                  ],
+                  "hex": "#296cd8"
+                },
+                "$extensions": {
+                  "com.example.styleguide": {
+                    "cmyk": [
+                      70,
+                      40,
+                      0,
+                      0
+                    ],
+                    "pantone": "PANTONE 2727 C"
+                  }
+                }
+              },
+              "700": {
+                "$value": {
+                  "colorSpace": "oklch",
+                  "components": [
+                    0.47,
+                    0.16,
+                    260
+                  ],
+                  "hex": "#1c55b2"
+                }
+              },
+              "800": {
+                "$value": {
+                  "colorSpace": "oklch",
+                  "components": [
+                    0.39,
+                    0.14,
+                    260
+                  ],
+                  "hex": "#0f408e"
+                }
+              }
+            },
+            "neutral": {
+              "50": {
+                "$value": {
+                  "colorSpace": "oklch",
+                  "components": [
+                    0.97,
+                    0.005,
+                    260
+                  ],
+                  "hex": "#f3f5f9"
+                }
+              },
+              "900": {
+                "$value": {
+                  "colorSpace": "oklch",
+                  "components": [
+                    0.23,
+                    0.01,
+                    260
+                  ],
+                  "hex": "#1a1d22"
+                }
+              },
+              "950": {
+                "$value": {
+                  "colorSpace": "oklch",
+                  "components": [
+                    0.15,
+                    0.01,
+                    260
+                  ],
+                  "hex": "#090b0f"
+                }
+              }
+            },
+            "primary": {
+              "background": {
+                "$value": "{color.brand.600}"
+              },
+              "background-hover": {
+                "$value": "{color.brand.700}"
+              },
+              "background-active": {
+                "$value": "{color.brand.800}"
+              },
+              "foreground": {
+                "$value": "{color.neutral.50}"
+              }
+            },
+            "page": {
+              "background": {
+                "$value": "{color.neutral.50}"
+              },
+              "foreground": {
+                "$value": "{color.neutral.900}"
+              }
+            }
+          },
+          "spacing": {
+            "$type": "dimension",
+            "$extensions": {
+              "com.example.styleguide": {
+                "scale": {
+                  "base": {
+                    "value": 4,
+                    "unit": "px"
+                  },
+                  "steps": {
+                    "xs": 1,
+                    "md": 4
+                  }
+                }
+              }
+            },
+            "xs": {
+              "$value": {
+                "value": 4,
+                "unit": "px"
+              }
+            },
+            "md": {
+              "$value": {
+                "value": 16,
+                "unit": "px"
+              }
+            }
+          },
+          "radius": {
+            "$type": "dimension",
+            "md": {
+              "$value": {
+                "value": 8,
+                "unit": "px"
+              }
+            }
+          },
+          "font": {
+            "$type": "fontFamily",
+            "heading": {
+              "$value": [
+                "Merriweather",
+                "serif"
+              ]
+            },
+            "body": {
+              "$value": [
+                "Open Sans",
+                "sans-serif"
+              ]
+            }
+          },
+          "font-size": {
+            "$type": "dimension",
+            "$extensions": {
+              "com.example.styleguide": {
+                "scale": {
+                  "base": {
+                    "value": 1,
+                    "unit": "rem"
+                  },
+                  "ratio": 1.25,
+                  "steps": {
+                    "md": 0,
+                    "4xl": 5
+                  }
+                }
+              }
+            },
+            "md": {
+              "$value": {
+                "value": 1,
+                "unit": "rem"
+              }
+            },
+            "4xl": {
+              "$value": {
+                "value": 3.0518,
+                "unit": "rem"
+              }
+            }
+          },
+          "typography": {
+            "$type": "typography",
+            "heading-1": {
+              "$value": {
+                "fontFamily": "{font.heading}",
+                "fontSize": "{font-size.4xl}",
+                "fontWeight": 700,
+                "letterSpacing": {
+                  "value": 0,
+                  "unit": "px"
+                },
+                "lineHeight": 1.2
+              }
+            }
+          },
+          "shadow": {
+            "$type": "shadow",
+            "md": {
+              "$value": {
+                "color": "{color.neutral.900}",
+                "offsetX": {
+                  "value": 0,
+                  "unit": "px"
+                },
+                "offsetY": {
+                  "value": 2,
+                  "unit": "px"
+                },
+                "blur": {
+                  "value": 8,
+                  "unit": "px"
+                },
+                "spread": {
+                  "value": 0,
+                  "unit": "px"
+                }
+              }
+            }
+          },
+          "duration": {
+            "$type": "duration",
+            "fast": {
+              "$value": {
+                "value": 150,
+                "unit": "ms"
+              }
+            }
+          }
+        }
+      ],
+      "$extensions": {
+        "com.example.styleguide": {
+          "assetGroups": [
+            {
+              "id": "logos",
+              "label": "Logos",
+              "items": [
+                {
+                  "label": "Primary",
+                  "src": "logos/primary.svg"
+                }
+              ]
+            },
+            {
+              "id": "patterns",
+              "label": "Patterns",
+              "items": [
+                {
+                  "label": "Dots",
+                  "src": "patterns/dots.svg",
+                  "description": "Hero backgrounds"
+                }
+              ]
+            }
+          ],
+          "fontFiles": [
+            {
+              "family": "Merriweather",
+              "weight": 700,
+              "style": "normal",
+              "subset": "latin",
+              "src": "fonts/merriweather-latin-700-normal.woff2",
+              "provider": "fontsource",
+              "fontsourceId": "merriweather",
+              "version": "5.3.0"
+            }
+          ]
+        }
+      }
+    }
+  },
+  "modifiers": {
+    "theme": {
+      "contexts": {
+        "light": [],
+        "dark": [
+          {
+            "color": {
+              "page": {
+                "background": {
+                  "$type": "color",
+                  "$value": "{color.neutral.950}"
+                }
+              }
+            }
+          }
+        ]
+      },
+      "default": "light"
+    }
+  },
+  "resolutionOrder": [
+    {
+      "$ref": "#/sets/foundation"
+    },
+    {
+      "$ref": "#/modifiers/theme"
+    }
+  ]
+}
