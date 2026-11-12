@@ -1,0 +1,25 @@
+{
+  "files": [
+    "favicons/favicon-1.jpg",
+    "favicons/favicon-2.jpg",
+    "favicons/touch-icon-1.jpg",
+    "favicons/touch-icon-2.jpg",
+    "icons/icon-1.svg",
+    "icons/icon-2.svg",
+    "icons/icon-3.svg",
+    "icons/icon-4.svg",
+    "icons/icon-5.svg",
+    "icons/icon-6.svg",
+    "icons/icon-7.svg",
+    "icons/icon-8.svg",
+    "logos/codyhouse.svg",
+    "logos/logo-ver-1.jpg",
+    "logos/logo-ver-2.jpg"
+  ],
+  "brands": [
+    {
+      "name": "Default",
+      "path": "brands/default.resolver.json"
+    }
+  ]
+}
