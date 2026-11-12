@@ -4,6 +4,7 @@ import { defineConfig } from 'vitest/config';
 export default defineConfig({
   server: { port: 8000, strictPort: true },
   preview: { port: 8000, strictPort: true },
-  build: { target: 'es2022' },
+  // license: the bundled libraries' notices, written to dist/.vite/license.md
+  build: { target: 'es2022', license: true },
   test: { include: ['tests/**/*.test.ts'] },
 });

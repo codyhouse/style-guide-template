@@ -12,7 +12,7 @@ import {
 } from '../lib/assets.js';
 import * as E from '../lib/edit.js';
 import { buildExport, classify, loadZip, parseBrandJson, saveJson, slug } from '../lib/io.js';
-import { manifest as manifestSchema, resolverDoc } from '../lib/schema.js';
+import { brandMeta as brandMetaSchema, manifest as manifestSchema, resolverDoc } from '../lib/schema.js';
 import { createStore, idbFileStore, type Store } from '../lib/state.js';
 import type { AssetContext, BrandMeta, Manifest, Problem, ResolverDoc, SessionFiles } from '../lib/types.js';
 import { vendorKey } from '../lib/vendor-key.js';
@@ -254,9 +254,17 @@ export class Session {
     return { name: `${this.fileName}-brand-kit.zip`, data: zip };
   }
 
-  /** Drops session files no draft refers to. */
+  /**
+   * Drops session files no draft refers to. If a draft does not parse (one that could not be shown),
+   * nothing is dropped: its files are still needed if it is restored.
+   */
   prune() {
-    const used = this.store.drafts().flatMap((d) => allSrcs(brandMeta(d, this.vendor)).map((x) => x.src));
-    return this.store.prune(new Set(used));
+    const used = new Set<string>();
+    for (const draft of this.store.drafts()) {
+      const meta = z.safeParse(brandMetaSchema, draft.sets.foundation?.$extensions?.[this.vendor] ?? {});
+      if (!meta.success) return;
+      for (const { src } of allSrcs(meta.data)) used.add(src);
+    }
+    return this.store.prune(used);
   }
 }

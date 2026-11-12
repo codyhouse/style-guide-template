@@ -261,7 +261,8 @@ export class App extends LightElement {
         });
       }
       anchor.classList.toggle('selected', inView);
-      anchor.toggleAttribute('aria-current', inView);
+      if (inView) anchor.setAttribute('aria-current', 'true');
+      else anchor.removeAttribute('aria-current');
     }
   };
 
