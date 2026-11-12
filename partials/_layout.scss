@@ -1,20 +1,28 @@
-// breakpoints
-   
-$S:     768px;   
-$M:     1024px;     
-$L:     1600px;   
+// breakpoints (media queries cannot read custom properties)
+
+$S:     768px;   // ds-allow-hardcode: media query breakpoint
+$M:     1024px;  // ds-allow-hardcode: media query breakpoint
+$L:     1600px;  // ds-allow-hardcode: media query breakpoint
 
 // media queries
 
 @mixin MQ($canvas) {
   @if $canvas == S {
-   @media only screen and (min-width: $S) { @content; } 
+   @media only screen and (min-width: $S) { @content; }
   }
   @else if $canvas == M {
-   @media only screen and (min-width: $M) { @content; } 
+   @media only screen and (min-width: $M) { @content; }
   }
   @else if $canvas == L {
-   @media only screen and (min-width: $L) { @content; } 
+   @media only screen and (min-width: $L) { @content; }
+  }
+}
+
+// hover styles only where a pointer can hover
+
+@mixin hover {
+  @media (hover: hover) {
+    &:hover { @content; }
   }
 }
 
@@ -24,4 +32,3 @@ $L:     1600px;
   width: 100% * $percentage;
   float: $float-direction;
 }
-

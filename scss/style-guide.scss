@@ -1,37 +1,22 @@
-@import 'bourbon'; // http://bourbon.io/
+@use 'sass:meta';
+@use '../partials/layout' as *; // responsive grid and media queries
 
-@import '../partials/layout'; // responsive grid and media queries
+// Every color, font, size, radius, shadow and duration comes from the brand's
+// CSS custom properties, generated from its DTCG resolver file at runtime.
 
-// color palette - these colors will be the color swatches of the Colors section
+/* --------------------------------
 
-$color-1: #5f8ee4; // Cornflower Blue - Action color
-$color-2: #19191a; // Dark Blue
-$color-3: #e4655f; // Red
-$color-4: #e6e6e6; // light grey
-$color-5: #ffffff; // white
-
-// additional colors
-
-$success: #6fce72; // green
-$alert: $color-3;  // red
-
-// fonts
-
-$primary-font: 'Merriweather', serif;
-$secondary-font: 'Open Sans', sans-serif;
-
-/* -------------------------------- 
-
-xBackground 
+xBackground
 
 -------------------------------- */
 
 body {
 	/* this is the page background */
-	background-color: $color-5;
+	background-color: var(--color-page-background);
+	color: var(--color-page-foreground);
 }
 
-/* -------------------------------- 
+/* --------------------------------
 
 xPatterns
 
@@ -39,53 +24,60 @@ xPatterns
 
 .cd-box {
 	/* this is the container of various design elements - i.e. the 2 logo of the branding section */
-	border: 1px solid $color-4;
-	border-radius: 3px;
-	background: $color-5;
-	box-shadow: 0 1px 1px rgba(#000, .05);
-	padding: 6px;
+	border: 1px solid var(--color-card-border); // ds-allow-hardcode: hairline
+	border-radius: var(--radius-sm);
+	background: var(--color-card-background);
+	color: var(--color-card-foreground);
+	box-shadow: var(--shadow-sm);
+	padding: var(--spacing-sm);
 }
 
-/* -------------------------------- 
+:focus-visible {
+	outline: 0.125rem solid var(--color-focus-border);
+	outline-offset: 0.125rem;
+}
 
-xNavigation 
+/* --------------------------------
+
+xNavigation
 
 -------------------------------- */
 
 header {
-	background-color: $color-2;
+	background-color: var(--color-page-background);
+	box-shadow: var(--shadow-sm);
 }
 
 .cd-logo {
 	/* logo box style */
-	background-color: $color-1;
-	width: 120px;
+	background-color: var(--color-primary-background);
+	width: 7.5rem;
 
 	@include MQ(M) {
-		width: 180px;
+		width: 11.25rem;
 	}
 }
 
 .cd-main-nav {
 	/* main navigation background color - full screen on small devices */
-	background: $color-2;
+	background: var(--color-page-background);
 
 	li a {
-		color: $color-5;
-		border-color: lighten($color-2, 5%);
+		color: var(--color-page-foreground);
+		border-color: var(--color-page-border);
 	}
 
 	@include MQ(M) {
 		li a {
-			color: lighten($color-2, 40%);
+			color: var(--color-muted-foreground);
 
 			&.selected {
-				color: $color-5;
-				box-shadow: 0 2px 0 $color-1;
+				color: var(--color-page-foreground);
+				box-shadow: 0 0.125rem 0 var(--color-primary-background);
 			}
 
-			.no-touch &:hover {
-				color: $color-5;
+			@include hover {
+				color: var(--color-page-foreground);
 			}
 		}
 	}
@@ -93,227 +85,256 @@ header {
 
 .cd-nav-trigger span {
 	/* hamburger menu */
-	background-color: $color-5;
+	background-color: var(--color-page-foreground);
 
 	&::before,
 	&::after {
 		/* upper and lower lines */
-		background-color: $color-5;
+		background-color: var(--color-page-foreground);
 	}
 }
 
 .nav-is-visible .cd-nav-trigger span {
 	/* hide line in the center on mobile when nav is visible */
-	background-color: rgba($color-5, 0);
+	background-color: transparent;
 
 	&::before, &::after {
 		/* preserve visibility of upper and lower lines - close icon */
-		background-color: rgba($color-5, 1);
+		background-color: var(--color-page-foreground);
 	}
 }
 
-.cd-download {
-	/* download button top-right visible on big devices */
-	background-color: lighten($color-2, 10%);
+/* --------------------------------
 
-	.no-touch &:hover {
-		background-color: lighten($color-2, 15%);
-	}
-
-	span {
-		/* tooltip */
-		background: $color-1;
-		color: $color-5;
-
-		&::before {
-			/* right arrow color */
-			border-color: $color-1;
-		}
-	}
-}
-
-/* -------------------------------- 
-
-xPage title 
+xPage title
 
 -------------------------------- */
 
 main > h1 {
-	color: $color-2;
-
-	@include MQ(L) {
-		/* title goes into the header on big devices */
-		color: $color-5;
-	}
+	color: var(--color-page-foreground);
 }
 
-/* -------------------------------- 
+/* --------------------------------
 
-xTypography 
+xTypography
 
 -------------------------------- */
 
 h1, h2 {
-	font-family: $secondary-font;
-	color: $color-2;
+	font-family: var(--font-heading);
+	color: var(--color-page-foreground);
 }
 
 h1 {
-	font-size: 2.4rem;
-	font-weight: 300;
-	line-height: 1.2;
+	font-size: var(--font-size-xl);
+	font-weight: var(--typography-heading-1-font-weight);
+	line-height: var(--typography-heading-1-line-height);
 	margin: 0 0 .4em;
 
 	@include MQ(S) {
-		font-size: 3.2rem;
+		font-size: var(--font-size-2xl);
 	}
 
 	@include MQ(M) {
-		font-size: 4rem;
+		font-size: var(--typography-heading-1-font-size);
 	}
 }
 
 h2 {
-	font-weight: bold;
+	font-weight: var(--typography-heading-2-font-weight);
 	text-transform: uppercase;
 	margin: 1em 0;
 
 	@include MQ(S) {
-		font-size: 1.8rem;
+		font-size: var(--typography-heading-2-font-size);
 		margin: 1em 0 1.4em;
 	}
 }
 
 section > h2::before {
 	/* number before each section title */
-	color: darken($color-4, 15%);
+	color: var(--color-muted-foreground);
 }
 
 p {
-	font-size: 1.4rem;
+	font-size: var(--font-size-md);
 	line-height: 1.4;
-	color: lighten($color-2, 25%);
+	color: var(--color-page-foreground);
 
 	a {
-		color: $color-1;
+		color: var(--color-primary-background);
 		text-decoration: underline;
 	}
 
 	@include MQ(S) {
-		font-size: 1.6rem;
-		line-height: 1.6;
+		line-height: var(--typography-body-line-height);
 	}
 }
 
-/* -------------------------------- 
+/* --------------------------------
 
-xButtons 
+xButtons
 
 -------------------------------- */
 
 .btn {
 	border: none;
 	box-shadow: none;
-	border-radius: .25em;
+	border-radius: var(--radius-sm);
 	font: {
-		size: 1.4rem;
-		family: $secondary-font;
+		size: var(--font-size-md);
+		family: var(--font-heading);
 	}
-	color: $color-5;
+	color: var(--color-primary-foreground);
 	padding: .6em 2.2em;
 	cursor: pointer;
-	background: $color-1;
+	background: var(--color-primary-background);
+	transition: background-color var(--duration-fast), color var(--duration-fast);
 
-	&:focus {
-		outline: none;
+	@include hover {
+		background: var(--color-primary-background-hover);
 	}
 
-	.no-touch &:hover {
-		background: lighten($color-1, 5%);
+	&[data-state=hover] {
+		background: var(--color-primary-background-hover);
 	}
 
-	&.btn-success {
-		background: $success;
-
-		.no-touch &:hover {
-			background: lighten($success, 5%);
-		}
+	&:active, &[data-state=active] {
+		background: var(--color-primary-background-active);
 	}
 
-	&.btn-alert {
-		background: $alert;
-
-		.no-touch &:hover {
-			background: lighten($alert, 5%);
-		}
+	&[data-state=focus] {
+		outline: 0.125rem solid var(--color-focus-border);
+		outline-offset: 0.125rem;
 	}
 
-	&.btn-outline {
-		color: $color-1;
+	&.btn-secondary {
+		color: var(--color-secondary-foreground);
 		background: transparent;
-		box-shadow: inset 0 0 0 1px $color-1;
+		box-shadow: inset 0 0 0 1px var(--color-secondary-border); // ds-allow-hardcode: hairline
 
-		.no-touch &:hover {
-			color: $color-5;
-			background: $color-1;
+		@include hover {
+			background: var(--color-secondary-background-hover);
+		}
+
+		&[data-state=hover] {
+			background: var(--color-secondary-background-hover);
+		}
+
+		&:active, &[data-state=active] {
+			background: var(--color-secondary-background-active);
 		}
 	}
 
-	@include MQ(S) {
-		font-size: 1.6rem;
+	&.btn-destructive {
+		color: var(--color-destructive-foreground);
+		background: var(--color-destructive-background);
+
+		@include hover {
+			background: var(--color-destructive-background-hover);
+		}
+
+		&[data-state=hover] {
+			background: var(--color-destructive-background-hover);
+		}
+
+		&:active, &[data-state=active] {
+			background: var(--color-destructive-background-active);
+		}
+	}
+
+	&:disabled {
+		cursor: not-allowed;
+		opacity: .5;
+		pointer-events: none;
+	}
+
+	&[aria-busy=true] {
+		cursor: progress;
+		position: relative;
+		color: transparent;
+
+		&::after {
+			/* loading spinner */
+			content: '';
+			position: absolute;
+			top: 50%;
+			left: 50%;
+			width: 1em;
+			height: 1em;
+			margin: -.5em 0 0 -.5em;
+			border-radius: 50%;
+			border: 0.125rem solid var(--color-primary-foreground);
+			border-right-color: transparent;
+			animation: cd-spin calc(var(--duration-normal) * 3) linear infinite;
+		}
+
+		&.btn-secondary::after {
+			border-color: var(--color-secondary-foreground);
+			border-right-color: transparent;
+		}
+
+		&.btn-destructive::after {
+			border-color: var(--color-destructive-foreground);
+			border-right-color: transparent;
+		}
 	}
 }
 
-.cd-buttons .cd-box:nth-of-type(2) span {
-	/* CSS class name color */ 
-	color: $color-1;
+@keyframes cd-spin {
+	to { transform: rotate(360deg); }
 }
 
-/* -------------------------------- 
+@media (prefers-reduced-motion: reduce) {
+	.btn[aria-busy=true]::after {
+		animation: none;
+	}
+}
 
-xIcons 
+.cd-buttons .cd-box:last-of-type span {
+	/* CSS class name color */
+	color: var(--color-primary-background);
+}
+
+/* --------------------------------
+
+xIcons
 
 -------------------------------- */
 
 .cd-icons li {
 	/* icons size */
-	width: 32px;
-	height: 32px;
+	width: 2rem;
+	height: 2rem;
 }
 
-/* -------------------------------- 
+/* --------------------------------
 
-xForm 
+xForm
 
 -------------------------------- */
 
-input[type=text], select {
-	border: 1px solid $color-4;
-	border-radius: .25em;
-	background: $color-5;
-
-	&:focus {
-		outline: none;
-	}
-}
-
 input[type=text] {
+	border: 1px solid var(--color-input-border); // ds-allow-hardcode: hairline
+	border-radius: var(--radius-sm);
+	background: var(--color-input-background);
+	color: var(--color-input-foreground);
 	padding: .6em 1em;
-	box-shadow: inset 1px 1px rgba(#000, .03);
 
 	&.success {
-		border-color: $success;
-		box-shadow: 0 0 6px rgba($success, .2);
+		border-color: var(--color-success-border);
+		box-shadow: 0 0 0 0.125rem var(--color-success-border);
 	}
 
 	&.alert {
-		border-color: $alert;
-		box-shadow: 0 0 6px rgba($alert, .2);
+		border-color: var(--color-destructive-border);
+		box-shadow: 0 0 0 0.125rem var(--color-destructive-border);
 	}
 
 	&:focus {
-		border-color: $color-1;
-		box-shadow: 0 0 6px rgba($color-1, .2);
+		outline: none;
+		border-color: var(--color-focus-border);
+		box-shadow: 0 0 0 0.125rem var(--color-focus-border);
 	}
 }
 
@@ -329,29 +350,29 @@ input[type=checkbox] {
 
 .radio-label,
 .checkbox-label {
-	padding-left: 24px;
-	@include user-select(none);
+	padding-left: 1.5rem;
+	user-select: none;
 
 	&::before,
 	&::after {
 		/* custom radio and check boxes */
 		content: '';
 		display: block;
-		width: 16px;
-		height: 16px;
+		width: 1rem;
+		height: 1rem;
 		position: absolute;
 		top: 50%;
-		@include transform(translateY(-50%));
+		transform: translateY(-50%);
 	}
 
 	&::before {
 		left: 0;
-		border: 1px solid $color-4;
-		box-shadow: inset 1px 1px rgba(#000, .03);
+		border: 1px solid var(--color-input-border); // ds-allow-hardcode: hairline
+		background: var(--color-input-background);
 	}
 
 	&::after {
-		left: 3px;
+		left: 0.1875rem;
 		background: url('../assets/form/icon-check.svg') no-repeat center center;
 		display: none;
 	}
@@ -362,14 +383,13 @@ input[type=checkbox] {
 }
 
 .checkbox-label::before {
-	border-radius: 3px;
+	border-radius: var(--radius-sm);
 }
 
 input[type=radio]:checked + label::before,
 input[type=checkbox]:checked + label::before {
-	background-color: $color-2;
-	border: none;
-	box-shadow: none;
+	background-color: var(--color-primary-background);
+	border-color: var(--color-primary-background);
 }
 
 input[type=radio]:checked + label::after,
@@ -377,26 +397,11 @@ input[type=checkbox]:checked + label::after {
 	display: block;
 }
 
-.cd-select::after {
-	/* switcher arrow for select element */
-	content: '';
-	position: absolute;
-	z-index: 1;
-	right: 14px;
-	top: 50%;
-	@include transform(translateY(-50%));
-	display: block;
-	width: 16px;
-	height: 16px;
-	background: url('../assets/form/icon-select.svg') no-repeat center center;
-	pointer-events: none;
+input[type=radio]:focus-visible + label::before,
+input[type=checkbox]:focus-visible + label::before {
+	outline: 0.125rem solid var(--color-focus-border);
+	outline-offset: 0.125rem;
 }
 
-select {
-	position: relative;
-	padding: .6em 2em .6em 1em;
-	cursor: pointer;
-	@include appearance(none);
-}
-
-@import '../partials/basic-style';
+@include meta.load-css('../partials/basic-style');
+@include meta.load-css('../partials/editor');
