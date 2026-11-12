@@ -8,13 +8,13 @@ Everything runs in the browser. There is no backend.
 ## Run it
 
 ```
-npm install
-npm start            # http://localhost:8000
+pnpm install
+pnpm dev             # http://localhost:8000
 ```
 
-- `npm test`: unit tests (Node's built-in test runner)
-- `npm run build:css`: compile `scss/style-guide.scss` to `css/style-guide.css`
-- `npm run vendor`: refresh the vendored `fflate` ZIP library in `js/vendor/`
+- `pnpm test`: unit tests (Node's built-in test runner)
+- `pnpm build:css`: compile `scss/style-guide.scss` to `css/style-guide.css`
+- `pnpm vendor`: refresh the vendored `fflate` ZIP library in `js/vendor/`
 
 Set the site's address in `js/config.js` (`HOSTED_URL`). The README in every exported kit links there, and the brand file's `$extensions` key is derived from it (`https://styleguide.example.com` becomes `com.example.styleguide`).
 
@@ -49,7 +49,7 @@ Files under `library/` are offered to every user of the site. To add some:
 2. List each path in `library/manifest.json` under `files`.
 3. To add a brand preset, put its resolver file in `library/brands/` and add `{ "name": ..., "path": "brands/..." }` under `brands`. The first brand is the one a new visitor sees.
 
-`npm test` checks that the manifest matches the files on disk and that every preset is valid, resolves, and passes contrast.
+`pnpm test` checks that the manifest matches the files on disk and that every preset is valid, resolves, and passes contrast.
 
 ## Credits
 
