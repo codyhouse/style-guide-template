@@ -1,0 +1,262 @@
+// The editing session around the brand store: files coming in, warnings, files waiting for a group,
+// and the brand kit going out. No DOM here; the UI subscribes and renders.
+import * as z from 'zod/mini';
+import { HOSTED_URL } from '../config.js';
+import {
+  adoptVendor,
+  allSrcs,
+  brandMeta,
+  matchDropped,
+  missingAssets,
+  withBrandMeta,
+} from '../lib/assets.js';
+import * as E from '../lib/edit.js';
+import { buildExport, classify, loadZip, parseBrandJson, saveJson, slug } from '../lib/io.js';
+import { manifest as manifestSchema, resolverDoc } from '../lib/schema.js';
+import { createStore, idbFileStore, type Store } from '../lib/state.js';
+import type { AssetContext, BrandMeta, Manifest, Problem, ResolverDoc, SessionFiles } from '../lib/types.js';
+import { vendorKey } from '../lib/vendor-key.js';
+
+export interface Ambiguous {
+  file: File;
+  candidates: string[];
+}
+
+const stem = (name: string) => name.replace(/\.[^.]+$/, '');
+const describe = (file: string, errors: Problem[]) =>
+  errors.map((e) => `${file}: ${e.path ? `${e.path}: ` : ''}${e.message}`);
+
+async function fetchJson(url: string): Promise<unknown> {
+  const res = await fetch(url);
+  if (!res.ok) throw new Error(`Could not load ${url} (${res.status})`);
+  return res.json();
+}
+
+export class Session {
+  readonly vendor = vendorKey(HOSTED_URL);
+  readonly library: Set<string>;
+  readonly ctx: AssetContext;
+  warnings: string[] = [];
+  pending: File[] = [];
+  ambiguous: Ambiguous[] = [];
+  readonly #listeners = new Set<() => void>();
+
+  private constructor(
+    readonly store: Store,
+    readonly manifest: Manifest,
+    readonly preset: ResolverDoc,
+  ) {
+    this.library = new Set(manifest.files);
+    this.ctx = { session: store.files, library: this.library };
+    store.subscribe(() => this.#changed());
+  }
+
+  /** Loads the library manifest and the first preset, and resumes the browser's saved draft. */
+  static async open(): Promise<Session> {
+    const manifest = z.parse(manifestSchema, await fetchJson('library/manifest.json'));
+    const preset = await Session.fetchPreset(manifest.brands[0].path);
+    const store = createStore({ doc: preset, storage: localStorage, fileStore: idbFileStore() });
+    await store.ready;
+    return new Session(store, manifest, preset);
+  }
+
+  static async fetchPreset(path: string): Promise<ResolverDoc> {
+    return z.parse(resolverDoc, await fetchJson(`library/${path}`));
+  }
+
+  subscribe(fn: () => void) {
+    this.#listeners.add(fn);
+    return () => this.#listeners.delete(fn);
+  }
+
+  #changed() {
+    for (const fn of this.#listeners) fn();
+  }
+
+  get doc() {
+    return this.store.get();
+  }
+
+  get meta(): BrandMeta {
+    return brandMeta(this.doc, this.vendor);
+  }
+
+  setMeta(fn: (meta: BrandMeta) => BrandMeta) {
+    this.store.set(withBrandMeta(this.doc, this.vendor, fn(this.meta)));
+  }
+
+  warn(...messages: string[]) {
+    const fresh = messages.filter((m) => !this.warnings.includes(m));
+    if (!fresh.length) return; // a repeated warning changes nothing, so nothing re-renders
+    this.warnings = [...this.warnings, ...new Set(fresh)];
+    this.#changed();
+  }
+
+  dismissWarnings() {
+    this.warnings = [];
+    this.#changed();
+  }
+
+  /** A draft that cannot be shown must never lock the page: show the preset, keep the draft as the previous one. */
+  fallBack(error: unknown) {
+    this.warnings = [
+      ...this.warnings,
+      `This brand could not be shown (${error instanceof Error ? error.message : String(error)}). ` +
+        'Showing the default brand; your draft is under Edit > Restore previous draft.',
+    ];
+    this.store.load(this.preset, undefined, { record: false });
+  }
+
+  /* files coming in */
+
+  #takenPaths() {
+    return new Set([...this.store.files.keys(), ...allSrcs(this.meta).map((s) => s.src)]);
+  }
+
+  /** New session files, each under a path nothing else uses yet. */
+  #place<T>(files: File[], folder: string, entry: (file: File, src: string) => T) {
+    const taken = this.#takenPaths();
+    const map: SessionFiles = new Map();
+    const entries = files.map((file) => {
+      const src = E.uniquePath(`${folder}/${file.name}`, taken);
+      taken.add(src);
+      map.set(src, file);
+      return entry(file, src);
+    });
+    return { map, entries };
+  }
+
+  async #persist(map: SessionFiles) {
+    const { notPersisted } = await this.store.addFiles(map);
+    if (notPersisted.length) {
+      this.warn(
+        ...notPersisted.map(
+          (p) =>
+            `Not saved in this browser (storage full): ${p}. It is still in this session and in exports.`,
+        ),
+      );
+    }
+  }
+
+  async addUploads(files: File[], groupId: string) {
+    const { map, entries } = this.#place(files, groupId, (file, src) => ({ label: stem(file.name), src }));
+    await this.#persist(map);
+    this.setMeta((m) => E.addItems(m, groupId, entries));
+  }
+
+  async addFontUploads(files: File[]) {
+    const { map, entries } = this.#place(files, 'fonts', (file, src) => ({
+      ...E.fontFromFileName(file.name),
+      src,
+    }));
+    await this.#persist(map);
+    this.setMeta((m) => E.addFontFiles(m, entries));
+  }
+
+  async #loadBrand(doc: ResolverDoc, files?: SessionFiles) {
+    const own = adoptVendor(doc, this.vendor);
+    this.store.load(withBrandMeta(own, this.vendor, brandMeta(own, this.vendor)));
+    this.pending = [];
+    this.ambiguous = [];
+    if (files?.size) await this.#persist(files);
+  }
+
+  /** Files dropped for a brand's missing paths, matched by file name; returns the ones that match nothing. */
+  async fillMissing(files: File[]) {
+    const { matched, ambiguous, unmatched } = matchDropped(missingAssets(this.meta, this.ctx), files);
+    if (matched.size) await this.#persist(matched);
+    this.ambiguous = [
+      ...this.ambiguous,
+      ...ambiguous.flatMap(({ name, candidates }) => {
+        const file = files.find((f) => f.name === name);
+        return file ? [{ file, candidates }] : [];
+      }),
+    ];
+    this.pending = [...this.pending, ...unmatched];
+    this.#changed();
+  }
+
+  async assign(file: File, path: string) {
+    this.ambiguous = this.ambiguous.filter((a) => a.file !== file);
+    await this.#persist(new Map([[path, file]]));
+  }
+
+  /** Puts the files waiting for a group into it; null makes a new group. */
+  async addPending(groupId: string | null) {
+    let id = groupId;
+    if (!id) {
+      const next = E.addGroup(this.meta, 'Uploads'); // appends the group
+      this.setMeta(() => next);
+      id = next.assetGroups.at(-1)?.id ?? null;
+    }
+    if (!id) return;
+    const files = this.pending;
+    this.pending = [];
+    await this.addUploads(files, id);
+  }
+
+  discardPending() {
+    this.pending = [];
+    this.#changed();
+  }
+
+  /** Anything dropped or loaded: one brand file (resolver, tokens or kit ZIP), fonts, and other files. */
+  async receive(files: File[]) {
+    try {
+      const brands = files.filter((f) => ['resolver', 'tokens', 'zip'].includes(classify(f.name)));
+      const [brand] = brands;
+      if (brands.length > 1)
+        this.warn(`Loaded ${brand.name}; drop one brand file at a time (${brands.length - 1} ignored).`);
+      if (brand) await this.#receiveBrand(brand);
+      const rest = files.filter((f) => !brands.includes(f));
+      const fonts = rest.filter((f) => classify(f.name) === 'font');
+      if (fonts.length) await this.addFontUploads(fonts);
+      const others = rest.filter((f) => !fonts.includes(f));
+      if (others.length) await this.fillMissing(others);
+    } catch (e) {
+      this.warn(`Could not load ${files.map((f) => f.name).join(', ')}: ${(e as Error).message}`);
+    }
+  }
+
+  async #receiveBrand(file: File) {
+    const { doc, errors, files } =
+      classify(file.name) === 'zip'
+        ? loadZip(new Uint8Array(await file.arrayBuffer()))
+        : { ...parseBrandJson(await file.text(), file.name), files: undefined };
+    if (doc && !errors.length) await this.#loadBrand(doc, files);
+    else this.warn(...describe(file.name, errors));
+  }
+
+  /* going out */
+
+  get fileName() {
+    return slug(this.doc.name ?? 'brand');
+  }
+
+  brandJson() {
+    return { name: `${this.fileName}.resolver.json`, data: saveJson(this.doc) };
+  }
+
+  async brandKit() {
+    const fetchBytes = async (url: string) => {
+      const res = await fetch(url);
+      if (!res.ok) throw new Error(`${res.status}`);
+      return new Uint8Array(await res.arrayBuffer());
+    };
+    const { zip, warnings } = await buildExport(this.doc, {
+      vendor: this.vendor,
+      files: this.store.files,
+      library: this.library,
+      fetchBytes,
+      hostedUrl: HOSTED_URL,
+    });
+    if (warnings.length) this.warn(...warnings.map((x) => `Export: ${x}`));
+    return { name: `${this.fileName}-brand-kit.zip`, data: zip };
+  }
+
+  /** Drops session files no draft refers to. */
+  prune() {
+    const used = this.store.drafts().flatMap((d) => allSrcs(brandMeta(d, this.vendor)).map((x) => x.src));
+    return this.store.prune(new Set(used));
+  }
+}

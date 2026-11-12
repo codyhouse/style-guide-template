@@ -280,13 +280,11 @@ const assetItem = z.looseObject({
   provider: z.optional(z.string()),
 });
 const assetGroup = z.looseObject({
-  id: z
-    .string()
-    .check(
-      z.regex(/^[a-z0-9][a-z0-9-]*$/, {
-        error: (iss) => `group id "${String(iss.input)}" must use a-z, 0-9 and -`,
-      }),
-    ),
+  id: z.string().check(
+    z.regex(/^[a-z0-9][a-z0-9-]*$/, {
+      error: (iss) => `group id "${String(iss.input)}" must use a-z, 0-9 and -`,
+    }),
+  ),
   label: z.optional(z.string()),
   items: z.array(assetItem, { error: 'group needs an items array' }),
 });

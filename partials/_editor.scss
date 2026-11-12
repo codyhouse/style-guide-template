@@ -27,6 +27,28 @@ xEditor - header actions, panels, drawer, listbox, token and file views
 	font-size: var(--font-size-sm);
 }
 
+/* Lit components that only group markup take no box of their own, so the layout and
+   selectors such as main > section see straight through them */
+sg-app,
+sg-guide,
+sg-panels,
+sg-colors,
+sg-typography,
+sg-scale,
+sg-code,
+sg-editor,
+sg-edit-brand,
+sg-edit-palette,
+sg-edit-roles,
+sg-edit-type,
+sg-edit-scales,
+sg-edit-shadow,
+sg-edit-assets,
+cd-color-input,
+cd-fontsource-picker {
+	display: contents;
+}
+
 /* header actions */
 
 .cd-actions {

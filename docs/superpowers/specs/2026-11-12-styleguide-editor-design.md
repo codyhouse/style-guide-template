@@ -185,7 +185,7 @@ The page is the preview: every section is styled by the loaded brand's tokens, f
 - **Contrast panel:** the required pairs in every `theme` context, pass / fail, live.
 - **Edit mode:** a drawer under the header with forms per area (palette, roles, fonts and type, scales, shadow, assets: add / rename / reorder / remove groups, add files to a group by upload or from the library). On wide screens the guide moves aside so edits show beside it. Undo and Redo (Ctrl/Cmd+Z, Ctrl/Cmd+Shift+Z, Ctrl+Y) step through every change of the brand this session. Color fields take any CSS color or the system color picker.
 - Editor UI follows house rules: pickers use the kit's Listbox pattern (the `<cd-listbox>` element), lucide icons as inline SVG, mobile-first.
-- The guide, its nav, the panels and the drawer are lit-html templates rendered from the document on every change, so focus, typing and open sections survive edits, undo and redo.
+- The UI is Lit components rendering into the light DOM, so the stylesheet applies unchanged: `<sg-app>` (header, section links, drawer), `<sg-guide>` and one component per guide section, `<sg-panels>`, `<sg-editor>` with one component per drawer area, and the `<cd-listbox>`, `<cd-color-input>` and `<cd-fontsource-picker>` controls. Lit updates only what changed, so focus, typing and open folds survive edits, undo and redo.
 
 ## Styles
 
@@ -200,21 +200,23 @@ Strict TypeScript, bundled by Vite. jQuery and Modernizr removed; the behaviors 
 
 | Module | Job |
 |---|---|
-| `state.js` | holds the resolver document; notifies on change; autosaves the document to localStorage and session files to IndexedDB |
-| `schema.ts` | zod schemas for everything loaded from outside (trust boundary): DTCG 2025.10 resolver structure and value shapes per `$type`, this site's brand metadata, the library manifest, Fontsource responses; the types of that data are inferred from them; readable errors |
-| `resolver.js` | applies `resolutionOrder` for a chosen set of modifier inputs; resolves `{}` aliases and `$ref` pointers |
-| `css.js` | the CSS generation above |
-| `scale.js` | spacing / radius / font-size generation from `base`, `steps`, `ratio`; keeps hand overrides |
-| `color.js` | conversions between DTCG color spaces (through culori) and hex / rgba; CSS color parsing; approximate CMYK; 11-shade generation; WCAG contrast ratio |
-| `fonts.js` | registers loaded font files (`FontFace` API) and builds `@font-face` rules |
-| `fontsource.js` | family list (cached), file URLs per variant, license fetch |
-| `assets.js` | the resolution rule |
-| `render.js` | the guide's sections and nav as lit-html templates; object URLs for session files |
-| `editor.js` | the drawer's forms as a lit-html template |
-| `listbox.js`, `fontsource-picker.js` | `<cd-listbox>` and `<cd-fontsource-picker>` custom elements |
-| `io.js` | load resolver / tokens JSON, ZIP, single files (drop anywhere or Load); missing-file matching by name; save JSON; export ZIP |
+| `lib/state.ts` | holds the resolver document; notifies on change; autosaves the document to localStorage and session files to IndexedDB |
+| `lib/schema.ts` | zod schemas for everything loaded from outside (trust boundary): DTCG 2025.10 resolver structure and value shapes per `$type`, this site's brand metadata, the library manifest, Fontsource responses; the types of that data are inferred from them; readable errors |
+| `lib/resolver.ts` | applies `resolutionOrder` for a chosen set of modifier inputs; resolves `{}` aliases and `$ref` pointers |
+| `lib/css.ts` | the CSS generation above |
+| `lib/scale.ts` | spacing / radius / font-size generation from `base`, `steps`, `ratio`; keeps hand overrides |
+| `lib/color.ts` | conversions between DTCG color spaces (through culori) and hex / rgba; CSS color parsing; approximate CMYK; 11-shade generation; WCAG contrast ratio |
+| `lib/fonts.ts` | `@font-face` rules for the brand's font files, with names and URLs escaped |
+| `lib/fontsource.ts` | family list (cached), file URLs per variant, license fetch |
+| `lib/assets.ts` | the resolution rule |
+| `app/session.ts` | the editing session around the store: files coming in, warnings, files waiting for a group, the brand kit going out |
+| `ui/app.ts` | `<sg-app>`: the page, theme, drawer, drag and drop, shortcuts |
+| `ui/guide/*` | `<sg-guide>` and its sections and panels |
+| `ui/editor/*` | `<sg-editor>`, one component per drawer area, the form fields |
+| `ui/urls.ts` | object URLs for session files |
+| `lib/io.ts` | load resolver / tokens JSON, ZIP, single files (drop anywhere or Load); missing-file matching by name; save JSON; export ZIP |
 
-Dependencies from npm, bundled by Vite: `lit-html` (rendering), `zod` (validation of loaded data), `fflate` (ZIP read / write), `culori` (color conversion and CSS color parsing), `idb-keyval` (session files in IndexedDB), `@floating-ui/dom` (listbox popup placement).
+Dependencies from npm, bundled by Vite: `lit` (components), `zod` (validation of loaded data), `fflate` (ZIP read / write), `culori` (color conversion and CSS color parsing), `idb-keyval` (session files in IndexedDB), `@floating-ui/dom` (listbox popup placement).
 
 ## Export ZIP
 

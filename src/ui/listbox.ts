@@ -1,16 +1,20 @@
 // <cd-listbox>: a button that announces its value and opens a role="listbox" popup.
 // Keyboard: arrows, Home/End, typeahead, Enter/Space to pick, Escape to close.
-// Set .label, .options ({ value, label, swatch? }) and .value; picking fires "change" with the value as
-// detail. The element does not change its own value: the owner sets it, so a refused pick shows nothing.
-// The open popup is placed by Floating UI: it flips above or shrinks when there is no room below.
-import { html, nothing, render } from 'lit-html';
-import { styleMap } from 'lit-html/directives/style-map.js';
+// The owner sets .value; picking fires "change" with the value as detail and changes nothing itself,
+// so a pick the owner refuses shows nothing. The open popup is placed by Floating UI: it flips above
+// or shrinks when there is no room below.
 import { autoUpdate, computePosition, flip, offset, shift, size } from '@floating-ui/dom';
+import { html, nothing, type PropertyValues } from 'lit';
+import { customElement, property, query, state } from 'lit/decorators.js';
+import { classMap } from 'lit/directives/class-map.js';
+import { styleMap } from 'lit/directives/style-map.js';
 import { icon } from './dom.js';
+import { LightElement } from './light-element.js';
 
 export interface ListboxOption {
   value: string;
   label: string;
+  /** any CSS color, shown as a chip next to the label */
   swatch?: string;
 }
 
@@ -21,73 +25,74 @@ const chip = (swatch?: string) =>
 
 let uid = 0;
 
-class Listbox extends HTMLElement {
-  #id = `cd-lb-${++uid}`;
-  #label = '';
-  #options: ListboxOption[] = [];
-  #value: string | null = null;
-  #open = false;
-  #active = 0;
-  #typed = '';
-  #typedAt = 0;
-  #stopPlacing: (() => void) | null = null;
-  #queued = false;
+@customElement('cd-listbox')
+export class Listbox extends LightElement {
+  @property() label = '';
+  @property({ attribute: false }) options: ListboxOption[] = [];
+  @property({ attribute: false }) value: string | null = null;
 
-  set label(v: string) {
-    this.#label = v;
-    this.#schedule();
-  }
-  set options(v: ListboxOption[]) {
-    this.#options = v;
-    this.#schedule();
-  }
-  set value(v: string | null) {
-    this.#value = v;
-    this.#schedule();
-  }
-  get value() {
-    return this.#value;
-  }
+  @state() private open = false;
+  @state() private active = 0;
 
-  connectedCallback() {
+  @query('.cd-listbox-trigger') private trigger?: HTMLButtonElement;
+  @query('[role=listbox]') private popup?: HTMLElement;
+
+  private readonly key = `cd-lb-${++uid}`;
+  private typed = '';
+  private typedAt = 0;
+  private stopPlacing?: () => void;
+
+  override connectedCallback() {
+    super.connectedCallback();
     this.classList.add('cd-listbox');
-    document.addEventListener('pointerdown', this.#outside);
-    this.#render();
+    document.addEventListener('pointerdown', this.onOutside);
   }
 
-  disconnectedCallback() {
-    document.removeEventListener('pointerdown', this.#outside);
-    this.#stopPlacing?.();
+  override disconnectedCallback() {
+    super.disconnectedCallback();
+    document.removeEventListener('pointerdown', this.onOutside);
+    this.stopPlacing?.();
   }
 
-  #outside = (e: PointerEvent) => {
-    if (this.#open && !this.contains(e.target as Node)) this.#close(false);
+  private readonly onOutside = (e: PointerEvent) => {
+    if (this.open && !this.contains(e.target as Node)) this.close(false);
   };
 
-  #schedule() {
-    if (this.#queued) return;
-    this.#queued = true;
-    queueMicrotask(() => {
-      this.#queued = false;
-      this.#render();
-    });
+  private show() {
+    this.active = Math.max(
+      0,
+      this.options.findIndex((o) => o.value === this.value),
+    );
+    this.open = true;
   }
 
-  // #render() always draws both, so a missing one is a bug in this file
-  #part<T extends HTMLElement>(selector: string): T {
-    const el = this.querySelector<T>(selector);
-    if (!el) throw new Error(`cd-listbox has no ${selector}`);
-    return el;
-  }
-  get #popup() {
-    return this.#part<HTMLElement>('[role=listbox]');
-  }
-  get #trigger() {
-    return this.#part<HTMLButtonElement>('.cd-listbox-trigger');
+  private close(focus = true) {
+    this.open = false;
+    if (focus) this.trigger?.focus();
   }
 
-  #place = () =>
-    computePosition(this.#trigger, this.#popup, {
+  private pick(i: number) {
+    this.close();
+    this.dispatchEvent(new CustomEvent('change', { detail: this.options[i].value }));
+  }
+
+  protected override updated(changed: PropertyValues<this>) {
+    if (!changed.has('open' as keyof Listbox)) {
+      if (this.open) this.popup?.children[this.active]?.scrollIntoView({ block: 'nearest' });
+      return;
+    }
+    this.stopPlacing?.();
+    this.stopPlacing = undefined;
+    if (this.open && this.trigger && this.popup) {
+      this.stopPlacing = autoUpdate(this.trigger, this.popup, () => this.place());
+      this.popup.focus();
+    }
+  }
+
+  private place() {
+    const { trigger, popup } = this;
+    if (!trigger || !popup) return;
+    computePosition(trigger, popup, {
       strategy: 'fixed',
       placement: 'bottom-start',
       middleware: [
@@ -102,126 +107,90 @@ class Listbox extends HTMLElement {
           },
         }),
       ],
-    }).then(({ x, y }) => Object.assign(this.#popup.style, { left: `${x}px`, top: `${y}px` }));
-
-  #show() {
-    this.#active = Math.max(
-      0,
-      this.#options.findIndex((o) => o.value === this.#value),
-    );
-    this.#open = true;
-    this.#render();
-    this.#stopPlacing = autoUpdate(this.#trigger, this.#popup, this.#place);
-    this.#popup.focus();
+    }).then(({ x, y }) => Object.assign(popup.style, { left: `${x}px`, top: `${y}px` }));
   }
 
-  #close(focus = true) {
-    this.#stopPlacing?.();
-    this.#stopPlacing = null;
-    this.#open = false;
-    this.#render();
-    if (focus) this.#trigger.focus();
-  }
-
-  #pick(i: number) {
-    this.#close();
-    this.dispatchEvent(new CustomEvent('change', { detail: this.#options[i].value }));
-  }
-
-  #onTriggerKey = (e: KeyboardEvent) => {
+  private onTriggerKey(e: KeyboardEvent) {
     if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
       e.preventDefault();
-      this.#show();
+      this.show();
     }
-  };
+  }
 
-  #onPopupKey = (e: KeyboardEvent) => {
-    const last = this.#options.length - 1;
+  private onPopupKey(e: KeyboardEvent) {
+    const last = this.options.length - 1;
     const keys: Record<string, () => void> = {
-      ArrowDown: () => {
-        this.#active = Math.min(last, this.#active + 1);
-      },
-      ArrowUp: () => {
-        this.#active = Math.max(0, this.#active - 1);
-      },
-      Home: () => {
-        this.#active = 0;
-      },
-      End: () => {
-        this.#active = last;
-      },
-      Enter: () => this.#pick(this.#active),
-      ' ': () => this.#pick(this.#active),
-      Escape: () => this.#close(),
-      Tab: () => this.#close(false),
+      ArrowDown: () => (this.active = Math.min(last, this.active + 1)),
+      ArrowUp: () => (this.active = Math.max(0, this.active - 1)),
+      Home: () => (this.active = 0),
+      End: () => (this.active = last),
+      Enter: () => this.pick(this.active),
+      ' ': () => this.pick(this.active),
+      Escape: () => this.close(),
+      Tab: () => this.close(false),
     };
     if (keys[e.key]) {
       if (e.key !== 'Tab') e.preventDefault();
       keys[e.key]();
     } else if (e.key.length === 1) {
       const now = Date.now();
-      this.#typed = now - this.#typedAt > 700 ? e.key.toLowerCase() : this.#typed + e.key.toLowerCase();
-      this.#typedAt = now;
-      const i = this.#options.findIndex((o) => o.label.toLowerCase().startsWith(this.#typed));
-      if (i >= 0) this.#active = i;
+      this.typed = now - this.typedAt > 700 ? e.key.toLowerCase() : this.typed + e.key.toLowerCase();
+      this.typedAt = now;
+      const i = this.options.findIndex((o) => o.label.toLowerCase().startsWith(this.typed));
+      if (i >= 0) this.active = i;
     }
-    if (this.#open) this.#render();
-  };
+  }
 
-  #onPopupClick = (e: MouseEvent) => {
-    const li = (e.target as Element).closest<HTMLElement>('[role=option]');
-    if (li) this.#pick(Number(li.dataset.index));
-  };
+  private onPopupClick(e: MouseEvent) {
+    const option = (e.target as Element).closest<HTMLElement>('[role=option]');
+    if (option) this.pick(Number(option.dataset.index));
+  }
 
-  #render() {
-    if (!this.isConnected) return;
-    const id = this.#id;
-    const current = this.#options.find((o) => o.value === this.#value);
-    render(
-      html` <span id="${id}-label" class="cd-sr-only">${this.#label}</span>
-        <button
-          type="button"
-          class="cd-listbox-trigger"
-          id="${id}-trigger"
-          aria-haspopup="listbox"
-          aria-expanded=${String(this.#open)}
-          aria-labelledby="${id}-label ${id}-trigger"
-          @click=${() => (this.#open ? this.#close() : this.#show())}
-          @keydown=${this.#onTriggerKey}
-        >
-          <span>${chip(current?.swatch)}${current?.label ?? 'Choose'}</span>${icon('chevron')}
-        </button>
-        <ul
-          role="listbox"
-          class="cd-listbox-popup"
-          id="${id}-list"
-          tabindex="-1"
-          aria-labelledby="${id}-label"
-          aria-activedescendant="${id}-opt-${this.#active}"
-          ?hidden=${!this.#open}
-          @click=${this.#onPopupClick}
-          @keydown=${this.#onPopupKey}
-        >
-          ${this.#options.map(
-            (o, i) =>
-              html` <li
-                role="option"
-                id="${id}-opt-${i}"
-                data-index=${i}
-                class="cd-listbox-option ${i === this.#active ? 'is-active' : ''}"
-                aria-selected=${String(o.value === this.#value)}
-              >
-                ${chip(o.swatch)}${o.label}
-              </li>`,
-          )}
-        </ul>`,
-      this,
-    );
-    if (this.#open) this.#popup.children[this.#active]?.scrollIntoView({ block: 'nearest' });
+  protected override render() {
+    const id = this.key;
+    const current = this.options.find((o) => o.value === this.value);
+    return html`
+      <span id="${id}-label" class="cd-sr-only">${this.label}</span>
+      <button
+        type="button"
+        class="cd-listbox-trigger"
+        id="${id}-trigger"
+        aria-haspopup="listbox"
+        aria-expanded=${String(this.open)}
+        aria-labelledby="${id}-label ${id}-trigger"
+        @click=${() => (this.open ? this.close() : this.show())}
+        @keydown=${this.onTriggerKey}
+      >
+        <span>${chip(current?.swatch)}${current?.label ?? 'Choose'}</span>${icon('chevron')}
+      </button>
+      <ul
+        role="listbox"
+        class="cd-listbox-popup"
+        id="${id}-list"
+        tabindex="-1"
+        aria-labelledby="${id}-label"
+        aria-activedescendant="${id}-opt-${this.active}"
+        ?hidden=${!this.open}
+        @click=${this.onPopupClick}
+        @keydown=${this.onPopupKey}
+      >
+        ${this.options.map(
+          (o, i) => html`
+            <li
+              role="option"
+              id="${id}-opt-${i}"
+              data-index=${i}
+              class=${classMap({ 'cd-listbox-option': true, 'is-active': i === this.active })}
+              aria-selected=${String(o.value === this.value)}
+            >
+              ${chip(o.swatch)}${o.label}
+            </li>
+          `,
+        )}
+      </ul>
+    `;
   }
 }
-
-if (!customElements.get('cd-listbox')) customElements.define('cd-listbox', Listbox);
 
 declare global {
   interface HTMLElementTagNameMap {
