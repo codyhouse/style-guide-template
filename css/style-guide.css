@@ -1068,6 +1068,10 @@ xEditor - header actions, panels, drawer, listbox, token and file views
   font-size: var(--font-size-xs);
 }
 
+.cd-hue {
+  margin-bottom: var(--spacing-lg);
+}
+
 .cd-field-row {
   display: flex;
   flex-wrap: wrap;
