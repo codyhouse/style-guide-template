@@ -1,4 +1,3 @@
-// Brand assets: metadata in the foundation set's $extensions, and where each file comes from.
 import { fileUrl } from './fontsource.js';
 import * as z from 'zod/mini';
 import { fileName } from './path.js';
@@ -17,7 +16,7 @@ function metaKey(doc: ResolverDoc, vendor: string): string | null {
   const ext = doc.sets?.foundation?.$extensions ?? {};
   if (ext[vendor]) return vendor;
   const others = Object.keys(ext).filter((k) => META_KEYS.some((m) => m in (ext[k] ?? {})));
-  return others.length === 1 ? others[0] : null; // a file saved from another origin
+  return others.length === 1 ? others[0] : null;
 }
 
 export function brandMeta(doc: ResolverDoc, vendor: string): BrandMeta {

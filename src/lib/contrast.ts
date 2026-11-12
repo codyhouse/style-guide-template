@@ -1,4 +1,3 @@
-// Required WCAG pairs derived from the role structure, checked in every theme context.
 import { resolve, contexts, defaultInputs } from './resolver.js';
 import { contrastRatio } from './color.js';
 import type { ContrastResult, ResolverDoc, Tokens } from './types.js';

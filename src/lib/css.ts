@@ -1,4 +1,3 @@
-// CSS custom properties from a DTCG resolver document.
 import { flatten, contexts, defaultInputs, mergedTree, aliasTarget } from './resolver.js';
 import { cssColor } from './color.js';
 import { fontFaceRules, cssString } from './fonts.js';

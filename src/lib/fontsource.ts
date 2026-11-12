@@ -1,4 +1,3 @@
-// Fontsource API client (https://fontsource.org): open-source fonts, no API key.
 import * as z from 'zod/mini';
 import {
   fontDetail,
@@ -11,7 +10,6 @@ import {
 
 export type FontsourceEntry = FontFile & { url: string };
 
-// only these parts of a fetch Response are read
 type Fetch = (url: string) => Promise<Pick<Response, 'ok' | 'status' | 'json'>>;
 
 export const API = 'https://api.fontsource.org/v1/fonts';

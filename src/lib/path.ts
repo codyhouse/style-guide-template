@@ -1,4 +1,3 @@
-// File names and extensions of slash-separated paths.
 export const fileName = (path: string) => path.slice(path.lastIndexOf('/') + 1);
 
 export function extension(path: string) {

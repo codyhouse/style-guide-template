@@ -1,5 +1,3 @@
-// The editing session around the brand store: files coming in, warnings, files waiting for a group,
-// and the brand kit going out. No DOM here; the UI subscribes and renders.
 import * as z from 'zod/mini';
 import { HOSTED_URL } from '../config.js';
 import {
@@ -51,7 +49,6 @@ export class Session {
     store.subscribe(() => this.#changed());
   }
 
-  /** Loads the library manifest and the first preset, and resumes the browser's saved draft. */
   static async open(): Promise<Session> {
     const manifest = z.parse(manifestSchema, await fetchJson('library/manifest.json'));
     const preset = await Session.fetchPreset(manifest.brands[0].path);
@@ -87,7 +84,7 @@ export class Session {
 
   warn(...messages: string[]) {
     const fresh = messages.filter((m) => !this.warnings.includes(m));
-    if (!fresh.length) return; // a repeated warning changes nothing, so nothing re-renders
+    if (!fresh.length) return;
     this.warnings = [...this.warnings, ...new Set(fresh)];
     this.#changed();
   }
@@ -107,13 +104,10 @@ export class Session {
     this.store.load(this.preset, undefined, { record: false });
   }
 
-  /* files coming in */
-
   #takenPaths() {
     return new Set([...this.store.files.keys(), ...allSrcs(this.meta).map((s) => s.src)]);
   }
 
-  /** New session files, each under a path nothing else uses yet. */
   #place<T>(files: File[], folder: string, entry: (file: File, src: string) => T) {
     const taken = this.#takenPaths();
     const map: SessionFiles = new Map();
@@ -161,7 +155,6 @@ export class Session {
     if (files?.size) await this.#persist(files);
   }
 
-  /** Files dropped for a brand's missing paths, matched by file name; returns the ones that match nothing. */
   async fillMissing(files: File[]) {
     const { matched, ambiguous, unmatched } = matchDropped(missingAssets(this.meta, this.ctx), files);
     if (matched.size) await this.#persist(matched);
@@ -181,11 +174,10 @@ export class Session {
     await this.#persist(new Map([[path, file]]));
   }
 
-  /** Puts the files waiting for a group into it; null makes a new group. */
   async addPending(groupId: string | null) {
     let id = groupId;
     if (!id) {
-      const next = E.addGroup(this.meta, 'Uploads'); // appends the group
+      const next = E.addGroup(this.meta, 'Uploads');
       this.setMeta(() => next);
       id = next.assetGroups.at(-1)?.id ?? null;
     }
@@ -200,7 +192,6 @@ export class Session {
     this.#changed();
   }
 
-  /** Anything dropped or loaded: one brand file (resolver, tokens or kit ZIP), fonts, and other files. */
   async receive(files: File[]) {
     try {
       const brands = files.filter((f) => ['resolver', 'tokens', 'zip'].includes(classify(f.name)));
@@ -226,8 +217,6 @@ export class Session {
     if (doc && !errors.length) await this.#loadBrand(doc, files);
     else this.warn(...describe(file.name, errors));
   }
-
-  /* going out */
 
   get fileName() {
     return slug(this.doc.name ?? 'brand');

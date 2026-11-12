@@ -1,14 +1,8 @@
 @use 'sass:meta';
-@use '../partials/layout' as *; // responsive grid and media queries
+@use '../partials/layout' as *;
 
 // Every color, font, size, radius, shadow and duration comes from the brand's
 // CSS custom properties, generated from its DTCG resolver file at runtime.
-
-/* --------------------------------
-
-xBackground
-
--------------------------------- */
 
 :root {
 	color-scheme: light;
@@ -19,19 +13,11 @@ xBackground
 }
 
 body {
-	/* this is the page background */
 	background-color: var(--color-page-background);
 	color: var(--color-page-foreground);
 }
 
-/* --------------------------------
-
-xPatterns
-
--------------------------------- */
-
 .cd-box {
-	/* this is the container of various design elements - i.e. the 2 logo of the branding section */
 	border: 1px solid var(--color-card-border); // ds-allow-hardcode: hairline
 	border-radius: var(--radius-sm);
 	background: var(--color-card-background);
@@ -45,19 +31,12 @@ xPatterns
 	outline-offset: 0.125rem;
 }
 
-/* --------------------------------
-
-xNavigation
-
--------------------------------- */
-
 header {
 	background-color: var(--color-page-background);
 	box-shadow: var(--shadow-sm);
 }
 
 .cd-logo {
-	/* logo box style */
 	background-color: var(--color-primary-background);
 	width: 5.5rem;
 
@@ -85,21 +64,9 @@ header {
 	}
 }
 
-/* --------------------------------
-
-xPage title
-
--------------------------------- */
-
 main > h1 {
 	color: var(--color-page-foreground);
 }
-
-/* --------------------------------
-
-xTypography
-
--------------------------------- */
 
 h1,
 h2 {
@@ -134,7 +101,6 @@ h2 {
 }
 
 section > h2::before {
-	/* number before each section title */
 	color: var(--color-muted-foreground);
 }
 
@@ -152,12 +118,6 @@ p {
 		line-height: var(--typography-body-line-height);
 	}
 }
-
-/* --------------------------------
-
-xButtons
-
--------------------------------- */
 
 .btn {
 	border: none;
@@ -204,14 +164,7 @@ xButtons
 	}
 }
 
-/* --------------------------------
-
-xIcons
-
--------------------------------- */
-
 .cd-icons li {
-	/* icon tile with its name */
 	min-width: 4rem;
 }
 

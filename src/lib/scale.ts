@@ -1,5 +1,3 @@
-// Generated scales (spacing, radius, font-size). The generator lives in the group's
-// $extensions; tokens hold the computed values so any DTCG tool can read them.
 import type { Dimension, TokenNode } from './types.js';
 
 export interface ScaleSpec {

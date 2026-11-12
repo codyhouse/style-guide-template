@@ -1,4 +1,3 @@
-// Color math for DTCG color values. Conversions and CSS parsing come from culori.
 import { converter, parse, type Color } from 'culori';
 import type { DtcgColor } from './types.js';
 
@@ -37,7 +36,6 @@ function toCulori(color: DtcgColor): Color {
 
 const toRgb = converter('rgb');
 const toOk = converter('oklch');
-// culori returns undefined only for input it cannot read; toCulori always builds a valid color
 const converted = <T>(out: T | undefined, color: unknown): T => {
   if (!out) throw new Error(`Color could not be converted: ${JSON.stringify(color)}`);
   return out;
@@ -60,7 +58,6 @@ export function toSrgb(color: DtcgColor) {
   return { r, g, b, alpha: color.alpha ?? 1 };
 }
 
-// The color as CSS, in its own color space.
 const FUNCTIONAL = new Set(['lab', 'lch', 'oklab', 'oklch']);
 export function cssColor(color: DtcgColor): string {
   const c = color.components.map((v) => (v === 'none' ? 'none' : round(v)));
@@ -120,7 +117,6 @@ export function cmyk(color: DtcgColor): number[] {
   return [...[r, g, b].map((v) => Math.round(((1 - v - k) / (1 - k)) * 100)), Math.round(k * 100)];
 }
 
-// WCAG 2.2 contrast on the displayed 8-bit sRGB values.
 export function contrastRatio(a: DtcgColor, b: DtcgColor): number {
   const lum = (color: DtcgColor) => {
     const [r, g, bl] = bytes(color)
@@ -150,7 +146,6 @@ export function shadeScale(h: number, c: number): Record<string, DtcgColor> {
   return scale;
 }
 
-// Reads any CSS color (hex, a name, rgb(), hsl(), oklch(), color(display-p3 ...)) into a DTCG oklch color, or null.
 export function parseCssColor(input: string): DtcgColor | null {
   const parsed = parse(String(input).trim());
   if (!parsed) return null;

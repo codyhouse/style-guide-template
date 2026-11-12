@@ -1,4 +1,3 @@
-// Types the app derives from a brand. The shapes of loaded data come from the zod schemas in schema.ts.
 import type * as z from 'zod/mini';
 import type { color } from './schema.js';
 
@@ -18,7 +17,6 @@ export type {
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export type Json = any;
 
-/** A node of a raw token tree: a group or a token, as loaded. */
 export type TokenNode = Record<string, Json>;
 
 export type DtcgColor = z.infer<typeof color>;

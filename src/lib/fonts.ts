@@ -1,4 +1,3 @@
-// @font-face rules and runtime registration for the brand's font files.
 import { extension } from './path.js';
 import type { FontFile } from './types.js';
 

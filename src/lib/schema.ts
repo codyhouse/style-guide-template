@@ -1,5 +1,3 @@
-// Validation of what comes from outside: brand files (DTCG 2025.10 resolver documents and token trees,
-// plus this site's metadata), the library manifest, and Fontsource responses.
 // https://www.designtokens.org/tr/2025.10/format/ , /color/ , /resolver/
 import * as z from 'zod/mini';
 import type { Json, Problem, TokenNode } from './types.js';
@@ -51,14 +49,11 @@ const isAlias = (v: unknown) =>
   (typeof v === 'string' && /^\{[^{}]+\}$/.test(v)) || (isObj(v) && typeof v.$ref === 'string');
 const join = (path: string, key: string | number) => (path ? `${path}.${key}` : String(key));
 
-/** zod issues as this app's problems, with the issue path appended to `base`. */
 export const problems = (error: z.core.$ZodError, base = ''): Problem[] =>
   error.issues.map((i) => ({
     path: i.path.reduce<string>((p, k) => join(p, String(k)), base),
     message: i.message,
   }));
-
-/* token values, one schema per $type; an alias is accepted wherever a value is */
 
 const alias = z.custom<string>(isAlias, 'must be an alias');
 const orAlias = <T extends z.core.SomeType>(schema: T) => z.union([alias, schema]);
@@ -138,8 +133,6 @@ function checkValue(type: string, value: unknown, path: string): Problem[] {
   }));
 }
 
-/* token trees: groups, tokens, $type inherited from the enclosing group */
-
 export function deepMerge(target: TokenNode, source: TokenNode): TokenNode {
   const out = { ...target };
   for (const [k, v] of Object.entries(source)) {
@@ -177,8 +170,6 @@ export function validateTokens(tree: TokenNode, path = '', inherited?: string, o
   }
   return errors;
 }
-
-/* resolver documents */
 
 const tokenTree = z
   .record(z.string(), z.custom<Json>())
@@ -255,8 +246,6 @@ export function toResolver(json: unknown, name: string): ResolverDoc {
   };
 }
 
-/* this site's brand metadata, in the foundation set's $extensions */
-
 // A src is a plain relative path: no scheme, no leading slash, no backslash, no '..' segments.
 export const isSafeSrc = (src: unknown): src is string =>
   typeof src === 'string' &&
@@ -326,8 +315,6 @@ export function validateBrandMeta(meta: unknown, path = 'brand'): Problem[] {
   return result.success ? [] : problems(result.error, path);
 }
 
-/* the site library and Fontsource */
-
 export const manifest = z.object({
   files: z.array(z.string()),
   brands: z
@@ -353,7 +340,6 @@ export const fontDetail = z.object({
   subsets: z.array(z.string()),
   npmVersion: z.string(),
   unicodeRange: z.optional(z.record(z.string(), z.string())),
-  // weight -> style -> subset -> files
   variants: z.optional(z.record(z.string(), z.record(z.string(), z.record(z.string(), variant)))),
 });
 export type FontDetail = z.infer<typeof fontDetail>;

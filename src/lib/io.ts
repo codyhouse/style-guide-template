@@ -1,4 +1,3 @@
-// Loading brand files and ZIPs, saving JSON, and exporting the brand kit ZIP.
 import { zipSync, unzipSync } from 'fflate';
 import { validateBrandMeta, validateResolver, toResolver } from './schema.js';
 import { resolve, contexts, defaultInputs } from './resolver.js';
@@ -187,7 +186,7 @@ export async function buildExport(
   const missing: string[] = [];
   const failedDownloads: string[] = [];
 
-  const placed = (src: string) => layout.get(src) ?? src; // every src of meta is in its layout
+  const placed = (src: string) => layout.get(src) ?? src;
   const collect = async (entry: AssetItem) => {
     const where = resolveAsset(entry, { session: files, library });
     const target = placed(entry.src);

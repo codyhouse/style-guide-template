@@ -1,4 +1,3 @@
-// DTCG 2025.10 resolution: resolutionOrder, modifier contexts, {alias} and $ref pointers.
 import { deepMerge } from './schema.js';
 import type { FlatToken, Json, ResolverDoc, TokenNode, Tokens } from './types.js';
 
@@ -95,7 +94,7 @@ export function resolve(doc: ResolverDoc, inputs = defaultInputs(doc)): Tokens {
   };
 
   const resolveRef = (ref: string, stack: string[]): unknown => {
-    const segs = pointerSegments(ref); // seggs :p
+    const segs = pointerSegments(ref);
     const at = segs.indexOf('$value');
     if (at === -1) throw new ResolveError(stack.at(-1) ?? ref, `$ref ${ref} must point into a token $value`);
     let v: Json = resolveToken(segs.slice(0, at).join('.'), stack);

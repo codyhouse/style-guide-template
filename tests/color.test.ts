@@ -14,7 +14,6 @@ import {
 } from '../src/lib/color.js';
 import type { DtcgColor } from '../src/lib/types.js';
 
-// the color spaces under test, as typed by the schema
 const space = (colorSpace: string, components: number[]) => ({ colorSpace, components }) as DtcgColor;
 
 const srgb = (r: number, g: number, b: number): DtcgColor => ({ colorSpace: 'srgb', components: [r, g, b] });

@@ -1,4 +1,3 @@
-// The editor's state: the brand document, session files, autosave, undo/redo and the previous draft.
 import { createStore as idbStore, set, del, clear, entries } from 'idb-keyval';
 import type { FileData, ResolverDoc, SessionFiles } from './types.js';
 
@@ -39,7 +38,6 @@ export function createStore({
   let timer: ReturnType<typeof setTimeout> | undefined;
   const subs = new Set<(doc: ResolverDoc) => void>();
   const files: SessionFiles = new Map();
-  // undo history is per session, not saved
   let past: ResolverDoc[] = [];
   let future: ResolverDoc[] = [];
   const record = () => {
@@ -122,7 +120,6 @@ export function createStore({
       current = base;
       for (const fn of subs) fn(current);
     },
-    // Drops files no draft refers to, from memory and from the browser's storage.
     async prune(keep: Set<string>) {
       for (const path of [...files.keys()]) {
         if (keep.has(path)) continue;

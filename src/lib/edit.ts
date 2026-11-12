@@ -1,4 +1,3 @@
-// Pure edit operations used by the editor. Each returns a new document or meta.
 import { anchoredScale } from './color.js';
 import { slug } from './io.js';
 import type {

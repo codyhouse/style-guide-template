@@ -1,11 +1,5 @@
 @use 'layout' as *;
 
-/* --------------------------------
-
-xBasic style
-
--------------------------------- */
-
 *,
 *::after,
 *::before {
@@ -202,8 +196,6 @@ section {
 	}
 }
 
-/* xBranding section - basic style */
-
 .cd-branding {
 	.cd-logos {
 		@include MQ(S) {
@@ -238,8 +230,6 @@ section {
 		}
 	}
 }
-
-/* xColor section - basic style */
 
 .cd-colors h3,
 .cd-typography h3 {
@@ -299,8 +289,6 @@ section {
 	}
 }
 
-/* xTypography section - basic style */
-
 .cd-typography {
 	h1::before {
 		content: 'Aa - ';
@@ -326,8 +314,6 @@ section {
 		text-transform: none;
 	}
 }
-
-/* xIcons section - basic style */
 
 .cd-icons {
 	ul {

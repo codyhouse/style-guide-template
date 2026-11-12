@@ -1,4 +1,3 @@
-// Copy-ready variants of the brand CSS: Tailwind v4 and shadcn/ui.
 import { generateCss, cssName } from './css.js';
 import { resolve, contexts, defaultInputs } from './resolver.js';
 import { toOklchString } from './color.js';
