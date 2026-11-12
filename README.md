@@ -14,7 +14,7 @@ pnpm dev             # http://localhost:8000
 
 - `pnpm test`: unit tests (Node's built-in test runner)
 - `pnpm build:css`: compile `scss/style-guide.scss` to `css/style-guide.css`
-- `pnpm vendor`: refresh the vendored `fflate` ZIP library in `js/vendor/`
+- `pnpm vendor`: refresh the vendored libraries in `js/vendor/`: `fflate` (ZIP) and `culori` (color conversion and CSS color parsing)
 
 Set the site's address in `js/config.js` (`HOSTED_URL`). The README in every exported kit links there, and the brand file's `$extensions` key is derived from it (`https://styleguide.example.com` becomes `com.example.styleguide`).
 
@@ -55,5 +55,7 @@ Files under `library/` are offered to every user of the site. To add some:
 ## Credits
 
 Based on the [CodyHouse Style Guide Template](http://codyhouse.co/gem/css-style-guide-template/) ([Terms](http://codyhouse.co/terms/)).
+
+Color conversion and parsing by [culori](https://culorijs.org) (MIT). ZIP files by [fflate](https://github.com/101arrowz/fflate) (MIT).
 
 Icons by [Petras Nargela](https://dribbble.com/petrasnargela), available for free download on [Freebiesbug](http://freebiesbug.com/psd-freebies/80-stroke-icons-psd-ai-webfont/). Interface icons from [Lucide](https://lucide.dev).

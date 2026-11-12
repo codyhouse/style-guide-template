@@ -69,6 +69,25 @@ test('parseCssColor reads hex, rgb and oklch', async () => {
   assert.equal(parseCssColor('blue-ish'), null);
 });
 
+test('parseCssColor reads any CSS color', async () => {
+  const { parseCssColor, inGamut } = await import('../js/lib/color.js');
+  assert.equal(parseCssColor('hsl(0 100% 50%)').hex, '#ff0000');
+  assert.equal(parseCssColor('rebeccapurple').hex, '#663399');
+  assert.deepEqual(parseCssColor('white').components, [1, 0, 0]);
+  const p3 = parseCssColor('color(display-p3 1 0 0)');
+  assert.equal(inGamut(p3), false);
+  assert.equal(p3.hex, '#ff0000');
+});
+
+test('every DTCG color space converts', async () => {
+  const { toHex } = await import('../js/lib/color.js');
+  const red = {
+    srgb: [1, 0, 0], 'srgb-linear': [1, 0, 0], hsl: [0, 100, 50], hwb: [0, 0, 0], 'display-p3': [0.9175, 0.2003, 0.1386],
+    lab: [54.29, 80.8, 69.89], lch: [54.29, 106.84, 40.85], oklab: [0.628, 0.2249, 0.1258],
+  };
+  for (const [colorSpace, components] of Object.entries(red)) assert.equal(toHex({ colorSpace, components }), '#ff0000', colorSpace);
+});
+
 test('anchoredScale keeps the typed color exactly as the nearest shade', async () => {
   const { anchoredScale, parseCssColor, toHex } = await import('../js/lib/color.js');
   const typed = parseCssColor('#f0941d');

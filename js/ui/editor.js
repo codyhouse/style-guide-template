@@ -82,7 +82,7 @@ function colorError(input, ok) {
   box.querySelector('.cd-error')?.remove();
   if (ok) input.removeAttribute('aria-describedby');
   else {
-    box.append(h('span', { class: 'cd-error', id }, 'Use #rrggbb, rgb(r g b) or oklch(L C H).'));
+    box.append(h('span', { class: 'cd-error', id }, 'Not a CSS color. Try #2e59aa, rgb(46 89 170), hsl(219 57% 42%), oklch(0.48 0.14 262) or a name like teal.'));
     input.setAttribute('aria-describedby', id);
   }
 }
@@ -178,7 +178,7 @@ export function renderEditor(body, app) {
     }),
     (() => {
       const name = text('new-hue-name', '', () => {}, { placeholder: 'accent' });
-      const colorField = colorInput('new-hue-color', 'the new hue color', '', () => {}, { placeholder: 'e.g. oklch(0.6 0.15 260)' });
+      const colorField = colorInput('new-hue-color', 'the new hue color', '', () => {}, { placeholder: 'any CSS color' });
       const color = colorField.querySelector('input');
       return h('div', { class: 'cd-field-row' }, field('New hue name', name), field('Color', colorField),
         h('button', { type: 'button', class: 'btn btn-small', onclick: () => {
