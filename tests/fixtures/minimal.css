@@ -1,0 +1,38 @@
+:root {
+  --color-brand-600: oklch(0.55 0.18 260);
+  --color-brand-700: oklch(0.47 0.16 260);
+  --color-brand-800: oklch(0.39 0.14 260);
+  --color-neutral-50: oklch(0.97 0.005 260);
+  --color-neutral-900: oklch(0.23 0.01 260);
+  --color-neutral-950: oklch(0.15 0.01 260);
+  --color-primary-background: var(--color-brand-600);
+  --color-primary-background-hover: var(--color-brand-700);
+  --color-primary-background-active: var(--color-brand-800);
+  --color-primary-foreground: var(--color-neutral-50);
+  --color-page-background: var(--color-neutral-50);
+  --color-page-foreground: var(--color-neutral-900);
+  --spacing-xs: 4px;
+  --spacing-md: 16px;
+  --radius-md: 8px;
+  --font-heading: "Merriweather", serif;
+  --font-body: "Open Sans", sans-serif;
+  --font-size-md: 1rem;
+  --font-size-4xl: 3.0518rem;
+  --typography-heading-1-font-family: var(--font-heading);
+  --typography-heading-1-font-size: var(--font-size-4xl);
+  --typography-heading-1-font-weight: 700;
+  --typography-heading-1-letter-spacing: 0px;
+  --typography-heading-1-line-height: 1.2;
+  --shadow-md: 0px 2px 8px 0px var(--color-neutral-900);
+  --duration-fast: 150ms;
+}
+:root[data-theme="dark"] {
+  --color-page-background: var(--color-neutral-950);
+}
+@font-face {
+  font-family: "Merriweather";
+  font-weight: 700;
+  font-style: normal;
+  src: url("fonts/merriweather-latin-700-normal.woff2") format("woff2");
+  font-display: swap;
+}
