@@ -1,0 +1,122 @@
+import { test } from 'node:test';
+import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+import { unzipSync } from '../js/vendor/fflate.js';
+import { classify, parseBrandJson, loadZip, saveJson, slug, exportLayout, buildExport, readme } from '../js/lib/io.js';
+import { resolve } from '../js/lib/resolver.js';
+import { brandMeta } from '../js/lib/assets.js';
+
+const V = 'com.example.styleguide';
+const load = () => JSON.parse(readFileSync(new URL('./fixtures/minimal.resolver.json', import.meta.url), 'utf8'));
+const bytes = (s) => new TextEncoder().encode(s);
+const text = (b) => new TextDecoder().decode(b);
+const ctx = (over = {}) => ({
+  vendor: V,
+  hostedUrl: 'https://styleguide.example.com',
+  files: new Map([['patterns/dots.svg', bytes('<svg/>')]]),
+  library: new Set(['logos/primary.svg']),
+  fetchBytes: async (url) => bytes(`bytes of ${url}`),
+  ...over,
+});
+
+test('classify', () => {
+  assert.equal(classify('a.resolver.json'), 'resolver');
+  assert.equal(classify('a.tokens.json'), 'tokens');
+  assert.equal(classify('brand.json'), 'tokens');
+  assert.equal(classify('kit.ZIP'), 'zip');
+  assert.equal(classify('a.WOFF2'), 'font');
+  assert.equal(classify('logo.svg'), 'image');
+  assert.equal(classify('deck.pdf'), 'file');
+});
+
+test('slug', () => {
+  assert.equal(slug('Brand Name'), 'brand-name');
+  assert.equal(slug('  !!  '), 'brand');
+});
+
+test('invalid JSON reports it', () => {
+  assert.match(parseBrandJson('{', 'x.json').errors[0].message, /JSON/);
+});
+
+test('schema and alias errors are reported with paths', () => {
+  const doc = load();
+  doc.sets.foundation.sources[0].color.primary.background.$value = '{color.nope}';
+  const r = parseBrandJson(JSON.stringify(doc), 'x.resolver.json');
+  assert.ok(r.errors.some((e) => e.path === 'color.primary.background'), JSON.stringify(r.errors));
+});
+
+test('a plain tokens file loads as a resolver named after the file', () => {
+  const r = parseBrandJson(JSON.stringify(load().sets.foundation.sources[0]), 'acme.tokens.json');
+  assert.deepEqual(r.errors, []);
+  assert.equal(r.doc.name, 'acme');
+});
+
+test('saveJson', () => {
+  const s = saveJson({ a: 1 });
+  assert.equal(s, '{\n  "a": 1\n}\n');
+});
+
+test('export layout: one folder per group, fonts in fonts/, duplicates numbered', () => {
+  const layout = exportLayout({
+    assetGroups: [{ id: 'logos', items: [{ src: 'a/logo.svg' }, { src: 'b/logo.svg' }] }],
+    fontFiles: [{ src: 'x/m.woff2' }],
+  });
+  assert.deepEqual([...layout], [['a/logo.svg', 'logos/logo.svg'], ['b/logo.svg', 'logos/logo-2.svg'], ['x/m.woff2', 'fonts/m.woff2']]);
+});
+
+test('zip contents', async () => {
+  const names = Object.keys(unzipSync((await buildExport(load(), ctx())).zip));
+  for (const n of ['README.md', 'css/theme.css', 'brand-name.resolver.json', 'logos/primary.svg', 'patterns/dots.svg',
+    'fonts/merriweather-latin-700-normal.woff2', 'fonts/merriweather-LICENSE.txt']) assert.ok(names.includes(n), n);
+});
+
+test('theme.css points fonts at ../fonts', async () => {
+  const css = text(unzipSync((await buildExport(load(), ctx())).zip)['css/theme.css']);
+  assert.match(css, /url\("\.\.\/fonts\/merriweather-latin-700-normal\.woff2"\)/);
+});
+
+test('round trip', async () => {
+  const doc = load();
+  const { zip } = await buildExport(doc, ctx());
+  const back = loadZip(zip);
+  assert.deepEqual(back.errors, []);
+  assert.deepEqual(resolve(back.doc), resolve(doc));
+  assert.deepEqual(brandMeta(back.doc, V).assetGroups.map((g) => g.id), ['logos', 'patterns']);
+  assert.equal(text(back.files.get('patterns/dots.svg')), '<svg/>');
+  assert.equal(back.files.has('README.md'), false);
+  assert.equal(back.files.has('css/theme.css'), false);
+});
+
+test('foreign tokens and extensions round-trip unchanged', async () => {
+  const doc = load();
+  const t = doc.sets.foundation.sources[0];
+  t.color.accent = { $root: { $value: '{color.brand.600}', $extensions: { 'org.tool.x': { k: 1 } } } };
+  doc.sets.foundation.$extensions['org.tool.x'] = { keep: true };
+  const back = loadZip((await buildExport(doc, ctx())).zip).doc;
+  assert.deepEqual(back.sets.foundation.sources[0].color.accent, t.color.accent);
+  assert.deepEqual(back.sets.foundation.$extensions['org.tool.x'], { keep: true });
+});
+
+test('a failed download is a warning listed in the README', async () => {
+  const fetchBytes = async (url) => { if (url.includes('merriweather@')) throw new Error('offline'); return bytes('x'); };
+  const { zip, warnings } = await buildExport(load(), ctx({ fetchBytes }));
+  assert.ok(warnings.some((w) => /merriweather-latin-700-normal\.woff2/.test(w)));
+  assert.match(text(unzipSync(zip)['README.md']), /merriweather-latin-700-normal\.woff2/);
+});
+
+test('a missing asset is a warning, export still works', async () => {
+  const { zip, warnings } = await buildExport(load(), ctx({ files: new Map() }));
+  assert.ok(warnings.some((w) => /patterns\/dots\.svg/.test(w)));
+  assert.equal('patterns/dots.svg' in unzipSync(zip), false);
+});
+
+test('README has the hosted URL and a contrast table with warnings', () => {
+  const md = readme(load(), {
+    hostedUrl: 'https://styleguide.example.com',
+    contrast: [{ context: 'light', label: 'primary text', ratio: 3.2, min: 4.5, pass: false }],
+    missing: [], failedDownloads: [],
+  });
+  assert.match(md, /^# Brand Name/);
+  assert.match(md, /https:\/\/styleguide\.example\.com/);
+  assert.match(md, /\| light \| primary text \| 3\.2 \| 4\.5 \| warning \|/);
+});
