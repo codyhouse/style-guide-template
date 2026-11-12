@@ -68,3 +68,14 @@ test('parseCssColor reads hex, rgb and oklch', async () => {
   assert.equal(parseCssColor('#ff0000').colorSpace, 'oklch');
   assert.equal(parseCssColor('blue-ish'), null);
 });
+
+test('anchoredScale keeps the typed color exactly as the nearest shade', async () => {
+  const { anchoredScale, parseCssColor, toHex } = await import('../js/lib/color.js');
+  const typed = parseCssColor('#f0941d');
+  const { scale, anchor } = anchoredScale(typed);
+  assert.equal(anchor, '300');
+  assert.equal(toHex(scale[anchor]), '#f0941d');
+  assert.deepEqual(scale[anchor].components, typed.components);
+  const ls = Object.values(scale).map((s) => s.components[0]);
+  assert.deepEqual([...ls].sort((a, b) => b - a), ls, 'shades stay ordered light to dark');
+});

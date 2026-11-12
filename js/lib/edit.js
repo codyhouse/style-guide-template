@@ -1,5 +1,5 @@
 // Pure edit operations used by the editor. Each returns a new document or meta.
-import { shadeScale, toOklch } from './color.js';
+import { anchoredScale } from './color.js';
 import { slug } from './io.js';
 
 const clone = (x) => structuredClone(x);
@@ -18,11 +18,13 @@ export function setToken(doc, path, token) {
   return out;
 }
 
-export function setHue(doc, hue, color) {
+// The typed color is kept as one shade (recorded as the group's base); the rest are generated.
+export function setHue(doc, hue, color, vendor) {
   const out = clone(doc);
-  const [, c, h] = toOklch(color);
+  const { scale, anchor } = anchoredScale(color);
   const group = (foundation(out).color[hue] ??= {});
-  for (const [shade, value] of Object.entries(shadeScale(h, c))) group[shade] = { ...group[shade], $value: value };
+  for (const [shade, value] of Object.entries(scale)) group[shade] = { ...group[shade], $value: value };
+  if (vendor) group.$extensions = { ...group.$extensions, [vendor]: { ...group.$extensions?.[vendor], base: anchor } };
   return out;
 }
 

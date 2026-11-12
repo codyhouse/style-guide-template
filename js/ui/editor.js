@@ -60,6 +60,8 @@ export function renderEditor(body, app) {
   const tokens = resolve(doc, { theme: app.theme() });
   const meta = brandMeta(doc, vendor);
   // An edit that breaks an alias (e.g. removing a hue a role points to) is refused, not applied.
+  // Edits read the token as it is now, so two edits in a row never undo each other.
+  const fresh = (path) => path.split('.').reduce((n, k) => n?.[k], E.foundation(store.get()));
   const set = (next, structural) => {
     try {
       for (const c of contexts(next).filter((x) => x.modifier === 'theme')) resolve(next, { theme: c.context });
@@ -90,26 +92,33 @@ export function renderEditor(body, app) {
   const palette = h('section', { class: 'cd-drawer-area' }, h('h3', {}, 'Palette'),
     hues.map((hue) => {
       const shades = Object.keys(tree.color[hue]).filter((s) => SHADE.test(s));
-      const mid = tree.color[hue]['600'] ?? tree.color[hue][shades[Math.floor(shades.length / 2)]];
+      const base = tree.color[hue].$extensions?.[vendor]?.base ?? ('600' in tree.color[hue] ? '600' : shades[Math.floor(shades.length / 2)]);
       return h('div', { class: 'cd-hue' },
         h('div', { class: 'cd-field-row' },
-          field(`${hue} base color`, text(`hue-${hue}`, mid ? toHex(mid.$value) : '', (v, input) => {
+          field(`${hue} base color`, text(`hue-${hue}`, toHex(tree.color[hue][base].$value), (v, input) => {
             const c = parseCssColor(v);
             colorError(input, !!c);
-            if (c) set(E.setHue(store.get(), hue, c), true);
-          }), 'Regenerates all 11 shades'),
+            if (c) set(E.setHue(store.get(), hue, c, vendor), true);
+          }), `Your color is kept as ${hue}-${base}. The other ${shades.length - 1} shades are generated from it.`),
           iconButton('trash', `Remove ${hue}`, () => set(E.removeHue(store.get(), hue), true), `rm-hue-${hue}`)),
+        h('ol', { class: 'cd-mini-scale', 'aria-label': `${hue} shades` }, shades.map((s) => h('li', {
+          class: s === base ? 'is-base' : null, title: `${hue}-${s}${s === base ? ' (your color)' : ''}`,
+          style: { background: `var(--color-${hue}-${s})` },
+        }, h('span', { class: 'cd-sr-only' }, `${hue}-${s}${s === base ? ', your color' : ''}`)))),
         h('details', {}, h('summary', {}, `${hue} shades, CMYK and Pantone`),
           shades.map((s) => {
             const t = tree.color[hue][s];
             const ext = t.$extensions?.[vendor] ?? {};
             const path = `color.${hue}.${s}`;
-            const setExt = (patch) => set(E.setToken(store.get(), path, { ...t, $extensions: { ...t.$extensions, [vendor]: { ...ext, ...patch } } }));
+            const setExt = (patch) => {
+              const cur = fresh(path);
+              set(E.setToken(store.get(), path, { ...cur, $extensions: { ...cur.$extensions, [vendor]: { ...cur.$extensions?.[vendor], ...patch } } }));
+            };
             return h('div', { class: 'cd-field-row' },
               field(`${hue}-${s}`, text(`shade-${hue}-${s}`, toOklchString(t.$value), (v, input) => {
                 const c = parseCssColor(v);
                 colorError(input, !!c);
-                if (c) set(E.setToken(store.get(), path, { ...t, $value: c }));
+                if (c) set(E.setToken(store.get(), path, { ...fresh(path), $value: c }));
               })),
               field('CMYK', text(`cmyk-${hue}-${s}`, ext.cmyk?.join(' '), (v) => {
                 const parts = v.split(/[\s,]+/).filter(Boolean).map(Number);
@@ -126,7 +135,7 @@ export function renderEditor(body, app) {
           const c = parseCssColor(color.value);
           const id = name.value.trim().toLowerCase().replace(/[^a-z0-9-]+/g, '-');
           colorError(color, !!c);
-          if (c && id && !ROLES.includes(id)) set(E.setHue(store.get(), id, c), true);
+          if (c && id && !ROLES.includes(id)) set(E.setHue(store.get(), id, c, vendor), true);
         } }, 'Add hue'));
     })());
 
@@ -161,9 +170,12 @@ export function renderEditor(body, app) {
       return choose(`font-${name}`, `font-${name}`, families.map((f) => ({ value: f, label: f })), current[0],
         (f) => set(E.setToken(store.get(), `font.${name}`, { $value: [f, generic] })));
     }),
-    Object.entries(tree.typography ?? {}).filter(([k]) => !k.startsWith('$')).map(([name, t]) => {
+    Object.entries(tree.typography ?? {}).filter(([k, t]) => !k.startsWith('$') && t.$value && typeof t.$value === 'object').map(([name, t]) => {
       const v = t.$value;
-      const put = (patch) => set(E.setToken(store.get(), `typography.${name}`, { ...t, $value: { ...v, ...patch } }));
+      const put = (patch) => {
+        const cur = fresh(`typography.${name}`);
+        set(E.setToken(store.get(), `typography.${name}`, { ...cur, $value: { ...cur.$value, ...patch } }));
+      };
       return h('div', {}, h('h4', {}, name),
         h('div', { class: 'cd-field-row' },
           choose(`typo-${name}-font`, 'Font', fontTokens.map((f) => ({ value: `{font.${f}}`, label: `font-${f}` })), v.fontFamily, (x) => put({ fontFamily: x })),
@@ -207,7 +219,10 @@ export function renderEditor(body, app) {
   const shadow = h('section', { class: 'cd-drawer-area' }, h('h3', {}, 'Shadow'),
     Object.entries(tree.shadow ?? {}).filter(([k, t]) => !k.startsWith('$') && !Array.isArray(t.$value) && typeof t.$value === 'object').map(([name, t]) => {
       const v = t.$value;
-      const put = (patch) => set(E.setToken(store.get(), `shadow.${name}`, { ...t, $value: { ...v, ...patch } }));
+      const put = (patch) => {
+        const cur = fresh(`shadow.${name}`);
+        set(E.setToken(store.get(), `shadow.${name}`, { ...cur, $value: { ...cur.$value, ...patch } }));
+      };
       return h('div', { class: 'cd-field-row' }, h('h4', {}, name),
         field('Offset Y (px)', number(`shadow-${name}-y`, v.offsetY.value, (x) => put({ offsetY: { value: x, unit: 'px' } }))),
         field('Blur (px)', number(`shadow-${name}-blur`, v.blur.value, (x) => x >= 0 && put({ blur: { value: x, unit: 'px' } }))),

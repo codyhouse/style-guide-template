@@ -138,3 +138,14 @@ export function parseCssColor(input) {
   if (m) return oklch(round(m[2] ? +m[1] / 100 : +m[1]), +m[3], +m[4], m[5] === undefined ? 1 : +m[5]);
   return null;
 }
+
+// A scale built around a typed color: the color is kept exactly as the shade whose
+// target lightness is nearest; the other shades are generated from its hue and chroma.
+export function anchoredScale(color) {
+  const [l, c, h] = toOklch(color);
+  const scale = shadeScale(h, c);
+  const anchor = Object.keys(scale).reduce((best, k) =>
+    (Math.abs(scale[k].components[0] - l) < Math.abs(scale[best].components[0] - l) ? k : best));
+  scale[anchor] = color.colorSpace === 'oklch' && color.hex ? color : oklch(l, c, h, color.alpha ?? 1);
+  return { scale, anchor };
+}

@@ -73,3 +73,11 @@ test('fontFromFileName guesses family, weight and style', () => {
   assert.deepEqual(E.fontFromFileName('Inter-BoldItalic.woff2'), { family: 'Inter', weight: 700, style: 'italic' });
   assert.deepEqual(E.fontFromFileName('my_font.ttf'), { family: 'my font', weight: 400, style: 'normal' });
 });
+
+test('setHue keeps the typed color and records which shade it is', async () => {
+  const { parseCssColor } = await import('../js/lib/color.js');
+  const out = E.setHue(load(), 'brand', parseCssColor('#f0941d'), V);
+  const brand = E.foundation(out).color.brand;
+  assert.equal(brand.$extensions[V].base, '300');
+  assert.equal(brand['300'].$value.hex, '#f0941d');
+});
