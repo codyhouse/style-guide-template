@@ -32,6 +32,11 @@ img {
 	max-width: 100%;
 }
 
+code {
+	font-family: monospace, monospace; // ds-allow-hardcode: code, not a brand font; doubled so browsers keep the inherited size
+	font-size: 0.95em;
+}
+
 input, textarea, button {
 	font-family: var(--font-body);
 	font-size: var(--font-size-md);
@@ -220,14 +225,19 @@ section {
 
 /* xColor section - basic style */
 
-.cd-colors {
+.cd-colors h3,
+.cd-typography h3 {
+	font-family: var(--font-heading);
+	font-size: var(--font-size-sm);
+	text-transform: uppercase;
+	margin: var(--spacing-lg) 0 var(--spacing-sm);
+}
 
-	h3 {
-		font-family: var(--font-heading);
-		font-size: var(--font-size-sm);
-		text-transform: uppercase;
-		margin: var(--spacing-lg) 0 var(--spacing-sm);
-	}
+.cd-typography .cd-box h3 {
+	margin-top: 0;
+}
+
+.cd-colors {
 
 	.cd-scale {
 		display: grid;
@@ -274,15 +284,6 @@ section {
 
 }
 
-.cd-typography .cd-box,
-.cd-icons .cd-box {
-	padding: var(--spacing-lg);
-
-	@include MQ(S) {
-		padding: var(--spacing-xl);
-	}
-}
-
 /* xTypography section - basic style */
 
 .cd-typography {
@@ -292,7 +293,8 @@ section {
 		color: var(--color-primary-background);
 	}
 
-	.cd-box + .cd-box {
+	.cd-box + .cd-box,
+	.cd-box + .cd-section-body {
 		margin-top: var(--spacing-lg);
 	}
 

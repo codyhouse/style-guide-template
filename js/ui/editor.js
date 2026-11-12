@@ -121,7 +121,7 @@ export function renderEditor(body, app) {
   const brand = area('Brand',
     field('Name', text('brand-name', doc.name, (v) => v && set({ ...store.get(), name: v }))),
     h('div', { class: 'cd-field-row' },
-      h('button', { type: 'button', class: 'btn btn-small', onclick: app.load }, 'Load file'),
+      h('button', { type: 'button', class: 'btn btn-secondary btn-small', onclick: app.load }, 'Load file'),
       h('button', { type: 'button', class: 'btn btn-secondary btn-small', onclick: app.save }, 'Save JSON'),
       h('button', { type: 'button', class: 'btn btn-secondary btn-small', onclick: app.export }, 'Export ZIP')),
     choose('brand-preset', 'Replace with a preset', manifest.brands.map((b) => ({ value: b.path, label: b.name })), null, async (path) => {
@@ -147,13 +147,14 @@ export function renderEditor(body, app) {
             const c = parseCssColor(v);
             colorError(input, !!c);
             if (c) set(E.setHue(store.get(), hue, c, vendor), true);
-          }), `Your color is kept as ${hue}-${base}. The other ${shades.length - 1} shades are generated from it.`),
+          })),
           iconButton('trash', `Remove ${hue}`, () => set(E.removeHue(store.get(), hue), true), `rm-hue-${hue}`)),
+        h('p', { class: 'cd-hint' }, `Your color is kept as ${hue}-${base}. The other ${shades.length - 1} shades are generated from it.`),
         h('ol', { class: 'cd-mini-scale', 'aria-label': `${hue} shades` }, shades.map((s) => h('li', {
           class: s === base ? 'is-base' : null, title: `${hue}-${s}${s === base ? ' (your color)' : ''}`,
           style: { background: `var(--color-${hue}-${s})` },
         }, h('span', { class: 'cd-sr-only' }, `${hue}-${s}${s === base ? ', your color' : ''}`)))),
-        h('details', {}, h('summary', {}, `${hue} shades, CMYK and Pantone`),
+        h('details', {}, h('summary', {}, `${cap(hue)} shades, CMYK and Pantone`),
           shades.map((s) => {
             const t = tree.color[hue][s];
             const ext = t.$extensions?.[vendor] ?? {};
@@ -271,10 +272,10 @@ export function renderEditor(body, app) {
         const cur = fresh(`shadow.${name}`);
         set(E.setToken(store.get(), `shadow.${name}`, { ...cur, $value: { ...cur.$value, ...patch } }));
       };
-      return h('div', { class: 'cd-field-row' }, h('h4', {}, name),
+      return h('div', {}, h('h4', {}, name), h('div', { class: 'cd-field-row' },
         field('Offset Y (px)', number(`shadow-${name}-y`, v.offsetY.value, (x) => put({ offsetY: { value: x, unit: 'px' } }))),
         field('Blur (px)', number(`shadow-${name}-blur`, v.blur.value, (x) => x >= 0 && put({ blur: { value: x, unit: 'px' } }))),
-        typeof v.color === 'object' ? field('Opacity', number(`shadow-${name}-a`, v.color.alpha ?? 1, (x) => x >= 0 && x <= 1 && put({ color: { ...v.color, alpha: x } }), { min: 0, max: 1, step: 0.05 })) : null);
+        typeof v.color === 'object' ? field('Opacity', number(`shadow-${name}-a`, v.color.alpha ?? 1, (x) => x >= 0 && x <= 1 && put({ color: { ...v.color, alpha: x } }), { min: 0, max: 1, step: 0.05 })) : null));
     }));
 
   /* assets */
@@ -301,7 +302,7 @@ export function renderEditor(body, app) {
           iconButton('trash', `Remove ${i.label}`, () => setMeta((m) => E.removeItem(m, g.id, i.src)), `rm-${g.id}-${i.src}`)))),
         upload,
         libraryFiles.length ? h('div', { class: 'cd-field-row' }, h('div', { class: 'cd-field' }, h('span', {}, 'From the library'), libSlot),
-          h('button', { type: 'button', class: 'btn btn-secondary btn-small', onclick: () => {
+          h('button', { type: 'button', class: 'btn btn-small', onclick: () => {
             if (!g.items.some((x) => x.src === libPick)) setMeta((m) => E.addItems(m, g.id, [{ label: libPick.split('/').pop(), src: libPick }]));
           } }, 'Add')) : null);
     }),

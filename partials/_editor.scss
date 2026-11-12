@@ -17,7 +17,12 @@ xEditor - header actions, panels, drawer, listbox, token and file views
 	stroke-linejoin: round;
 }
 
+:root {
+	--control-h: 2.25rem;
+}
+
 .btn-small {
+	min-height: var(--control-h);
 	padding: .4em 1em;
 	font-size: var(--font-size-sm);
 }
@@ -289,8 +294,21 @@ xEditor - header actions, panels, drawer, listbox, token and file views
 	}
 
 	h4 {
+		font-family: var(--font-heading);
 		font-size: var(--font-size-sm);
+		font-weight: 700;
 		margin: var(--spacing-md) 0 var(--spacing-xs);
+	}
+
+	details > summary {
+		font-size: var(--font-size-sm);
+		/* padding, not flex: a flex summary loses its marker */
+		padding: var(--spacing-xs) 0;
+		cursor: pointer;
+	}
+
+	details[open] > summary {
+		margin-bottom: var(--spacing-sm);
 	}
 }
 
@@ -302,6 +320,7 @@ xEditor - header actions, panels, drawer, listbox, token and file views
 
 	input[type=text], input[type=number], input[type=search] {
 		width: 100%;
+		min-height: var(--control-h);
 		padding: .5em .75em;
 		border: 1px solid var(--color-input-border); // ds-allow-hardcode: hairline
 		border-radius: var(--radius-sm);
@@ -405,7 +424,7 @@ xEditor - header actions, panels, drawer, listbox, token and file views
 		font-size: var(--font-size-sm);
 		overflow-wrap: anywhere;
 
-		> div {
+		> div, > span {
 			flex: 1;
 			min-width: 0;
 		}
@@ -419,6 +438,11 @@ xEditor - header actions, panels, drawer, listbox, token and file views
 	display: inline-block;
 	min-width: 12rem;
 	max-width: 100%;
+
+	.cd-field & {
+		display: block;
+		width: 100%;
+	}
 }
 
 .cd-listbox-trigger {
@@ -427,8 +451,9 @@ xEditor - header actions, panels, drawer, listbox, token and file views
 	justify-content: space-between;
 	gap: var(--spacing-sm);
 	width: 100%;
-	min-height: 2.75rem;
-	padding: .5em var(--spacing-sm) .5em var(--spacing-md);
+	min-height: var(--control-h);
+	padding: .25em var(--spacing-sm) .25em .75em;
+	font-size: var(--font-size-sm);
 	border: 1px solid var(--color-input-border); // ds-allow-hardcode: hairline
 	border-radius: var(--radius-sm);
 	background: var(--color-input-background);
@@ -493,13 +518,17 @@ xEditor - header actions, panels, drawer, listbox, token and file views
 
 .cd-token-row {
 	display: grid;
-	grid-template-columns: 8rem 1fr;
+	grid-template-columns: 12rem 1fr;
 	align-items: center;
 	gap: var(--spacing-sm);
 
 	code {
 		overflow-wrap: anywhere;
 	}
+}
+
+.cd-token-value {
+	color: var(--color-muted-foreground);
 }
 
 .cd-bar {
@@ -532,8 +561,47 @@ xEditor - header actions, panels, drawer, listbox, token and file views
 	border: none;
 }
 
+.cd-code-bar {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	justify-content: space-between;
+	gap: var(--spacing-sm);
+	margin-bottom: var(--spacing-sm);
+
+	.cd-tabs {
+		margin-bottom: 0;
+	}
+
+	.cd-copy {
+		display: inline-flex;
+		align-items: center;
+		gap: var(--spacing-xs);
+		width: auto;
+		min-height: 2.75rem;
+		padding: 0 var(--spacing-md);
+		font-size: var(--font-size-sm);
+		cursor: pointer;
+
+		> span:first-child {
+			display: inline-flex;
+			align-items: center;
+			gap: var(--spacing-xs);
+		}
+
+		&:has(.cd-copy-status:not(:empty)) > span:first-child {
+			display: none;
+		}
+	}
+
+	.cd-copy-status {
+		position: static;
+		display: inline;
+		background: none;
+	}
+}
+
 .cd-code {
-	position: relative;
 
 	pre {
 		max-height: 30rem;
@@ -547,13 +615,7 @@ xEditor - header actions, panels, drawer, listbox, token and file views
 	}
 
 	code {
-		font-family: monospace; // ds-allow-hardcode: code sample, not a brand font
-	}
-
-	.btn {
-		position: absolute;
-		top: var(--spacing-sm);
-		right: var(--spacing-sm);
+		font-size: 1em;
 	}
 }
 
@@ -662,6 +724,7 @@ xEditor - header actions, panels, drawer, listbox, token and file views
 }
 
 .cd-copy {
+	position: relative;
 	display: block;
 	width: 100%;
 	min-height: 1.5rem;
@@ -679,7 +742,14 @@ xEditor - header actions, panels, drawer, listbox, token and file views
 }
 
 .cd-copy-status {
-	display: block;
+	/* over the button, so it never shifts the layout */
+	position: absolute;
+	inset: 0;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	border-radius: var(--radius-sm);
+	background: color-mix(in oklch, var(--color-page-background) 90%, transparent);
 	font-size: var(--font-size-xs);
 	font-weight: 700;
 	color: var(--color-page-foreground);
@@ -719,8 +789,8 @@ xEditor - header actions, panels, drawer, listbox, token and file views
 }
 
 .cd-shadow-stage {
-	padding: var(--spacing-xl);
-	border-radius: var(--radius-md);
+	padding: var(--spacing-lg);
+	border-radius: var(--radius-sm);
 	background: var(--color-muted-background);
 
 	.cd-shadow-box {
@@ -741,4 +811,9 @@ xEditor - header actions, panels, drawer, listbox, token and file views
 .cd-drawer-body .cd-field-row + .cd-field,
 .cd-drawer-body .cd-field + .cd-field-row {
 	margin-top: var(--spacing-sm);
+}
+
+.cd-drawer-body .cd-action {
+	min-width: var(--control-h);
+	min-height: var(--control-h);
 }

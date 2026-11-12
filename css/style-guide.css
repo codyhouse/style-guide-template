@@ -28,7 +28,7 @@ xPatterns
   background: var(--color-card-background);
   color: var(--color-card-foreground);
   box-shadow: var(--shadow-sm);
-  padding: var(--spacing-sm);
+  padding: var(--spacing-lg);
 }
 
 :focus-visible {
@@ -228,6 +228,11 @@ img {
   max-width: 100%;
 }
 
+code {
+  font-family: monospace, monospace;
+  font-size: 0.95em;
+}
+
 input, textarea, button {
   font-family: var(--font-body);
   font-size: var(--font-size-md);
@@ -418,11 +423,16 @@ section h2::before {
 }
 
 /* xColor section - basic style */
-.cd-colors h3 {
+.cd-colors h3,
+.cd-typography h3 {
   font-family: var(--font-heading);
   font-size: var(--font-size-sm);
   text-transform: uppercase;
   margin: var(--spacing-lg) 0 var(--spacing-sm);
+}
+
+.cd-typography .cd-box h3 {
+  margin-top: 0;
 }
 
 .cd-colors .cd-scale {
@@ -468,24 +478,14 @@ section h2::before {
   vertical-align: middle;
 }
 
-.cd-typography .cd-box,
-.cd-icons .cd-box {
-  padding: var(--spacing-lg);
-}
-
-@media only screen and (min-width: 768px) {
-  .cd-typography .cd-box,
-  .cd-icons .cd-box {
-    padding: var(--spacing-xl);
-  }
-}
 /* xTypography section - basic style */
 .cd-typography h1::before {
   content: "Aa - ";
   color: var(--color-primary-background);
 }
 
-.cd-typography .cd-box + .cd-box {
+.cd-typography .cd-box + .cd-box,
+.cd-typography .cd-box + .cd-section-body {
   margin-top: var(--spacing-lg);
 }
 
@@ -545,7 +545,12 @@ xEditor - header actions, panels, drawer, listbox, token and file views
   stroke-linejoin: round;
 }
 
+:root {
+  --control-h: 2.25rem;
+}
+
 .btn-small {
+  min-height: var(--control-h);
   padding: 0.4em 1em;
   font-size: var(--font-size-sm);
 }
@@ -815,8 +820,21 @@ xEditor - header actions, panels, drawer, listbox, token and file views
 }
 
 .cd-drawer-area h4 {
+  font-family: var(--font-heading);
   font-size: var(--font-size-sm);
+  font-weight: 700;
   margin: var(--spacing-md) 0 var(--spacing-xs);
+}
+
+.cd-drawer-area details > summary {
+  font-size: var(--font-size-sm);
+  /* padding, not flex: a flex summary loses its marker */
+  padding: var(--spacing-xs) 0;
+  cursor: pointer;
+}
+
+.cd-drawer-area details[open] > summary {
+  margin-bottom: var(--spacing-sm);
 }
 
 .cd-field {
@@ -828,6 +846,7 @@ xEditor - header actions, panels, drawer, listbox, token and file views
 
 .cd-field input[type=text], .cd-field input[type=number], .cd-field input[type=search] {
   width: 100%;
+  min-height: var(--control-h);
   padding: 0.5em 0.75em;
   border: 1px solid var(--color-input-border);
   border-radius: var(--radius-sm);
@@ -932,7 +951,7 @@ xEditor - header actions, panels, drawer, listbox, token and file views
   overflow-wrap: anywhere;
 }
 
-.cd-list-editor li > div {
+.cd-list-editor li > div, .cd-list-editor li > span {
   flex: 1;
   min-width: 0;
 }
@@ -945,14 +964,20 @@ xEditor - header actions, panels, drawer, listbox, token and file views
   max-width: 100%;
 }
 
+.cd-field .cd-listbox {
+  display: block;
+  width: 100%;
+}
+
 .cd-listbox-trigger {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: var(--spacing-sm);
   width: 100%;
-  min-height: 2.75rem;
-  padding: 0.5em var(--spacing-sm) 0.5em var(--spacing-md);
+  min-height: var(--control-h);
+  padding: 0.25em var(--spacing-sm) 0.25em 0.75em;
+  font-size: var(--font-size-sm);
   border: 1px solid var(--color-input-border);
   border-radius: var(--radius-sm);
   background: var(--color-input-background);
@@ -1016,13 +1041,17 @@ xEditor - header actions, panels, drawer, listbox, token and file views
 
 .cd-token-row {
   display: grid;
-  grid-template-columns: 8rem 1fr;
+  grid-template-columns: 12rem 1fr;
   align-items: center;
   gap: var(--spacing-sm);
 }
 
 .cd-token-row code {
   overflow-wrap: anywhere;
+}
+
+.cd-token-value {
+  color: var(--color-muted-foreground);
 }
 
 .cd-bar {
@@ -1055,8 +1084,44 @@ xEditor - header actions, panels, drawer, listbox, token and file views
   border: none;
 }
 
-.cd-code {
-  position: relative;
+.cd-code-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--spacing-sm);
+  margin-bottom: var(--spacing-sm);
+}
+
+.cd-code-bar .cd-tabs {
+  margin-bottom: 0;
+}
+
+.cd-code-bar .cd-copy {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+  width: auto;
+  min-height: 2.75rem;
+  padding: 0 var(--spacing-md);
+  font-size: var(--font-size-sm);
+  cursor: pointer;
+}
+
+.cd-code-bar .cd-copy > span:first-child {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+}
+
+.cd-code-bar .cd-copy:has(.cd-copy-status:not(:empty)) > span:first-child {
+  display: none;
+}
+
+.cd-code-bar .cd-copy-status {
+  position: static;
+  display: inline;
+  background: none;
 }
 
 .cd-code pre {
@@ -1071,13 +1136,7 @@ xEditor - header actions, panels, drawer, listbox, token and file views
 }
 
 .cd-code code {
-  font-family: monospace;
-}
-
-.cd-code .btn {
-  position: absolute;
-  top: var(--spacing-sm);
-  right: var(--spacing-sm);
+  font-size: 1em;
 }
 
 /* asset groups */
@@ -1183,6 +1242,7 @@ xEditor - header actions, panels, drawer, listbox, token and file views
 }
 
 .cd-copy {
+  position: relative;
   display: block;
   width: 100%;
   min-height: 1.5rem;
@@ -1201,7 +1261,14 @@ xEditor - header actions, panels, drawer, listbox, token and file views
   }
 }
 .cd-copy-status {
-  display: block;
+  /* over the button, so it never shifts the layout */
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-sm);
+  background: color-mix(in oklch, var(--color-page-background) 90%, transparent);
   font-size: var(--font-size-xs);
   font-weight: 700;
   color: var(--color-page-foreground);
@@ -1241,8 +1308,8 @@ xEditor - header actions, panels, drawer, listbox, token and file views
 }
 
 .cd-shadow-stage {
-  padding: var(--spacing-xl);
-  border-radius: var(--radius-md);
+  padding: var(--spacing-lg);
+  border-radius: var(--radius-sm);
   background: var(--color-muted-background);
 }
 
@@ -1263,4 +1330,9 @@ xEditor - header actions, panels, drawer, listbox, token and file views
 .cd-drawer-body .cd-field-row + .cd-field,
 .cd-drawer-body .cd-field + .cd-field-row {
   margin-top: var(--spacing-sm);
+}
+
+.cd-drawer-body .cd-action {
+  min-width: var(--control-h);
+  min-height: var(--control-h);
 }

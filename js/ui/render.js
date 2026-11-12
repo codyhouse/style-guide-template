@@ -46,6 +46,9 @@ export function urlFor(entry, ctx) {
 }
 
 const dim = (v) => (v && typeof v === 'object' ? `${v.value}${v.unit}` : String(v));
+// 9999px and up is the convention for fully round
+const radiusText = (v) => (v.value * (v.unit === 'rem' ? 16 : 1) >= 9999 ? 'full' : dim(v));
+const tokenLabel = (path, value) => [h('code', {}, cssName(path)), ...(value ? [' ', h('span', { class: 'cd-token-value' }, value)] : [])];
 const sizeOf = (data) => (data ? (data.size ?? data.byteLength) : null);
 const formatSize = (n) => (n === null ? '' : n < 1024 ? `${n} B` : n < 1048576 ? `${(n / 1024).toFixed(1)} KB` : `${(n / 1048576).toFixed(1)} MB`);
 
@@ -147,12 +150,12 @@ function renderColors(body, tokens, vendor) {
     else other.push([path, t]);
   }
   const roleRow = ([path, t]) => h('tr', {},
-    h('td', {}, h('span', { class: 'cd-chip', style: { background: `var(${cssName(path)})` } }), h('code', {}, path)),
-    h('td', {}, typeof t.value === 'string' ? t.value : t.value?.$ref ?? toOklchString(t.value)),
+    h('td', {}, h('span', { class: 'cd-chip', style: { background: `var(${cssName(path)})` } }), h('code', {}, cssName(path))),
+    h('td', {}, h('code', {}, typeof t.value === 'string' ? t.value : t.value?.$ref ?? toOklchString(t.value))),
     h('td', {}, toHex(t.resolved)));
-  const table = (rows) => h('table', { class: 'cd-roles' },
+  const table = (rows) => h('div', { class: 'cd-box' }, h('table', { class: 'cd-roles' },
     h('thead', {}, h('tr', {}, h('th', {}, 'Token'), h('th', {}, 'Value'), h('th', {}, 'Hex'))),
-    h('tbody', {}, rows.map(roleRow)));
+    h('tbody', {}, rows.map(roleRow))));
   body.replaceChildren(
     ...[...hues].flatMap(([hue, shades]) => [h('h3', { id: `hue-${hue}` }, hue), scaleRow(hue, shades.map(([p, t]) => swatch(p, t, vendor)))]),
     h('h3', {}, 'Roles'), table(roles),
@@ -169,7 +172,7 @@ function renderTypography(body, tokens, meta) {
   body.replaceChildren(
     h('div', { class: 'cd-box' }, h('h3', {}, 'Font sizes'),
       sizes.map(([p, t]) => h('p', { class: 'cd-type-sample', style: { 'font-size': `var(${cssName(p)})` } },
-        'Aa ', h('span', { class: 'cd-type-meta' }, `${cssName(p)}: ${dim(t.resolved)}`)))),
+        'Aa ', h('span', { class: 'cd-type-meta' }, tokenLabel(p, dim(t.resolved)))))),
     h('div', { class: 'cd-box' }, h('h3', {}, 'Text styles'),
       styles.map(([p, t]) => h('p', {
         class: 'cd-type-sample',
@@ -197,13 +200,13 @@ function renderScale(body, tokens, prefix, kind) {
   const list = [...tokens].filter(([p]) => p.startsWith(`${prefix}.`));
   if (kind === 'spacing') {
     body.replaceChildren(h('div', { class: 'cd-box cd-token-list' }, list.map(([p, t]) => h('div', { class: 'cd-token-row' },
-      h('code', {}, `${cssName(p)}: ${dim(t.resolved)}`), h('div', { class: 'cd-bar', style: { width: `var(${cssName(p)})` } })))));
+      h('span', {}, tokenLabel(p, dim(t.resolved))), h('div', { class: 'cd-bar', style: { width: `var(${cssName(p)})` } })))));
     return;
   }
   const style = (p) => (kind === 'radius' ? { 'border-radius': `var(${cssName(p)})` } : { 'box-shadow': `var(${cssName(p)})` });
   body.replaceChildren(h('div', { class: `cd-swatch-grid${kind === 'shadow' ? ' cd-shadow-stage' : ''}` }, list.map(([p, t]) => h('figure', {},
     h('div', { class: kind === 'radius' ? 'cd-radius-box' : 'cd-shadow-box', style: style(p) }),
-    h('figcaption', {}, h('code', {}, cssName(p)), h('br'), kind === 'radius' ? dim(t.resolved) : '')))));
+    h('figcaption', {}, tokenLabel(p, kind === 'radius' ? radiusText(t.resolved) : null))))));
 }
 
 let codeTab = 'css';
@@ -217,6 +220,7 @@ function renderCode(body, doc, vendor) {
   const id = (k) => `cd-code-${k}`;
   const list = h('div', { role: 'tablist', class: 'cd-tabs', 'aria-label': 'Code format' });
   const panel = h('div', { role: 'tabpanel', class: 'cd-code', id: 'cd-code-panel' });
+  const copySlot = h('div', {});
   const show = (key, focus) => {
     codeTab = key;
     const [, label, make] = tabs.find((t) => t[0] === key);
@@ -228,9 +232,8 @@ function renderCode(body, doc, vendor) {
       if (on && focus) btn.focus();
     }
     panel.setAttribute('aria-labelledby', id(key));
-    panel.replaceChildren(
-      copyable(code, h('span', {}, icon('copy'), ' Copy'), { class: 'btn btn-secondary btn-small cd-copy-code', 'aria-label': `Copy ${label}` }),
-      h('pre', { tabindex: '0', 'aria-label': label }, h('code', {}, code)));
+    copySlot.replaceChildren(copyable(code, h('span', {}, icon('copy'), 'Copy'), { class: 'btn btn-secondary btn-small cd-copy', 'aria-label': `Copy ${label}`, title: `Copy ${label}` }));
+    panel.replaceChildren(h('pre', { tabindex: '0', 'aria-label': label }, h('code', {}, code)));
   };
   for (const [key, label] of tabs) {
     list.append(h('button', { type: 'button', role: 'tab', id: id(key), 'data-tab': key, 'aria-controls': 'cd-code-panel', onclick: () => show(key) }, label));
@@ -242,7 +245,7 @@ function renderCode(body, doc, vendor) {
     e.preventDefault();
     show(tabs[(next + tabs.length) % tabs.length][0], true);
   });
-  body.replaceChildren(list, panel);
+  body.replaceChildren(h('div', { class: 'cd-code-bar' }, list, copySlot), panel);
   show(codeTab);
 }
 
