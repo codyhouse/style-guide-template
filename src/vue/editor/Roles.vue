@@ -42,7 +42,7 @@ function setRole(path: string, value: string) {
       :label="cap(path.split('.').slice(1).join(' ').replace(/-/g, ' '))"
       :options="options(path, token.value)"
       :value="token.value"
-      @change="setRole(path, $event)"
+      @update:value="setRole(path, $event)"
     />
   </div>
 </template>

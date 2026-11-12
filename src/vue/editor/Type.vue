@@ -56,7 +56,7 @@ function setFont(name: string, family: string) {
     :label="`${cap(name)} font`"
     :options="families"
     :value="[ctx.tree.font[name].$value].flat()[0]"
-    @change="setFont(name, $event)"
+    @update:value="setFont(name, $event)"
   />
   <div v-for="[name, token] in styles" :key="name">
     <h4>{{ cap(name.replace(/-/g, ' ')) }}</h4>
@@ -65,13 +65,13 @@ function setFont(name: string, family: string) {
         label="Font"
         :options="fontOptions"
         :value="token.$value.fontFamily"
-        @change="put(name, { fontFamily: $event })"
+        @update:value="put(name, { fontFamily: $event })"
       />
       <Choice
         label="Size"
         :options="sizeOptions"
         :value="token.$value.fontSize"
-        @change="put(name, { fontSize: $event })"
+        @update:value="put(name, { fontSize: $event })"
       />
     </div>
     <div class="cd-field-row">

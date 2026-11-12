@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { computed, nextTick, onMounted, onUnmounted, onUpdated } from 'vue';
+import { computed, ref, shallowReactive, useTemplateRef, watch } from 'vue';
+import { useEventListener, useIntersectionObserver, useWindowSize } from '@vueuse/core';
 import type { Session } from '../../app/session.js';
 import { missingAssets } from '../../lib/assets.js';
 import { checkContrast } from '../../lib/contrast.js';
@@ -20,7 +21,9 @@ const props = defineProps<{
   tokens: Tokens;
   meta: BrandMeta;
   covered: boolean;
+  inset: number;
 }>();
+const current = defineModel<string[]>('current', { required: true });
 const sections = computed(() => sectionsOf(props.meta, props.tokens));
 const group = (id: string) => props.meta.assetGroups.find((g) => g.id === id)?.items ?? [];
 const rest = computed(() =>
@@ -31,25 +34,30 @@ const rest = computed(() =>
       ),
   ),
 );
+const specimen = ref(['', '']);
+const specimenEls = useTemplateRef<HTMLElement[]>('specimen');
 function measureSpecimen() {
-  const heading = document.querySelector<HTMLElement>('#typography > .cd-box h1');
-  for (const el of [heading, heading?.nextElementSibling]) {
-    const label = el?.querySelector('.cd-specimen-label');
-    if (!el || !label) continue;
+  specimen.value = (specimenEls.value ?? []).map((el) => {
     const s = getComputedStyle(el);
-    label.textContent = `${s.fontWeight} ${s.fontFamily.split(',')[0].replace(/['"]/g, '')} ${Math.round(parseFloat(s.fontSize))}px`;
-  }
+    return `${s.fontWeight} ${s.fontFamily.split(',')[0].replace(/['"]/g, '')} ${Math.round(parseFloat(s.fontSize))}px`;
+  });
 }
-onMounted(() => {
-  addEventListener('resize', measureSpecimen);
-  document.fonts?.addEventListener('loadingdone', measureSpecimen);
-  nextTick(measureSpecimen);
-});
-onUpdated(measureSpecimen);
-onUnmounted(() => {
-  removeEventListener('resize', measureSpecimen);
-  document.fonts?.removeEventListener('loadingdone', measureSpecimen);
-});
+watch(() => props.tokens, measureSpecimen, { immediate: true, flush: 'post' });
+useEventListener('resize', measureSpecimen);
+useEventListener(document.fonts, 'loadingdone', measureSpecimen);
+
+// a section is current while it passes under the fixed header
+const sectionEls = shallowReactive(new Map<string, HTMLElement>());
+const { height } = useWindowSize();
+useIntersectionObserver(
+  () => [...sectionEls.values()],
+  (entries) => {
+    const ids = new Set(current.value);
+    for (const entry of entries) ids[entry.isIntersecting ? 'add' : 'delete'](entry.target.id);
+    current.value = [...ids];
+  },
+  { rootMargin: () => `0px 0px ${props.inset - height.value}px 0px` },
+);
 </script>
 
 <template>
@@ -58,14 +66,23 @@ onUnmounted(() => {
     <div class="cd-panels" aria-live="polite">
       <Panels :session="session" :contrast="checkContrast(doc)" :missing="missingAssets(meta, session.ctx)" />
     </div>
-    <section v-for="section in sections" :id="section.id" :key="section.id" :class="section.cls">
+    <section
+      v-for="section in sections"
+      :id="section.id"
+      :key="section.id"
+      :ref="(el) => (el ? sectionEls.set(section.id, el as HTMLElement) : sectionEls.delete(section.id))"
+      :class="section.cls"
+    >
       <h2>{{ section.title }}</h2>
       <div v-if="section.id === 'typography'" class="cd-box">
-        <h1 role="none">Heading, <span class="cd-specimen-label"></span></h1>
-        <p>
-          Aa - <span class="cd-specimen-label"></span>. Lorem ipsum dolor sit amet, consectetur adipisicing
-          elit. Omnis voluptate distinctio reprehenderit, autem deleniti ad <a href="#0">voluptatum eaque</a>.
-          Optio ea aperiam nisi distinctio nemo repellat, voluptate fugiat. Quidem neque illum, blanditiis!
+        <h1 ref="specimen" role="none">
+          Heading, <span class="cd-specimen-label">{{ specimen[0] }}</span>
+        </h1>
+        <p ref="specimen">
+          Aa - <span class="cd-specimen-label">{{ specimen[1] }}</span>. Lorem ipsum dolor sit amet,
+          consectetur adipisicing elit. Omnis voluptate distinctio reprehenderit, autem deleniti ad
+          <a href="#0">voluptatum eaque</a>. Optio ea aperiam nisi distinctio nemo repellat, voluptate fugiat.
+          Quidem neque illum, blanditiis!
         </p>
       </div>
       <div class="cd-section-body">

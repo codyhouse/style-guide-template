@@ -28,8 +28,8 @@ async function replace(path: string) {
   <Choice
     label="Replace with a preset"
     :options="ctx.session.manifest.brands.map((b) => ({ value: b.path, label: b.name }))"
-    :value="null"
-    @change="replace"
+    value=""
+    @update:value="replace"
   />
   <div class="cd-field-row">
     <button type="button" class="btn btn-secondary btn-small" @click="ctx.session.store.clearDraft()">

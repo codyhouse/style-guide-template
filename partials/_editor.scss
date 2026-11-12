@@ -191,10 +191,6 @@
 	color: var(--color-card-foreground);
 	box-shadow: var(--shadow-lg);
 
-	&[hidden] {
-		display: none;
-	}
-
 	@include MQ(S) {
 		width: 30rem;
 		border-left: 1px solid var(--color-card-border); // ds-allow-hardcode: hairline
@@ -452,26 +448,21 @@
 		transition: transform var(--duration-fast);
 	}
 
-	&[aria-expanded='true'] .cd-icon {
+	&[data-state='open'] .cd-icon {
 		transform: rotate(180deg);
 	}
 }
 
 .cd-listbox-popup {
-	/* left, top, width and the room left on screen are set by Floating UI while open */
-	position: fixed;
 	z-index: 35;
-	max-height: min(16rem, var(--cd-popup-room, 16rem));
+	width: var(--reka-select-trigger-width);
+	max-height: min(16rem, var(--reka-select-content-available-height, 16rem));
 	overflow-y: auto;
 	padding: var(--spacing-xs);
 	border: 1px solid var(--color-card-border); // ds-allow-hardcode: hairline
 	border-radius: var(--radius-sm);
 	background: var(--color-card-background);
 	box-shadow: var(--shadow-md);
-
-	&[hidden] {
-		display: none;
-	}
 }
 
 .cd-listbox-option {
@@ -484,11 +475,13 @@
 	cursor: pointer;
 	font-size: var(--font-size-sm);
 
-	&.is-active {
+	outline: none;
+
+	&[data-highlighted] {
 		background: var(--color-secondary-background-hover);
 	}
 
-	&[aria-selected='true'] {
+	&[data-state='checked'] {
 		font-weight: 700;
 	}
 }

@@ -11,6 +11,8 @@ import { cap, huesOf, shadesOf } from './palette-data.js';
 const props = defineProps<{ ctx: EditorContext }>();
 const nameError = ref<string>();
 const colorError = ref<string>();
+const newName = ref('');
+const newColor = ref('');
 const hues = computed(() => huesOf(props.ctx.tree));
 function group(hue: string) {
   return props.ctx.tree.color[hue];
@@ -46,15 +48,13 @@ function setCmyk(path: string, value: string) {
 function setShade(path: string, color: Parameters<typeof E.setHue>[2]) {
   props.ctx.set(E.setToken(props.ctx.session.store.get(), path, { ...props.ctx.fresh(path), $value: color }));
 }
-function addHue(e: Event) {
-  e.preventDefault();
-  const data = new FormData(e.currentTarget as HTMLFormElement);
-  const id = String(data.get('name') ?? '')
+function addHue() {
+  const id = newName.value
     .trim()
     .toLowerCase()
     .replace(/[^a-z0-9-]+/g, '-')
     .replace(/^-|-$/g, '');
-  const color = parseCssColor(String(data.get('color') ?? '').trim());
+  const color = parseCssColor(newColor.value.trim());
   nameError.value = !id
     ? 'Give the hue a name.'
     : ROLES.includes(id) || hues.value.includes(id)
@@ -63,7 +63,7 @@ function addHue(e: Event) {
   colorError.value = color ? undefined : COLOR_ERROR;
   if (nameError.value || !color) return;
   props.ctx.set(E.setHue(props.ctx.session.store.get(), id, color, props.ctx.session.vendor));
-  (e.currentTarget as HTMLFormElement).reset();
+  newName.value = newColor.value = '';
 }
 </script>
 
@@ -74,7 +74,7 @@ function addHue(e: Event) {
         ><span>{{ cap(hue) }} base color</span>
         <ColorInput
           :label="`${hue} base color`"
-          :value="toHex(group(hue)[base(hue)].$value)"
+          :model-value="toHex(group(hue)[base(hue)].$value)"
           @commit="ctx.set(E.setHue(ctx.session.store.get(), hue, $event, ctx.session.vendor))"
         />
       </label>
@@ -106,7 +106,7 @@ function addHue(e: Event) {
           ><span>{{ hue }}-{{ shade }}</span>
           <ColorInput
             :label="`${hue}-${shade}`"
-            :value="toOklchString(group(hue)[shade].$value)"
+            :model-value="toOklchString(group(hue)[shade].$value)"
             :picker="false"
             @commit="setShade(`color.${hue}.${shade}`, $event)"
           />
@@ -125,12 +125,12 @@ function addHue(e: Event) {
       </div>
     </details>
   </div>
-  <form class="cd-field-row" @submit="addHue">
+  <form class="cd-field-row" @submit.prevent="addHue">
     <label class="cd-field"
       ><span>New hue name</span>
       <input
+        v-model="newName"
         type="text"
-        name="name"
         placeholder="accent"
         :aria-invalid="nameError ? 'true' : undefined"
         :aria-describedby="nameError ? 'new-hue-name-error' : undefined"
@@ -139,7 +139,12 @@ function addHue(e: Event) {
     </label>
     <label class="cd-field"
       ><span>Color</span>
-      <ColorInput name="color" label="the new hue color" placeholder="any CSS color" :error="colorError" />
+      <ColorInput
+        v-model="newColor"
+        label="the new hue color"
+        placeholder="any CSS color"
+        :error="colorError"
+      />
     </label>
     <button type="submit" class="btn btn-small">Add hue</button>
   </form>

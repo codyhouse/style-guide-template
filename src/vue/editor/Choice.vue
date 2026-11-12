@@ -1,12 +1,12 @@
 <script setup lang="ts">
 import Listbox, { type ListboxOption } from '../Listbox.vue';
-defineProps<{ label: string; options: ListboxOption[]; value: string | null }>();
-defineEmits<{ change: [value: string] }>();
+defineProps<{ label: string; options: ListboxOption[] }>();
+const value = defineModel<string>('value', { required: true });
 </script>
 
 <template>
   <div class="cd-field">
     <span aria-hidden="true">{{ label }}</span>
-    <Listbox :label="label" :options="options" :value="value" @change="$emit('change', $event)" />
+    <Listbox v-model:value="value" :label="label" :options="options" />
   </div>
 </template>

@@ -8,6 +8,10 @@
 
 html {
 	scroll-padding-top: var(--header-h);
+
+	@media (prefers-reduced-motion: no-preference) {
+		scroll-behavior: smooth;
+	}
 }
 
 html * {
@@ -180,6 +184,8 @@ main {
 
 section {
 	margin: 3em 0;
+	/* anchor jumps keep the top margin visible below the header */
+	scroll-margin-top: 3em;
 	counter-increment: section;
 	min-width: 0;
 
@@ -193,6 +199,7 @@ section {
 
 	@include MQ(L) {
 		margin: 0 0 4em;
+		scroll-margin-top: 0;
 	}
 }
 

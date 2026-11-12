@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue';
+import { computed, ref, shallowReactive } from 'vue';
 import * as E from '../../lib/edit.js';
 import { extension, fileName } from '../../lib/path.js';
 import type { AssetGroup, AssetItem } from '../../lib/types.js';
@@ -10,28 +10,21 @@ import TextField from './TextField.vue';
 import UploadButton from './UploadButton.vue';
 import type { EditorContext } from './context.js';
 const props = defineProps<{ ctx: EditorContext }>();
-const picks = ref(new Map<string, string>());
+const picks = shallowReactive(new Map<string, string>());
+const newGroup = ref('');
 const library = computed(() => [...props.ctx.session.library].filter((p) => !p.startsWith('brands/')));
 const image = /\.(svg|png|jpe?g|gif|webp|avif|ico)$/i;
-function pick(group: AssetGroup) {
-  return picks.value.get(group.id) ?? library.value[0];
-}
-function setPick(id: string, value: string) {
-  picks.value = new Map(picks.value).set(id, value);
-}
-function addFromLibrary(e: Event, group: AssetGroup) {
-  e.preventDefault();
+const pick = (group: AssetGroup) => picks.get(group.id) ?? library.value[0];
+function addFromLibrary(group: AssetGroup) {
   const src = pick(group);
   if (src && !group.items.some((item) => item.src === src))
     props.ctx.setMeta((meta) => E.addItems(meta, group.id, [{ label: fileName(src), src }]));
 }
-function addGroup(e: Event) {
-  e.preventDefault();
-  const form = e.currentTarget as HTMLFormElement;
-  const label = String(new FormData(form).get('label') ?? '').trim();
+function addGroup() {
+  const label = newGroup.value.trim();
   if (!label) return;
   props.ctx.setMeta((meta) => E.addGroup(meta, label));
-  form.reset();
+  newGroup.value = '';
 }
 function thumb(item: AssetItem) {
   return urlFor(item, props.ctx.session.ctx);
@@ -102,22 +95,22 @@ function thumb(item: AssetItem) {
       :label="`Upload to ${group.label ?? group.id}`"
       @files="ctx.session.addUploads($event, group.id)"
     />
-    <form v-if="library.length" class="cd-field-row" @submit="addFromLibrary($event, group)">
+    <form v-if="library.length" class="cd-field-row" @submit.prevent="addFromLibrary(group)">
       <div class="cd-field">
         <span>From the library</span>
         <Listbox
           :label="`Library file for ${group.label ?? group.id}`"
           :options="library.map((src) => ({ value: src, label: src }))"
           :value="pick(group)"
-          @change="setPick(group.id, $event)"
+          @update:value="picks.set(group.id, $event)"
         />
       </div>
       <button type="submit" class="btn btn-small">Add</button>
     </form>
   </div>
-  <form class="cd-field-row" @submit="addGroup">
+  <form class="cd-field-row" @submit.prevent="addGroup">
     <label class="cd-field"
-      ><span>New group</span><input type="text" name="label" placeholder="Patterns"
+      ><span>New group</span><input v-model="newGroup" type="text" placeholder="Patterns"
     /></label>
     <button type="submit" class="btn btn-small">Add group</button>
   </form>

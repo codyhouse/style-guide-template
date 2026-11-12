@@ -1,18 +1,22 @@
 <script setup lang="ts">
+import { computed } from 'vue';
 const props = withDefaults(
   defineProps<{ label: string; value?: number; min?: number; max?: number; step?: number | string }>(),
   { step: 'any' },
 );
 const emit = defineEmits<{ commit: [value: number] }>();
-function change(e: Event) {
-  const value = (e.target as HTMLInputElement).value;
-  if (value !== '' && Number.isFinite(Number(value))) emit('commit', Number(value));
-}
+// a number input yields '' while it holds no valid number
+const number = computed<number | ''>({
+  get: () => props.value ?? '',
+  set: (value) => {
+    if (value !== '' && Number.isFinite(value)) emit('commit', value);
+  },
+});
 </script>
 
 <template>
   <label class="cd-field"
     ><span>{{ label }}</span>
-    <input type="number" :value="props.value ?? ''" :min="min" :max="max" :step="step" @change="change" />
+    <input v-model.lazy="number" type="number" :min="min" :max="max" :step="step" />
   </label>
 </template>

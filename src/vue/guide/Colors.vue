@@ -1,99 +1,92 @@
 <script setup lang="ts">
 import { computed } from 'vue';
+import { RovingFocusGroup, RovingFocusItem } from 'reka-ui';
 import { cmyk, toHex, toOklchString, toRgbaString } from '../../lib/color.js';
 import { ROLES } from '../../lib/contrast.js';
 import { cssName } from '../../lib/css.js';
 import type { ResolvedToken, Tokens } from '../../lib/types.js';
 import CopyButton from './CopyButton.vue';
 
-type Row = [path: string, token: ResolvedToken];
+interface Shade {
+  path: string;
+  name: string;
+  hex: string;
+  copies: { text: string; shown: string }[];
+}
+interface Row {
+  path: string;
+  source: string;
+  hex: string;
+}
+
 const props = defineProps<{ tokens: Tokens; vendor: string }>();
+
+const isStep = (part?: string) => !!part && Number.isInteger(Number(part));
+
+function shade(path: string, name: string, token: ResolvedToken): Shade {
+  const own = token.extensions?.[props.vendor] ?? {};
+  const printed = Array.isArray(own.cmyk);
+  const cmykText = `CMYK ${(printed ? own.cmyk : cmyk(token.resolved)).join(' ')}`;
+  const copies = [toHex(token.resolved), toRgbaString(token.resolved), toOklchString(token.resolved)].map(
+    (text) => ({ text, shown: text }),
+  );
+  copies.push({ text: cmykText, shown: printed ? cmykText : `${cmykText} (approx.)` });
+  if (own.pantone) copies.push({ text: String(own.pantone), shown: String(own.pantone) });
+  return { path, name, hex: toHex(token.resolved), copies };
+}
+
+function row(path: string, token: ResolvedToken): Row {
+  const { value } = token;
+  const source = typeof value === 'string' ? value : (value?.$ref ?? toOklchString(value));
+  return { path, source, hex: toHex(token.resolved) };
+}
+
 const color = computed(() => {
-  const hues = new Map<string, Row[]>(),
-    roles: Row[] = [],
-    other: Row[] = [];
+  const hues = new Map<string, Shade[]>();
+  const roles: Row[] = [];
+  const other: Row[] = [];
   for (const [path, token] of props.tokens) {
     if (token.type !== 'color' || !path.startsWith('color.')) continue;
-    const [, group, shade, ...rest] = path.split('.');
-    if (ROLES.includes(group)) roles.push([path, token]);
-    else if (/^\d+$/.test(shade) && !rest.length)
-      hues.set(group, [...(hues.get(group) ?? []), [path, token]]);
-    else other.push([path, token]);
+    const [, group, step, ...deeper] = path.split('.');
+    if (ROLES.includes(group)) roles.push(row(path, token));
+    else if (isStep(step) && !deeper.length)
+      hues.set(group, [...(hues.get(group) ?? []), shade(path, `${group}-${step}`, token)]);
+    else other.push(row(path, token));
   }
-  return { hues: [...hues], roles, other };
+  const tables = [{ title: 'Roles', rows: roles }];
+  if (other.length) tables.push({ title: 'Other tokens', rows: other });
+  return { hues: [...hues], tables };
 });
+
 const background = (path: string) => ({ background: `var(${cssName(path)})` });
-const extension = (token: ResolvedToken) => token.extensions?.[props.vendor] ?? {};
-const cmykText = (token: ResolvedToken) =>
-  `CMYK ${(Array.isArray(extension(token).cmyk) ? extension(token).cmyk : cmyk(token.resolved)).join(' ')}`;
-function rove(e: KeyboardEvent) {
-  const list = [...(e.currentTarget as Element).querySelectorAll<HTMLElement>('.cd-copy-swatch')];
-  const i = list.indexOf(document.activeElement as HTMLElement);
-  const moves: Record<string, number> = {
-    ArrowRight: i + 1,
-    ArrowDown: i + 1,
-    ArrowLeft: i - 1,
-    ArrowUp: i - 1,
-    Home: 0,
-    End: list.length - 1,
-  };
-  if (i < 0 || !(e.key in moves)) return;
-  e.preventDefault();
-  const j = Math.max(0, Math.min(list.length - 1, moves[e.key]));
-  list[i].tabIndex = -1;
-  list[j].tabIndex = 0;
-  list[j].focus();
-}
 </script>
 
 <template>
   <template v-for="[hue, shades] in color.hues" :key="hue">
     <h3 :id="`hue-${hue}`">{{ hue }}</h3>
-    <ul class="cd-scale" :aria-labelledby="`hue-${hue}`" @keydown="rove">
-      <li v-for="([path, token], index) in shades" :key="path">
+    <RovingFocusGroup as="ul" class="cd-scale" :aria-labelledby="`hue-${hue}`">
+      <li v-for="s in shades" :key="s.path">
+        <RovingFocusItem as-child>
+          <CopyButton :text="s.hex" :label="`${s.name}: copy ${s.hex}`" class="cd-copy cd-copy-swatch">
+            <span class="cd-color-swatch" :style="background(s.path)"></span>
+          </CopyButton>
+        </RovingFocusItem>
+        <b>{{ s.name }}</b>
         <CopyButton
-          :text="toHex(token.resolved)"
-          :label="`${path.replace(/^color\./, '').replace('.', '-')}: copy ${toHex(token.resolved)}`"
-          :tabindex="index ? -1 : 0"
-          class="cd-copy cd-copy-swatch"
-        >
-          <span class="cd-color-swatch" :style="background(path)"></span>
-        </CopyButton>
-        <b>{{ path.replace(/^color\./, '').replace('.', '-') }}</b>
-        <CopyButton :text="toHex(token.resolved)" :tabindex="-1" class="cd-copy"
-          ><small>{{ toHex(token.resolved) }}</small></CopyButton
-        >
-        <CopyButton :text="toRgbaString(token.resolved)" :tabindex="-1" class="cd-copy"
-          ><small>{{ toRgbaString(token.resolved) }}</small></CopyButton
-        >
-        <CopyButton :text="toOklchString(token.resolved)" :tabindex="-1" class="cd-copy"
-          ><small>{{ toOklchString(token.resolved) }}</small></CopyButton
-        >
-        <CopyButton :text="cmykText(token)" :tabindex="-1" class="cd-copy"
-          ><small
-            >{{ cmykText(token) }}{{ Array.isArray(extension(token).cmyk) ? '' : ' (approx.)' }}</small
-          ></CopyButton
-        >
-        <CopyButton
-          v-if="extension(token).pantone"
-          :text="String(extension(token).pantone)"
+          v-for="copy in s.copies"
+          :key="copy.shown"
+          :text="copy.text"
           :tabindex="-1"
           class="cd-copy"
-          ><small>{{ extension(token).pantone }}</small></CopyButton
         >
+          <small>{{ copy.shown }}</small>
+        </CopyButton>
       </li>
-    </ul>
+    </RovingFocusGroup>
   </template>
-  <h3>Roles</h3>
-  <template
-    v-for="[name, rows] in [
-      ['Roles', color.roles],
-      ['Other tokens', color.other],
-    ] as const"
-    :key="name"
-  >
-    <h3 v-if="name === 'Other tokens' && rows.length">Other tokens</h3>
-    <div v-if="name === 'Roles' || rows.length" class="cd-box">
+  <template v-for="table in color.tables" :key="table.title">
+    <h3>{{ table.title }}</h3>
+    <div class="cd-box">
       <table class="cd-roles">
         <thead>
           <tr>
@@ -103,18 +96,14 @@ function rove(e: KeyboardEvent) {
           </tr>
         </thead>
         <tbody>
-          <tr v-for="[path, token] in rows" :key="path">
+          <tr v-for="r in table.rows" :key="r.path">
             <td>
-              <span class="cd-chip" :style="background(path)"></span><code>{{ cssName(path) }}</code>
+              <span class="cd-chip" :style="background(r.path)"></span><code>{{ cssName(r.path) }}</code>
             </td>
             <td>
-              <code>{{
-                typeof token.value === 'string'
-                  ? token.value
-                  : (token.value?.$ref ?? toOklchString(token.value))
-              }}</code>
+              <code>{{ r.source }}</code>
             </td>
-            <td>{{ toHex(token.resolved) }}</td>
+            <td>{{ r.hex }}</td>
           </tr>
         </tbody>
       </table>

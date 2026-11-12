@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue';
+import { computed, ref, shallowReactive, useTemplateRef } from 'vue';
+import { useDropZone, useFileDialog } from '@vueuse/core';
 import type { Session } from '../../app/session.js';
 import type { ContrastResult } from '../../lib/types.js';
 import Icon from '../Icon.vue';
@@ -7,18 +8,22 @@ import Listbox from '../Listbox.vue';
 const props = defineProps<{ session: Session; contrast: ContrastResult[]; missing: string[] }>();
 const newGroup = '__new';
 const pendingTarget = ref<string | null>(null);
-const targets = new WeakMap<File, string>();
-const targetVersion = ref(0);
-const missingInput = ref<HTMLInputElement>();
+const targets = shallowReactive(new WeakMap<File, string>());
+const dropZone = useTemplateRef('dropZone');
+const { isOverDropZone } = useDropZone(dropZone, (files) => {
+  if (files) void props.session.fillMissing(files);
+});
 const options = computed(() => [
   ...props.session.meta.assetGroups.map((g) => ({ value: g.id, label: g.label ?? g.id })),
   { value: newGroup, label: 'New group: Uploads' },
 ]);
-const target = computed(() =>
-  options.value.some((o) => o.value === pendingTarget.value)
-    ? pendingTarget.value
-    : (options.value[0]?.value ?? newGroup),
-);
+const target = computed({
+  get: () =>
+    options.value.some((o) => o.value === pendingTarget.value)
+      ? (pendingTarget.value as string)
+      : (options.value[0]?.value ?? newGroup),
+  set: (value) => (pendingTarget.value = value),
+});
 const failures = computed(() => props.contrast.filter((r) => !r.pass).length);
 const warnings = computed(() =>
   props.session.store.saveError
@@ -26,33 +31,9 @@ const warnings = computed(() =>
     : props.session.warnings,
 );
 const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? '' : 's'}`;
-function targetFor(file: File, candidates: string[]) {
-  void targetVersion.value;
-  return targets.get(file) ?? candidates[0];
-}
-function chooseTarget(file: File, value: string) {
-  targets.set(file, value);
-  targetVersion.value++;
-}
-function onMissingFiles(e: Event) {
-  const input = e.target as HTMLInputElement;
-  void props.session.fillMissing([...(input.files ?? [])]);
-  input.value = '';
-}
-function over(e: DragEvent) {
-  e.preventDefault();
-  e.stopPropagation();
-  (e.currentTarget as Element).classList.add('is-over');
-}
-function leave(e: DragEvent) {
-  (e.currentTarget as Element).classList.remove('is-over');
-}
-function drop(e: DragEvent) {
-  e.preventDefault();
-  e.stopPropagation();
-  leave(e);
-  void props.session.fillMissing([...(e.dataTransfer?.files ?? [])]);
-}
+const targetFor = (file: File, candidates: string[]) => targets.get(file) ?? candidates[0];
+const missingDialog = useFileDialog({ reset: true });
+missingDialog.onChange((files) => files && void props.session.fillMissing([...files]));
 </script>
 
 <template>
@@ -74,8 +55,7 @@ function drop(e: DragEvent) {
     </ul>
     <div class="cd-field-row">
       <div class="cd-field">
-        <span>Add to group</span
-        ><Listbox label="Asset group" :options="options" :value="target" @change="pendingTarget = $event" />
+        <span>Add to group</span><Listbox v-model:value="target" label="Asset group" :options="options" />
       </div>
       <button
         type="button"
@@ -104,19 +84,18 @@ function drop(e: DragEvent) {
           :label="`Where does ${file.name} go?`"
           :options="candidates.map((c) => ({ value: c, label: c }))"
           :value="targetFor(file, candidates)"
-          @change="chooseTarget(file, $event)"
+          @update:value="targets.set(file, $event)"
         />
       </div>
       <button type="button" class="btn btn-small" @click="session.assign(file, targetFor(file, candidates))">
         Use here
       </button>
     </div>
-    <div class="cd-drop-zone" @dragover="over" @dragleave="leave" @drop="drop">
+    <div ref="dropZone" class="cd-drop-zone" :class="{ 'is-over': isOverDropZone }">
       Drop the missing files here, or
-      <button type="button" class="btn btn-secondary btn-small" @click="missingInput?.click()">
+      <button type="button" class="btn btn-secondary btn-small" @click="missingDialog.open()">
         Choose files
       </button>
-      <input ref="missingInput" type="file" multiple hidden @change="onMissingFiles" />
     </div>
   </div>
   <div class="cd-box cd-panel">

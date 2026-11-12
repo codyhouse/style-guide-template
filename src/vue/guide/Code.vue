@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { computed, nextTick, ref } from 'vue';
+import { computed, ref } from 'vue';
+import { TabsContent, TabsList, TabsRoot, TabsTrigger } from 'reka-ui';
 import { generateCss } from '../../lib/css.js';
 import { shadcnCss, tailwindCss } from '../../lib/exports.js';
 import type { FontFile, ResolverDoc } from '../../lib/types.js';
@@ -20,56 +21,32 @@ const formats = [
   },
   { key: 'shadcn', label: 'shadcn/ui', code: (doc: ResolverDoc) => shadcnCss(doc) },
 ];
-const index = ref(0);
-const format = computed(() => formats[index.value]);
+const selected = ref(formats[0].key);
+const format = computed(() => formats.find((f) => f.key === selected.value) ?? formats[0]);
 const code = computed(() => format.value.code(props.doc, props.vendor));
-async function select(i: number, focus = false) {
-  index.value = (i + formats.length) % formats.length;
-  await nextTick();
-  if (focus) document.getElementById(`cd-code-${format.value.key}`)?.focus();
-}
-function onKey(e: KeyboardEvent) {
-  const moves: Record<string, number> = {
-    ArrowRight: index.value + 1,
-    ArrowLeft: index.value - 1,
-    Home: 0,
-    End: formats.length - 1,
-  };
-  if (!(e.key in moves)) return;
-  e.preventDefault();
-  void select(moves[e.key], true);
-}
 </script>
 
 <template>
-  <div class="cd-code-bar">
-    <div role="tablist" class="cd-tabs" aria-label="Code format" @keydown="onKey">
-      <button
-        v-for="(item, i) in formats"
-        :id="`cd-code-${item.key}`"
-        :key="item.key"
-        type="button"
-        role="tab"
-        aria-controls="cd-code-panel"
-        :aria-selected="i === index"
-        :tabindex="i === index ? 0 : -1"
-        @click="select(i)"
-      >
-        {{ item.label }}
-      </button>
+  <TabsRoot v-model="selected" activation-mode="automatic">
+    <div class="cd-code-bar">
+      <TabsList class="cd-tabs" aria-label="Code format">
+        <TabsTrigger v-for="item in formats" :key="item.key" :value="item.key">
+          {{ item.label }}
+        </TabsTrigger>
+      </TabsList>
+      <div>
+        <CopyButton
+          :text="code"
+          :label="`Copy ${format.label}`"
+          :title="`Copy ${format.label}`"
+          class="btn btn-secondary btn-small cd-copy"
+        >
+          <span><Icon name="copy" />Copy</span>
+        </CopyButton>
+      </div>
     </div>
-    <div>
-      <CopyButton
-        :text="code"
-        :label="`Copy ${format.label}`"
-        :title="`Copy ${format.label}`"
-        class="btn btn-secondary btn-small cd-copy"
-      >
-        <span><Icon name="copy" />Copy</span>
-      </CopyButton>
-    </div>
-  </div>
-  <div id="cd-code-panel" role="tabpanel" class="cd-code" :aria-labelledby="`cd-code-${format.key}`">
-    <pre tabindex="0" :aria-label="format.label"><code>{{ code }}</code></pre>
-  </div>
+    <TabsContent v-for="item in formats" :key="item.key" :value="item.key" class="cd-code" tabindex="-1">
+      <pre tabindex="0" :aria-label="item.label"><code>{{ code }}</code></pre>
+    </TabsContent>
+  </TabsRoot>
 </template>

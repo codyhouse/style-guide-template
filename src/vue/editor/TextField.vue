@@ -1,15 +1,14 @@
 <script setup lang="ts">
-defineProps<{ label: string; value?: string; placeholder?: string; hint?: string }>();
+import { computed } from 'vue';
+const props = defineProps<{ label: string; value?: string; placeholder?: string; hint?: string }>();
 const emit = defineEmits<{ commit: [value: string] }>();
-function change(e: Event) {
-  emit('commit', (e.target as HTMLInputElement).value.trim());
-}
+const text = computed({ get: () => props.value ?? '', set: (value) => emit('commit', value) });
 </script>
 
 <template>
   <label class="cd-field"
     ><span>{{ label }}</span>
-    <input type="text" :value="value ?? ''" :placeholder="placeholder" @change="change" />
+    <input v-model.lazy.trim="text" type="text" :placeholder="placeholder" />
     <span v-if="hint" class="cd-hint">{{ hint }}</span>
   </label>
 </template>
