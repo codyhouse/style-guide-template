@@ -4,7 +4,8 @@ import { readFileSync } from 'node:fs';
 import { tailwindCss, shadcnCss } from '../src/lib/exports.js';
 
 const V = 'com.example.styleguide';
-const load = () => JSON.parse(readFileSync(new URL('./fixtures/minimal.resolver.json', import.meta.url), 'utf8'));
+const load = () =>
+  JSON.parse(readFileSync(new URL('./fixtures/minimal.resolver.json', import.meta.url), 'utf8'));
 const opts = { vendor: V, fontSrc: (f) => f.src };
 
 test('tailwind v4: tokens in @theme with Tailwind namespaces, dark as a variant', () => {

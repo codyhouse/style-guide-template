@@ -29,19 +29,24 @@ export function brandMeta(doc: ResolverDoc, vendor: string): BrandMeta {
 export function withBrandMeta(doc: ResolverDoc, vendor: string, meta: BrandMeta): ResolverDoc {
   const out = structuredClone(doc);
   const key = metaKey(doc, vendor);
-  const ext = { ...(out.sets.foundation.$extensions ?? {}) };
-  if (key && key !== vendor) delete ext[key];
-  ext[vendor] = meta;
+  const foreign = key !== vendor ? key : null; // metadata saved by another site moves to this site's key
+  const kept = Object.entries(out.sets.foundation.$extensions ?? {}).filter(([k]) => k !== foreign);
+  const ext = { ...Object.fromEntries(kept), [vendor]: meta };
   out.sets.foundation.$extensions = ext;
   return out;
 }
 
 export const allSrcs = (meta: BrandMeta): SrcEntry[] => [
-  ...meta.assetGroups.flatMap((g) => g.items.map((entry) => ({ src: entry.src, kind: 'asset' as const, groupId: g.id, entry }))),
+  ...meta.assetGroups.flatMap((g) =>
+    g.items.map((entry) => ({ src: entry.src, kind: 'asset' as const, groupId: g.id, entry })),
+  ),
   ...meta.fontFiles.map((entry) => ({ src: entry.src, kind: 'font' as const, entry })),
 ];
 
-export function resolveAsset(item: AssetItem, { session, library }: AssetContext): { source: AssetSource; url?: string } {
+export function resolveAsset(
+  item: AssetItem,
+  { session, library }: AssetContext,
+): { source: AssetSource; url?: string } {
   if (!isSafeSrc(item.src)) return { source: 'missing' };
   if (session.has(item.src)) return { source: 'session' };
   if (library.has(item.src)) return { source: 'library', url: `library/${item.src}` };
@@ -50,7 +55,9 @@ export function resolveAsset(item: AssetItem, { session, library }: AssetContext
 }
 
 export const missingAssets = (meta: BrandMeta, ctx: AssetContext): string[] =>
-  allSrcs(meta).filter(({ entry }) => resolveAsset(entry, ctx).source === 'missing').map((s) => s.src);
+  allSrcs(meta)
+    .filter(({ entry }) => resolveAsset(entry, ctx).source === 'missing')
+    .map((s) => s.src);
 
 export function matchDropped(missing: string[], files: File[]) {
   const matched: SessionFiles = new Map();

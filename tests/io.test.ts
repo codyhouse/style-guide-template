@@ -3,12 +3,22 @@ import assert from 'node:assert/strict';
 import { present } from './helpers.js';
 import { readFileSync } from 'node:fs';
 import { unzipSync } from 'fflate';
-import { classify, parseBrandJson, loadZip, saveJson, slug, exportLayout, buildExport, readme } from '../src/lib/io.js';
+import {
+  classify,
+  parseBrandJson,
+  loadZip,
+  saveJson,
+  slug,
+  exportLayout,
+  buildExport,
+  readme,
+} from '../src/lib/io.js';
 import { resolve } from '../src/lib/resolver.js';
 import { brandMeta } from '../src/lib/assets.js';
 
 const V = 'com.example.styleguide';
-const load = () => JSON.parse(readFileSync(new URL('./fixtures/minimal.resolver.json', import.meta.url), 'utf8'));
+const load = () =>
+  JSON.parse(readFileSync(new URL('./fixtures/minimal.resolver.json', import.meta.url), 'utf8'));
 const bytes = (s) => new TextEncoder().encode(s);
 const text = (b) => new TextDecoder().decode(b);
 const ctx = (over = {}) => ({
@@ -43,7 +53,10 @@ test('schema and alias errors are reported with paths', () => {
   const doc = load();
   doc.sets.foundation.sources[0].color.primary.background.$value = '{color.nope}';
   const r = parseBrandJson(JSON.stringify(doc), 'x.resolver.json');
-  assert.ok(r.errors.some((e) => e.path === 'color.primary.background'), JSON.stringify(r.errors));
+  assert.ok(
+    r.errors.some((e) => e.path === 'color.primary.background'),
+    JSON.stringify(r.errors),
+  );
 });
 
 test('a plain tokens file loads as a resolver named after the file', () => {
@@ -62,13 +75,28 @@ test('export layout: one folder per group, fonts in fonts/, duplicates numbered'
     assetGroups: [{ id: 'logos', items: [{ src: 'a/logo.svg' }, { src: 'b/logo.svg' }] }],
     fontFiles: [{ src: 'x/m.woff2', family: 'M', weight: 400, style: 'normal' }],
   });
-  assert.deepEqual([...layout], [['a/logo.svg', 'logos/logo.svg'], ['b/logo.svg', 'logos/logo-2.svg'], ['x/m.woff2', 'fonts/m.woff2']]);
+  assert.deepEqual(
+    [...layout],
+    [
+      ['a/logo.svg', 'logos/logo.svg'],
+      ['b/logo.svg', 'logos/logo-2.svg'],
+      ['x/m.woff2', 'fonts/m.woff2'],
+    ],
+  );
 });
 
 test('zip contents', async () => {
   const names = Object.keys(unzipSync((await buildExport(load(), ctx())).zip));
-  for (const n of ['README.md', 'css/theme.css', 'brand-name.resolver.json', 'logos/primary.svg', 'patterns/dots.svg',
-    'fonts/merriweather-latin-700-normal.woff2', 'fonts/merriweather-LICENSE.txt']) assert.ok(names.includes(n), n);
+  for (const n of [
+    'README.md',
+    'css/theme.css',
+    'brand-name.resolver.json',
+    'logos/primary.svg',
+    'patterns/dots.svg',
+    'fonts/merriweather-latin-700-normal.woff2',
+    'fonts/merriweather-LICENSE.txt',
+  ])
+    assert.ok(names.includes(n), n);
 });
 
 test('theme.css points fonts at ../fonts', async () => {
@@ -83,7 +111,10 @@ test('round trip', async () => {
   assert.deepEqual(back.errors, []);
   const loaded = present(back.doc);
   assert.deepEqual(resolve(loaded), resolve(doc));
-  assert.deepEqual(brandMeta(loaded, V).assetGroups.map((g) => g.id), ['logos', 'patterns']);
+  assert.deepEqual(
+    brandMeta(loaded, V).assetGroups.map((g) => g.id),
+    ['logos', 'patterns'],
+  );
   assert.equal(text(back.files.get('patterns/dots.svg')), '<svg/>');
   assert.equal(back.files.has('README.md'), false);
   assert.equal(back.files.has('css/theme.css'), false);
@@ -100,7 +131,10 @@ test('foreign tokens and extensions round-trip unchanged', async () => {
 });
 
 test('a failed download is a warning listed in the README', async () => {
-  const fetchBytes = async (url) => { if (url.includes('merriweather@')) throw new Error('offline'); return bytes('x'); };
+  const fetchBytes = async (url) => {
+    if (url.includes('merriweather@')) throw new Error('offline');
+    return bytes('x');
+  };
   const { zip, warnings } = await buildExport(load(), ctx({ fetchBytes }));
   assert.ok(warnings.some((w) => /merriweather-latin-700-normal\.woff2/.test(w)));
   assert.match(text(unzipSync(zip)['README.md']), /merriweather-latin-700-normal\.woff2/);
@@ -115,8 +149,19 @@ test('a missing asset is a warning, export still works', async () => {
 test('README has the hosted URL and a contrast table with warnings', () => {
   const md = readme(load(), {
     hostedUrl: 'https://styleguide.example.com',
-    contrast: [{ context: 'light', fg: 'color.primary.foreground', bg: 'color.primary.background', label: 'primary text', ratio: 3.2, min: 4.5, pass: false }],
-    missing: [], failedDownloads: [],
+    contrast: [
+      {
+        context: 'light',
+        fg: 'color.primary.foreground',
+        bg: 'color.primary.background',
+        label: 'primary text',
+        ratio: 3.2,
+        min: 4.5,
+        pass: false,
+      },
+    ],
+    missing: [],
+    failedDownloads: [],
   });
   assert.match(md, /^# Brand Name/);
   assert.match(md, /https:\/\/styleguide\.example\.com/);
@@ -125,7 +170,9 @@ test('README has the hosted URL and a contrast table with warnings', () => {
 
 test('a file that breaks in any theme is rejected at load', () => {
   const doc = load();
-  doc.modifiers.theme.contexts.dark = [{ color: { page: { background: { $type: 'color', $value: '{color.nope}' } } } }];
+  doc.modifiers.theme.contexts.dark = [
+    { color: { page: { background: { $type: 'color', $value: '{color.nope}' } } } },
+  ];
   assert.ok(parseBrandJson(JSON.stringify(doc), 'x.resolver.json').errors.length);
 });
 

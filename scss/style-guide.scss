@@ -13,7 +13,7 @@ xBackground
 :root {
 	color-scheme: light;
 
-	&[data-theme=dark] {
+	&[data-theme='dark'] {
 		color-scheme: dark;
 	}
 }
@@ -101,7 +101,8 @@ xTypography
 
 -------------------------------- */
 
-h1, h2 {
+h1,
+h2 {
 	font-family: var(--font-heading);
 	color: var(--color-page-foreground);
 }
@@ -110,7 +111,7 @@ h1 {
 	font-size: var(--font-size-xl);
 	font-weight: var(--typography-heading-1-font-weight);
 	line-height: var(--typography-heading-1-line-height);
-	margin: 0 0 .4em;
+	margin: 0 0 0.4em;
 
 	@include MQ(S) {
 		font-size: var(--font-size-2xl);
@@ -167,10 +168,12 @@ xButtons
 		family: var(--font-heading);
 	}
 	color: var(--color-primary-foreground);
-	padding: .6em 2.2em;
+	padding: 0.6em 2.2em;
 	cursor: pointer;
 	background: var(--color-primary-background);
-	transition: background-color var(--duration-fast), color var(--duration-fast);
+	transition:
+		background-color var(--duration-fast),
+		color var(--duration-fast);
 
 	@include hover {
 		background: var(--color-primary-background-hover);
@@ -196,7 +199,7 @@ xButtons
 
 	&:disabled {
 		cursor: not-allowed;
-		opacity: .5;
+		opacity: 0.5;
 		pointer-events: none;
 	}
 }

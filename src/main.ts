@@ -35,12 +35,15 @@ const store = createStore({ doc: preset, storage: localStorage, fileStore: idbFi
 await store.ready;
 
 const ctx = { session: store.files, library };
-let theme = localStorage.getItem(THEME_KEY) ?? (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+let theme =
+  localStorage.getItem(THEME_KEY) ?? (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
 let warnings: string[] = [];
 let pending: File[] = [];
 let ambiguous: PanelsState['ambiguous'] = [];
 
-const addWarnings = (messages: string[]) => { warnings = [...new Set([...warnings, ...messages])]; };
+const addWarnings = (messages: string[]) => {
+  warnings = [...new Set([...warnings, ...messages])];
+};
 const warn = (...messages: string[]) => {
   addWarnings(messages);
   draw();
@@ -49,13 +52,20 @@ const warn = (...messages: string[]) => {
 /*******************
 	files coming in
 ********************/
-const takenPaths = () => new Set([...store.files.keys(), ...allSrcs(brandMeta(store.get(), vendor)).map((s) => s.src)]);
+const takenPaths = () =>
+  new Set([...store.files.keys(), ...allSrcs(brandMeta(store.get(), vendor)).map((s) => s.src)]);
 const stem = (name: string) => name.replace(/\.[^.]+$/, '');
-const setMeta = (fn: (meta: BrandMeta) => BrandMeta) => store.set(withBrandMeta(store.get(), vendor, fn(brandMeta(store.get(), vendor))));
+const setMeta = (fn: (meta: BrandMeta) => BrandMeta) =>
+  store.set(withBrandMeta(store.get(), vendor, fn(brandMeta(store.get(), vendor))));
 
 async function persist(map: SessionFiles) {
   const { notPersisted } = await store.addFiles(map);
-  if (notPersisted.length) warn(...notPersisted.map((p) => `Not saved in this browser (storage full): ${p}. It is still in this session and in exports.`));
+  if (notPersisted.length)
+    warn(
+      ...notPersisted.map(
+        (p) => `Not saved in this browser (storage full): ${p}. It is still in this session and in exports.`,
+      ),
+    );
 }
 
 async function addUploads(files: File[], groupId: string) {
@@ -93,12 +103,19 @@ async function loadBrand(doc: ResolverDoc, files?: SessionFiles) {
 }
 
 async function fillMissing(files: File[]) {
-  const { matched, ambiguous: amb, unmatched } = matchDropped(missingAssets(brandMeta(store.get(), vendor), ctx), files);
+  const {
+    matched,
+    ambiguous: amb,
+    unmatched,
+  } = matchDropped(missingAssets(brandMeta(store.get(), vendor), ctx), files);
   if (matched.size) await persist(matched);
-  ambiguous = [...ambiguous, ...amb.flatMap(({ name, candidates }) => {
-    const file = files.find((f) => f.name === name);
-    return file ? [{ file, candidates }] : [];
-  })];
+  ambiguous = [
+    ...ambiguous,
+    ...amb.flatMap(({ name, candidates }) => {
+      const file = files.find((f) => f.name === name);
+      return file ? [{ file, candidates }] : [];
+    }),
+  ];
   return unmatched;
 }
 
@@ -113,7 +130,8 @@ async function routeFiles(files: File[]) {
 async function routeFilesUnsafe(files: File[]) {
   const brandFiles = files.filter((f) => ['resolver', 'tokens', 'zip'].includes(classify(f.name)));
   const [brand] = brandFiles;
-  if (brandFiles.length > 1) warn(`Loaded ${brand.name}; drop one brand file at a time (${brandFiles.length - 1} ignored).`);
+  if (brandFiles.length > 1)
+    warn(`Loaded ${brand.name}; drop one brand file at a time (${brandFiles.length - 1} ignored).`);
   if (brand) {
     if (classify(brand.name) === 'zip') {
       const { doc, files: zipped, errors } = loadZip(new Uint8Array(await brand.arrayBuffer()));
@@ -138,7 +156,10 @@ async function routeFilesUnsafe(files: File[]) {
 ********************/
 const panelHandlers: PanelHandlers = {
   refresh: () => draw(),
-  onMissingFiles: async (files) => { pending = [...pending, ...(await fillMissing(files))]; draw(); },
+  onMissingFiles: async (files) => {
+    pending = [...pending, ...(await fillMissing(files))];
+    draw();
+  },
   onAssign: async (file, path) => {
     ambiguous = ambiguous.filter((a) => a.file !== file);
     await persist(new Map([[path, file]]));
@@ -155,14 +176,25 @@ const panelHandlers: PanelHandlers = {
     pending = [];
     await addUploads(files, id);
   },
-  onDiscardPending: () => { pending = []; draw(); },
-  onDismissWarnings: () => { warnings = []; draw(); },
+  onDiscardPending: () => {
+    pending = [];
+    draw();
+  },
+  onDismissWarnings: () => {
+    warnings = [];
+    draw();
+  },
 };
 
 function checkFonts() {
   document.fonts?.ready.then(() => {
     const failed = [...document.fonts].filter((f) => f.status === 'error');
-    if (failed.length) warn(...failed.map((f) => `Font could not be loaded: ${f.family.replace(/"/g, '')} ${f.weight} ${f.style}`));
+    if (failed.length)
+      warn(
+        ...failed.map(
+          (f) => `Font could not be loaded: ${f.family.replace(/"/g, '')} ${f.weight} ${f.style}`,
+        ),
+      );
   });
 }
 
@@ -173,15 +205,21 @@ function paint(doc: ResolverDoc) {
   const tokens = resolve(doc, { theme });
   const css = generateCss(doc, { vendor, fontSrc: (f) => urlFor(f, ctx) ?? f.src });
   const list = sections({ doc, tokens, meta, ctx, vendor, refresh: draw });
-  const guide = guideView({ doc, list, panels: {
-    contrast: checkContrast(doc),
-    missing: missingAssets(meta, ctx),
-    ambiguous,
-    pending,
-    groups: meta.assetGroups,
-    warnings: store.saveError ? [...warnings, 'Your edits could not be saved in this browser. Save JSON to keep them.'] : warnings,
-    handlers: panelHandlers,
-  } });
+  const guide = guideView({
+    doc,
+    list,
+    panels: {
+      contrast: checkContrast(doc),
+      missing: missingAssets(meta, ctx),
+      ambiguous,
+      pending,
+      groups: meta.assetGroups,
+      warnings: store.saveError
+        ? [...warnings, 'Your edits could not be saved in this browser. Save JSON to keep them.']
+        : warnings,
+      handlers: panelHandlers,
+    },
+  });
   const editor = drawer.hidden ? null : editorView(app);
   required('#brand-css').textContent = css;
   document.title = `${doc.name ?? 'Brand'} | Style Guide`;
@@ -198,7 +236,9 @@ function draw() {
   } catch (e) {
     // A draft that cannot be shown must never lock the page: fall back, keep the draft as the previous one.
     if (doc === preset) throw e;
-    addWarnings([`This brand could not be shown (${(e as Error).message}). Showing the default brand; your draft is under Edit > Restore previous draft.`]);
+    addWarnings([
+      `This brand could not be shown (${(e as Error).message}). Showing the default brand; your draft is under Edit > Restore previous draft.`,
+    ]);
     store.load(preset, undefined, { record: false });
     return;
   }
@@ -209,7 +249,11 @@ function draw() {
   updateNavigation();
   checkFonts();
   clearTimeout(pruneTimer);
-  pruneTimer = setTimeout(() => store.prune(new Set(store.drafts().flatMap((d) => allSrcs(brandMeta(d, vendor)).map((x) => x.src)))), 2000);
+  pruneTimer = setTimeout(
+    () =>
+      store.prune(new Set(store.drafts().flatMap((d) => allSrcs(brandMeta(d, vendor)).map((x) => x.src)))),
+    2000,
+  );
 }
 
 /*******************
@@ -259,7 +303,10 @@ nav.addEventListener('click', (event) => {
   const target = document.getElementById(decodeURIComponent(link.hash.slice(1)));
   if (!target) return;
   const topMargin = parseFloat(getComputedStyle(target).marginTop);
-  scrollTo({ top: target.getBoundingClientRect().top + scrollY - header.offsetHeight - topMargin, behavior: reduceMotion.matches ? 'auto' : 'smooth' });
+  scrollTo({
+    top: target.getBoundingClientRect().top + scrollY - header.offsetHeight - topMargin,
+    behavior: reduceMotion.matches ? 'auto' : 'smooth',
+  });
   history.replaceState(null, '', link.hash);
 });
 
@@ -269,9 +316,14 @@ function updateNavigation() {
     const top = section.getBoundingClientRect().top + scrollY;
     const topMargin = parseFloat(getComputedStyle(section).marginTop);
     const anchor = nav.querySelector<HTMLElement>(`a[href="#${CSS.escape(section.id)}"]`);
-    const inView = top - header.offsetHeight - topMargin <= scrollY && top + section.offsetHeight - topMargin > scrollY + 1;
+    const inView =
+      top - header.offsetHeight - topMargin <= scrollY &&
+      top + section.offsetHeight - topMargin > scrollY + 1;
     if (inView && anchor && !anchor.classList.contains('selected')) {
-      nav.scrollTo({ left: anchor.offsetLeft - (nav.clientWidth - anchor.offsetWidth) / 2, behavior: reduceMotion.matches ? 'auto' : 'smooth' });
+      nav.scrollTo({
+        left: anchor.offsetLeft - (nav.clientWidth - anchor.offsetWidth) / 2,
+        behavior: reduceMotion.matches ? 'auto' : 'smooth',
+      });
     }
     anchor?.classList.toggle('selected', inView);
     if (inView) anchor?.setAttribute('aria-current', 'true');
@@ -279,11 +331,15 @@ function updateNavigation() {
   }
 }
 addEventListener('scroll', updateNavigation, { passive: true });
-nav.addEventListener('wheel', (e) => {
-  if (nav.scrollWidth <= nav.clientWidth || Math.abs(e.deltaX) > Math.abs(e.deltaY)) return;
-  e.preventDefault();
-  nav.scrollLeft += e.deltaY;
-}, { passive: false });
+nav.addEventListener(
+  'wheel',
+  (e) => {
+    if (nav.scrollWidth <= nav.clientWidth || Math.abs(e.deltaX) > Math.abs(e.deltaY)) return;
+    e.preventDefault();
+    nav.scrollLeft += e.deltaY;
+  },
+  { passive: false },
+);
 
 /*******************
 	editor drawer
@@ -293,9 +349,19 @@ const drawerBody = required('#cd-drawer-body');
 const editToggle = required('#edit-toggle');
 const main = required('main');
 const wideDrawer = matchMedia('(min-width: 768px)'); // $S
-wideDrawer.addEventListener('change', () => { if (!drawer.hidden) main.inert = !wideDrawer.matches; });
+wideDrawer.addEventListener('change', () => {
+  if (!drawer.hidden) main.inert = !wideDrawer.matches;
+});
 const app: EditorApp = {
-  store, vendor, library, manifest, theme: () => theme, addUploads, addFontUploads, warn, refresh: () => draw(),
+  store,
+  vendor,
+  library,
+  manifest,
+  theme: () => theme,
+  addUploads,
+  addFontUploads,
+  warn,
+  refresh: () => draw(),
   urlFor: (item) => urlFor(item, ctx),
   load: () => required('#load-btn').click(),
   save: () => required('#save-btn').click(),
@@ -347,7 +413,10 @@ drawer.addEventListener('keydown', (e) => {
 ********************/
 const loadInput = required<HTMLInputElement>('#load-input');
 required('#load-btn').addEventListener('click', () => loadInput.click());
-loadInput.addEventListener('change', () => { routeFiles([...(loadInput.files ?? [])]); loadInput.value = ''; });
+loadInput.addEventListener('change', () => {
+  routeFiles([...(loadInput.files ?? [])]);
+  loadInput.value = '';
+});
 
 required('#save-btn').addEventListener('click', () => {
   const doc = store.get();
@@ -365,7 +434,13 @@ exportBtn.addEventListener('click', async () => {
       if (!res.ok) throw new Error(`${res.status}`);
       return new Uint8Array(await res.arrayBuffer());
     };
-    const { zip, warnings: w } = await buildExport(doc, { vendor, files: store.files, library, fetchBytes, hostedUrl: HOSTED_URL });
+    const { zip, warnings: w } = await buildExport(doc, {
+      vendor,
+      files: store.files,
+      library,
+      fetchBytes,
+      hostedUrl: HOSTED_URL,
+    });
     download(`${slug(doc.name ?? 'brand')}-brand-kit.zip`, zip, 'application/zip');
     if (w.length) warn(...w.map((x) => `Export: ${x}`));
   } catch (e) {
@@ -390,7 +465,9 @@ addEventListener('dragleave', () => {
   dragDepth = Math.max(0, dragDepth - 1);
   if (!dragDepth) document.body.classList.remove('is-dragging');
 });
-addEventListener('dragover', (e) => { if (hasFiles(e)) e.preventDefault(); });
+addEventListener('dragover', (e) => {
+  if (hasFiles(e)) e.preventDefault();
+});
 addEventListener('drop', (e) => {
   dragDepth = 0;
   document.body.classList.remove('is-dragging');

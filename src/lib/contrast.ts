@@ -3,7 +3,19 @@ import { resolve, contexts, defaultInputs } from './resolver.js';
 import { contrastRatio } from './color.js';
 import type { ContrastResult, ResolverDoc, Tokens } from './types.js';
 
-export const ROLES = ['primary', 'secondary', 'destructive', 'success', 'warning', 'info', 'page', 'card', 'muted', 'input', 'focus'];
+export const ROLES = [
+  'primary',
+  'secondary',
+  'destructive',
+  'success',
+  'warning',
+  'info',
+  'page',
+  'card',
+  'muted',
+  'input',
+  'focus',
+];
 
 export function requiredPairs(tokens: Tokens) {
   const pairs: Array<{ fg: string; bg: string; min: number; label: string }> = [];

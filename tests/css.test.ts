@@ -5,7 +5,8 @@ import { cssName, cssValue, generateCss } from '../src/lib/css.js';
 import { fontFaceRules } from '../src/lib/fonts.js';
 
 const V = 'com.example.styleguide';
-const load = () => JSON.parse(readFileSync(new URL('./fixtures/minimal.resolver.json', import.meta.url), 'utf8'));
+const load = () =>
+  JSON.parse(readFileSync(new URL('./fixtures/minimal.resolver.json', import.meta.url), 'utf8'));
 const opts = { vendor: V, fontSrc: (e) => e.src };
 
 test('names', () => {
@@ -16,20 +17,33 @@ test('names', () => {
 
 test('values', () => {
   assert.equal(cssValue('color', '{color.brand.600}'), 'var(--color-brand-600)');
-  assert.equal(cssValue('color', { colorSpace: 'oklch', components: [0.55, 0.18, 260] }), 'oklch(0.55 0.18 260)');
+  assert.equal(
+    cssValue('color', { colorSpace: 'oklch', components: [0.55, 0.18, 260] }),
+    'oklch(0.55 0.18 260)',
+  );
   assert.equal(cssValue('dimension', { value: 16, unit: 'px' }), '16px');
   assert.equal(cssValue('duration', { value: 150, unit: 'ms' }), '150ms');
   assert.equal(cssValue('fontFamily', ['Open Sans', 'sans-serif']), '"Open Sans", sans-serif');
   assert.equal(cssValue('fontWeight', 'semi-bold'), '600');
   assert.equal(cssValue('cubicBezier', [0.4, 0, 0.2, 1]), 'cubic-bezier(0.4, 0, 0.2, 1)');
   assert.equal(
-    cssValue('shadow', { color: '{color.neutral.900}', offsetX: { value: 0, unit: 'px' }, offsetY: { value: 2, unit: 'px' }, blur: { value: 8, unit: 'px' }, spread: { value: 0, unit: 'px' }, inset: true }),
+    cssValue('shadow', {
+      color: '{color.neutral.900}',
+      offsetX: { value: 0, unit: 'px' },
+      offsetY: { value: 2, unit: 'px' },
+      blur: { value: 8, unit: 'px' },
+      spread: { value: 0, unit: 'px' },
+      inset: true,
+    }),
     'inset 0px 2px 8px 0px var(--color-neutral-900)',
   );
 });
 
 test('snapshot', () => {
-  assert.equal(generateCss(load(), opts), readFileSync(new URL('./fixtures/minimal.css', import.meta.url), 'utf8'));
+  assert.equal(
+    generateCss(load(), opts),
+    readFileSync(new URL('./fixtures/minimal.css', import.meta.url), 'utf8'),
+  );
 });
 
 test('typography expands into one property per field', () => {
@@ -55,9 +69,26 @@ test('foreign tokens are emitted', () => {
 });
 
 test('font-face', () => {
-  const css = fontFaceRules([{ family: 'Merriweather', weight: 700, style: 'normal', src: 'fonts/m.woff2', unicodeRange: 'U+0000-00FF' }], (e) => e.src);
-  assert.match(css, /@font-face \{[^}]*font-family: "Merriweather";[^}]*font-weight: 700;[^}]*src: url\("fonts\/m\.woff2"\) format\("woff2"\);[^}]*unicode-range: U\+0000-00FF;[^}]*font-display: swap;/);
-  assert.match(fontFaceRules([{ family: 'X', weight: 400, style: 'italic', src: 'a.ttf' }], (e) => e.src), /format\("truetype"\)/);
+  const css = fontFaceRules(
+    [
+      {
+        family: 'Merriweather',
+        weight: 700,
+        style: 'normal',
+        src: 'fonts/m.woff2',
+        unicodeRange: 'U+0000-00FF',
+      },
+    ],
+    (e) => e.src,
+  );
+  assert.match(
+    css,
+    /@font-face \{[^}]*font-family: "Merriweather";[^}]*font-weight: 700;[^}]*src: url\("fonts\/m\.woff2"\) format\("woff2"\);[^}]*unicode-range: U\+0000-00FF;[^}]*font-display: swap;/,
+  );
+  assert.match(
+    fontFaceRules([{ family: 'X', weight: 400, style: 'italic', src: 'a.ttf' }], (e) => e.src),
+    /format\("truetype"\)/,
+  );
 });
 
 test('font family names cannot break out of the CSS string', () => {
@@ -74,7 +105,10 @@ test('strokeStyle strings are limited to keywords', () => {
 
 test('unusual token names are escaped, never injected', () => {
   const doc = load();
-  doc.sets.foundation.sources[0].size = { $type: 'dimension', 'x;}body{background:red}:root{y': { $value: { value: 1, unit: 'px' } } };
+  doc.sets.foundation.sources[0].size = {
+    $type: 'dimension',
+    'x;}body{background:red}:root{y': { $value: { value: 1, unit: 'px' } },
+  };
   const css = generateCss(doc, opts);
   assert.doesNotMatch(css, /body\{background:red\}/);
   assert.match(css, /--size-x\\3b /);
@@ -82,7 +116,9 @@ test('unusual token names are escaped, never injected', () => {
 
 test('modifier and context names cannot break the selector', () => {
   const doc = load();
-  doc.modifiers.theme.contexts['d"]{}body{color:red}x[y="'] = [{ color: { page: { background: { $type: 'color', $value: '{color.brand.600}' } } } }];
+  doc.modifiers.theme.contexts['d"]{}body{color:red}x[y="'] = [
+    { color: { page: { background: { $type: 'color', $value: '{color.brand.600}' } } } },
+  ];
   const css = generateCss(doc, opts);
   assert.doesNotMatch(css, /\]\{\}body\{color:red\}/);
 });

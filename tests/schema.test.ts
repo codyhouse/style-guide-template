@@ -4,7 +4,8 @@ import { present } from './helpers.js';
 import { readFileSync } from 'node:fs';
 import { validateResolver, toResolver, isResolver } from '../src/lib/schema.js';
 
-const load = () => JSON.parse(readFileSync(new URL('./fixtures/minimal.resolver.json', import.meta.url), 'utf8'));
+const load = () =>
+  JSON.parse(readFileSync(new URL('./fixtures/minimal.resolver.json', import.meta.url), 'utf8'));
 const tree = (doc) => doc.sets.foundation.sources[0];
 
 test('minimal fixture is valid', () => {
@@ -21,7 +22,10 @@ test('missing $type is an error', () => {
   const doc = load();
   delete tree(doc).spacing.$type;
   const r = validateResolver(doc);
-  assert.ok(r.errors.some((e) => e.path?.endsWith('spacing.md') && /\$type/.test(e.message)), JSON.stringify(r.errors));
+  assert.ok(
+    r.errors.some((e) => e.path?.endsWith('spacing.md') && /\$type/.test(e.message)),
+    JSON.stringify(r.errors),
+  );
 });
 
 test('$type inherited from group is valid', () => {
@@ -39,7 +43,11 @@ test('bad dimension unit', () => {
 test('bad color space', () => {
   const doc = load();
   tree(doc).color.brand['700'].$value.colorSpace = 'cmyk';
-  assert.ok(validateResolver(doc).errors.some((e) => e.path?.endsWith('color.brand.700') && /colorSpace/.test(e.message)));
+  assert.ok(
+    validateResolver(doc).errors.some(
+      (e) => e.path?.endsWith('color.brand.700') && /colorSpace/.test(e.message),
+    ),
+  );
 });
 
 test('unknown $ key is an error', () => {
@@ -84,8 +92,22 @@ test('color components must have three entries', () => {
 
 test('border and transition sub-values are validated', () => {
   const doc = load();
-  tree(doc).border = { $type: 'border', bad: { $value: { color: '{color.brand.600}', width: { value: 1, unit: 'px' }, style: 'solid;}html{x:y' } } };
-  tree(doc).transition = { $type: 'transition', bad: { $value: { duration: { value: 1, unit: 'em' }, delay: { value: 0, unit: 'ms' }, timingFunction: [0, 0, 1, 1] } } };
+  tree(doc).border = {
+    $type: 'border',
+    bad: {
+      $value: { color: '{color.brand.600}', width: { value: 1, unit: 'px' }, style: 'solid;}html{x:y' },
+    },
+  };
+  tree(doc).transition = {
+    $type: 'transition',
+    bad: {
+      $value: {
+        duration: { value: 1, unit: 'em' },
+        delay: { value: 0, unit: 'ms' },
+        timingFunction: [0, 0, 1, 1],
+      },
+    },
+  };
   const errors = validateResolver(doc).errors;
   assert.ok(errors.some((e) => e.path?.endsWith('border.bad')));
   assert.ok(errors.some((e) => e.path?.endsWith('transition.bad')));

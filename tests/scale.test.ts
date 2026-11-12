@@ -3,8 +3,14 @@ import assert from 'node:assert/strict';
 import { generateScale, applyScale, setStep } from '../src/lib/scale.js';
 
 const V = 'com.example.styleguide';
-const spacing = { base: { value: 4, unit: 'px' }, steps: { xs: 1, sm: 2, md: 4, lg: 6, xl: 8, '2xl': 12, '3xl': 16 } };
-const groupWith = (scale) => ({ $type: 'dimension', $extensions: { [V]: { scale: structuredClone(scale) } } });
+const spacing = {
+  base: { value: 4, unit: 'px' },
+  steps: { xs: 1, sm: 2, md: 4, lg: 6, xl: 8, '2xl': 12, '3xl': 16 },
+};
+const groupWith = (scale) => ({
+  $type: 'dimension',
+  $extensions: { [V]: { scale: structuredClone(scale) } },
+});
 
 test('linear scale', () => {
   assert.deepEqual(generateScale(spacing).md, { value: 16, unit: 'px' });
@@ -21,7 +27,10 @@ test('applyScale writes every step and keeps other extensions', () => {
   const g = groupWith(spacing);
   g.$extensions['org.tool.x'] = { a: 1 };
   const out = applyScale(g, V);
-  assert.deepEqual(Object.keys(out).filter((k) => !k.startsWith('$')), Object.keys(spacing.steps));
+  assert.deepEqual(
+    Object.keys(out).filter((k) => !k.startsWith('$')),
+    Object.keys(spacing.steps),
+  );
   assert.deepEqual(out.$extensions['org.tool.x'], { a: 1 });
   assert.equal('md' in g, false, 'input not mutated');
 });

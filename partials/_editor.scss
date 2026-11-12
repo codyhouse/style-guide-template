@@ -23,7 +23,7 @@ xEditor - header actions, panels, drawer, listbox, token and file views
 
 .btn-small {
 	min-height: var(--control-h);
-	padding: .4em 1em;
+	padding: 0.4em 1em;
 	font-size: var(--font-size-sm);
 }
 
@@ -77,12 +77,12 @@ xEditor - header actions, panels, drawer, listbox, token and file views
 		background: var(--color-secondary-background-hover);
 	}
 
-	&[aria-pressed=true] {
+	&[aria-pressed='true'] {
 		background: var(--color-secondary-background-active);
 	}
 
-	&[aria-disabled=true] {
-		opacity: .4;
+	&[aria-disabled='true'] {
+		opacity: 0.4;
 		cursor: default;
 		background: transparent;
 	}
@@ -318,10 +318,12 @@ xEditor - header actions, panels, drawer, listbox, token and file views
 	margin-bottom: var(--spacing-sm);
 	font-size: var(--font-size-sm);
 
-	input[type=text], input[type=number], input[type=search] {
+	input[type='text'],
+	input[type='number'],
+	input[type='search'] {
 		width: 100%;
 		min-height: var(--control-h);
-		padding: .5em .75em;
+		padding: 0.5em 0.75em;
 		border: 1px solid var(--color-input-border); // ds-allow-hardcode: hairline
 		border-radius: var(--radius-sm);
 		background: var(--color-input-background);
@@ -349,12 +351,12 @@ xEditor - header actions, panels, drawer, listbox, token and file views
 	display: flex;
 	gap: var(--spacing-xs);
 
-	input[type=text] {
+	input[type='text'] {
 		flex: 1;
 		min-width: 0;
 	}
 
-	input[type=color] {
+	input[type='color'] {
 		flex: none;
 		width: var(--control-h);
 		height: var(--control-h);
@@ -424,7 +426,8 @@ xEditor - header actions, panels, drawer, listbox, token and file views
 		font-size: var(--font-size-sm);
 		overflow-wrap: anywhere;
 
-		> div, > span {
+		> div,
+		> span {
 			flex: 1;
 			min-width: 0;
 		}
@@ -452,7 +455,7 @@ xEditor - header actions, panels, drawer, listbox, token and file views
 	gap: var(--spacing-sm);
 	width: 100%;
 	min-height: var(--control-h);
-	padding: .25em var(--spacing-sm) .25em .75em;
+	padding: 0.25em var(--spacing-sm) 0.25em 0.75em;
 	font-size: var(--font-size-sm);
 	border: 1px solid var(--color-input-border); // ds-allow-hardcode: hairline
 	border-radius: var(--radius-sm);
@@ -465,7 +468,7 @@ xEditor - header actions, panels, drawer, listbox, token and file views
 		transition: transform var(--duration-fast);
 	}
 
-	&[aria-expanded=true] .cd-icon {
+	&[aria-expanded='true'] .cd-icon {
 		transform: rotate(180deg);
 	}
 }
@@ -501,7 +504,7 @@ xEditor - header actions, panels, drawer, listbox, token and file views
 		background: var(--color-secondary-background-hover);
 	}
 
-	&[aria-selected=true] {
+	&[aria-selected='true'] {
 		font-weight: 700;
 	}
 }
@@ -548,7 +551,8 @@ xEditor - header actions, panels, drawer, listbox, token and file views
 	}
 }
 
-.cd-radius-box, .cd-shadow-box {
+.cd-radius-box,
+.cd-shadow-box {
 	height: 5rem;
 	background: var(--color-card-background);
 	border: 1px solid var(--color-card-border); // ds-allow-hardcode: hairline
@@ -600,7 +604,6 @@ xEditor - header actions, panels, drawer, listbox, token and file views
 }
 
 .cd-code {
-
 	pre {
 		max-height: 30rem;
 		overflow: auto;
@@ -767,7 +770,7 @@ xEditor - header actions, panels, drawer, listbox, token and file views
 	gap: var(--spacing-xs);
 	margin-bottom: var(--spacing-sm);
 
-	[role=tab] {
+	[role='tab'] {
 		min-height: 2.75rem;
 		padding: 0 var(--spacing-md);
 		border: 1px solid var(--color-card-border); // ds-allow-hardcode: hairline
@@ -778,7 +781,7 @@ xEditor - header actions, panels, drawer, listbox, token and file views
 		font-size: var(--font-size-sm);
 		cursor: pointer;
 
-		&[aria-selected=true] {
+		&[aria-selected='true'] {
 			background: var(--color-primary-background);
 			border-color: var(--color-primary-background);
 			color: var(--color-primary-foreground);

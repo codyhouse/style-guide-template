@@ -10,5 +10,9 @@ export default tseslint.config(
   ...tseslint.configs.strict,
   lit.configs['flat/recommended'],
   prettier,
-  { languageOptions: { globals: { ...globals.browser, ...globals.node } } },
+  {
+    languageOptions: { globals: { ...globals.browser, ...globals.node } },
+    // a rest pattern is how a field is left out of a copy
+    rules: { '@typescript-eslint/no-unused-vars': ['error', { ignoreRestSiblings: true }] },
+  },
 );

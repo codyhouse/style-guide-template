@@ -2,7 +2,15 @@ import { test } from 'vitest';
 import assert from 'node:assert/strict';
 import { present } from './helpers.js';
 import {
-  oklch, toOklch, toHex, inGamut, toOklchString, toRgbaString, cmyk, contrastRatio, shadeScale,
+  oklch,
+  toOklch,
+  toHex,
+  inGamut,
+  toOklchString,
+  toRgbaString,
+  cmyk,
+  contrastRatio,
+  shadeScale,
 } from '../src/lib/color.js';
 import type { DtcgColor } from '../src/lib/types.js';
 
@@ -55,7 +63,19 @@ test('strings', () => {
 
 test('shade scale', () => {
   const s = shadeScale(260, 0.18);
-  assert.deepEqual(Object.keys(s), ['50', '100', '200', '300', '400', '500', '600', '700', '800', '900', '950']);
+  assert.deepEqual(Object.keys(s), [
+    '50',
+    '100',
+    '200',
+    '300',
+    '400',
+    '500',
+    '600',
+    '700',
+    '800',
+    '900',
+    '950',
+  ]);
   assert.equal(s['50'].components[0], 0.97);
   assert.equal(s['950'].components[0], 0.15);
   for (const v of Object.values(s)) assert.ok(inGamut(v));
@@ -87,10 +107,17 @@ test('parseCssColor reads any CSS color', async () => {
 test('every DTCG color space converts', async () => {
   const { toHex } = await import('../src/lib/color.js');
   const red = {
-    srgb: [1, 0, 0], 'srgb-linear': [1, 0, 0], hsl: [0, 100, 50], hwb: [0, 0, 0], 'display-p3': [0.9175, 0.2003, 0.1386],
-    lab: [54.29, 80.8, 69.89], lch: [54.29, 106.84, 40.85], oklab: [0.628, 0.2249, 0.1258],
+    srgb: [1, 0, 0],
+    'srgb-linear': [1, 0, 0],
+    hsl: [0, 100, 50],
+    hwb: [0, 0, 0],
+    'display-p3': [0.9175, 0.2003, 0.1386],
+    lab: [54.29, 80.8, 69.89],
+    lch: [54.29, 106.84, 40.85],
+    oklab: [0.628, 0.2249, 0.1258],
   };
-  for (const [colorSpace, components] of Object.entries(red)) assert.equal(toHex(space(colorSpace, components)), '#ff0000', colorSpace);
+  for (const [colorSpace, components] of Object.entries(red))
+    assert.equal(toHex(space(colorSpace, components)), '#ff0000', colorSpace);
 });
 
 test('anchoredScale keeps the typed color exactly as the nearest shade', async () => {
@@ -101,17 +128,33 @@ test('anchoredScale keeps the typed color exactly as the nearest shade', async (
   assert.equal(toHex(scale[anchor]), '#f0941d');
   assert.deepEqual(scale[anchor].components, typed.components);
   const ls = Object.values(scale).map((s) => Number(s.components[0]));
-  assert.deepEqual([...ls].sort((a, b) => b - a), ls, 'shades stay ordered light to dark');
+  assert.deepEqual(
+    [...ls].sort((a, b) => b - a),
+    ls,
+    'shades stay ordered light to dark',
+  );
 });
 
 test('every DTCG color space converts (white is white everywhere)', async () => {
   const { toHex } = await import('../src/lib/color.js');
   const white = {
-    srgb: [1, 1, 1], 'srgb-linear': [1, 1, 1], hsl: [0, 0, 100], hwb: [0, 100, 0], lab: [100, 0, 0], lch: [100, 0, 0],
-    oklab: [1, 0, 0], oklch: [1, 0, 0], 'display-p3': [1, 1, 1], 'a98-rgb': [1, 1, 1], 'prophoto-rgb': [1, 1, 1],
-    rec2020: [1, 1, 1], 'xyz-d65': [0.95047, 1, 1.08883], 'xyz-d50': [0.96422, 1, 0.82521],
+    srgb: [1, 1, 1],
+    'srgb-linear': [1, 1, 1],
+    hsl: [0, 0, 100],
+    hwb: [0, 100, 0],
+    lab: [100, 0, 0],
+    lch: [100, 0, 0],
+    oklab: [1, 0, 0],
+    oklch: [1, 0, 0],
+    'display-p3': [1, 1, 1],
+    'a98-rgb': [1, 1, 1],
+    'prophoto-rgb': [1, 1, 1],
+    rec2020: [1, 1, 1],
+    'xyz-d65': [0.95047, 1, 1.08883],
+    'xyz-d50': [0.96422, 1, 0.82521],
   };
-  for (const [colorSpace, components] of Object.entries(white)) assert.equal(toHex(space(colorSpace, components)), '#ffffff', colorSpace);
+  for (const [colorSpace, components] of Object.entries(white))
+    assert.equal(toHex(space(colorSpace, components)), '#ffffff', colorSpace);
 });
 
 test('known reds in other spaces', async () => {
@@ -124,7 +167,10 @@ test('known reds in other spaces', async () => {
 test('cssColor writes each space natively', async () => {
   const { cssColor } = await import('../src/lib/color.js');
   assert.equal(cssColor({ colorSpace: 'display-p3', components: [1, 0, 0] }), 'color(display-p3 1 0 0)');
-  assert.equal(cssColor({ colorSpace: 'lab', components: [50, 20, -30], alpha: 0.5 }), 'lab(50 20 -30 / 0.5)');
+  assert.equal(
+    cssColor({ colorSpace: 'lab', components: [50, 20, -30], alpha: 0.5 }),
+    'lab(50 20 -30 / 0.5)',
+  );
   assert.equal(cssColor({ colorSpace: 'hsl', components: [10, 50, 40] }), 'hsl(10 50% 40%)');
   assert.equal(cssColor({ colorSpace: 'oklch', components: [0.5, 0.1, 10] }), 'oklch(0.5 0.1 10)');
 });

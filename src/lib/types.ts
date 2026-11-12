@@ -2,7 +2,16 @@
 import type * as z from 'zod/mini';
 import type { color } from './schema.js';
 
-export type { AssetGroup, AssetItem, BrandMeta, FontDetail, FontFile, FontListing, Manifest, ResolverDoc } from './schema.js';
+export type {
+  AssetGroup,
+  AssetItem,
+  BrandMeta,
+  FontDetail,
+  FontFile,
+  FontListing,
+  Manifest,
+  ResolverDoc,
+} from './schema.js';
 
 // A token tree is user JSON that schema.ts has checked; its values are as varied as DTCG allows
 // (colors, dimensions, aliases, composites), so they are read where used instead of typed up front.

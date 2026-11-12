@@ -14,7 +14,10 @@ export interface ListboxOption {
   swatch?: string;
 }
 
-const chip = (swatch?: string) => (swatch ? html`<span class="cd-chip" aria-hidden="true" style=${styleMap({ background: swatch })}></span>` : nothing);
+const chip = (swatch?: string) =>
+  swatch
+    ? html`<span class="cd-chip" aria-hidden="true" style=${styleMap({ background: swatch })}></span>`
+    : nothing;
 
 let uid = 0;
 
@@ -30,10 +33,21 @@ class Listbox extends HTMLElement {
   #stopPlacing: (() => void) | null = null;
   #queued = false;
 
-  set label(v: string) { this.#label = v; this.#schedule(); }
-  set options(v: ListboxOption[]) { this.#options = v; this.#schedule(); }
-  set value(v: string | null) { this.#value = v; this.#schedule(); }
-  get value() { return this.#value; }
+  set label(v: string) {
+    this.#label = v;
+    this.#schedule();
+  }
+  set options(v: ListboxOption[]) {
+    this.#options = v;
+    this.#schedule();
+  }
+  set value(v: string | null) {
+    this.#value = v;
+    this.#schedule();
+  }
+  get value() {
+    return this.#value;
+  }
 
   connectedCallback() {
     this.classList.add('cd-listbox');
@@ -46,12 +60,17 @@ class Listbox extends HTMLElement {
     this.#stopPlacing?.();
   }
 
-  #outside = (e: PointerEvent) => { if (this.#open && !this.contains(e.target as Node)) this.#close(false); };
+  #outside = (e: PointerEvent) => {
+    if (this.#open && !this.contains(e.target as Node)) this.#close(false);
+  };
 
   #schedule() {
     if (this.#queued) return;
     this.#queued = true;
-    queueMicrotask(() => { this.#queued = false; this.#render(); });
+    queueMicrotask(() => {
+      this.#queued = false;
+      this.#render();
+    });
   }
 
   // #render() always draws both, so a missing one is a bug in this file
@@ -60,23 +79,36 @@ class Listbox extends HTMLElement {
     if (!el) throw new Error(`cd-listbox has no ${selector}`);
     return el;
   }
-  get #popup() { return this.#part<HTMLElement>('[role=listbox]'); }
-  get #trigger() { return this.#part<HTMLButtonElement>('.cd-listbox-trigger'); }
+  get #popup() {
+    return this.#part<HTMLElement>('[role=listbox]');
+  }
+  get #trigger() {
+    return this.#part<HTMLButtonElement>('.cd-listbox-trigger');
+  }
 
-  #place = () => computePosition(this.#trigger, this.#popup, {
-    strategy: 'fixed',
-    placement: 'bottom-start',
-    middleware: [offset(4), flip({ padding: 8 }), shift({ padding: 8 }), size({
-      padding: 8,
-      apply: ({ availableHeight, rects, elements }) => {
-        elements.floating.style.width = `${rects.reference.width}px`;
-        elements.floating.style.setProperty('--cd-popup-room', `${availableHeight}px`);
-      },
-    })],
-  }).then(({ x, y }) => Object.assign(this.#popup.style, { left: `${x}px`, top: `${y}px` }));
+  #place = () =>
+    computePosition(this.#trigger, this.#popup, {
+      strategy: 'fixed',
+      placement: 'bottom-start',
+      middleware: [
+        offset(4),
+        flip({ padding: 8 }),
+        shift({ padding: 8 }),
+        size({
+          padding: 8,
+          apply: ({ availableHeight, rects, elements }) => {
+            elements.floating.style.width = `${rects.reference.width}px`;
+            elements.floating.style.setProperty('--cd-popup-room', `${availableHeight}px`);
+          },
+        }),
+      ],
+    }).then(({ x, y }) => Object.assign(this.#popup.style, { left: `${x}px`, top: `${y}px` }));
 
   #show() {
-    this.#active = Math.max(0, this.#options.findIndex((o) => o.value === this.#value));
+    this.#active = Math.max(
+      0,
+      this.#options.findIndex((o) => o.value === this.#value),
+    );
     this.#open = true;
     this.#render();
     this.#stopPlacing = autoUpdate(this.#trigger, this.#popup, this.#place);
@@ -106,10 +138,18 @@ class Listbox extends HTMLElement {
   #onPopupKey = (e: KeyboardEvent) => {
     const last = this.#options.length - 1;
     const keys: Record<string, () => void> = {
-      ArrowDown: () => { this.#active = Math.min(last, this.#active + 1); },
-      ArrowUp: () => { this.#active = Math.max(0, this.#active - 1); },
-      Home: () => { this.#active = 0; },
-      End: () => { this.#active = last; },
+      ArrowDown: () => {
+        this.#active = Math.min(last, this.#active + 1);
+      },
+      ArrowUp: () => {
+        this.#active = Math.max(0, this.#active - 1);
+      },
+      Home: () => {
+        this.#active = 0;
+      },
+      End: () => {
+        this.#active = last;
+      },
       Enter: () => this.#pick(this.#active),
       ' ': () => this.#pick(this.#active),
       Escape: () => this.#close(),
@@ -137,20 +177,46 @@ class Listbox extends HTMLElement {
     if (!this.isConnected) return;
     const id = this.#id;
     const current = this.#options.find((o) => o.value === this.#value);
-    render(html`
-      <span id="${id}-label" class="cd-sr-only">${this.#label}</span>
-      <button type="button" class="cd-listbox-trigger" id="${id}-trigger" aria-haspopup="listbox"
-        aria-expanded=${String(this.#open)} aria-labelledby="${id}-label ${id}-trigger"
-        @click=${() => (this.#open ? this.#close() : this.#show())} @keydown=${this.#onTriggerKey}>
-        <span>${chip(current?.swatch)}${current?.label ?? 'Choose'}</span>${icon('chevron')}
-      </button>
-      <ul role="listbox" class="cd-listbox-popup" id="${id}-list" tabindex="-1" aria-labelledby="${id}-label"
-        aria-activedescendant="${id}-opt-${this.#active}" ?hidden=${!this.#open}
-        @click=${this.#onPopupClick} @keydown=${this.#onPopupKey}>
-        ${this.#options.map((o, i) => html`
-          <li role="option" id="${id}-opt-${i}" data-index=${i} class="cd-listbox-option ${i === this.#active ? 'is-active' : ''}"
-            aria-selected=${String(o.value === this.#value)}>${chip(o.swatch)}${o.label}</li>`)}
-      </ul>`, this);
+    render(
+      html` <span id="${id}-label" class="cd-sr-only">${this.#label}</span>
+        <button
+          type="button"
+          class="cd-listbox-trigger"
+          id="${id}-trigger"
+          aria-haspopup="listbox"
+          aria-expanded=${String(this.#open)}
+          aria-labelledby="${id}-label ${id}-trigger"
+          @click=${() => (this.#open ? this.#close() : this.#show())}
+          @keydown=${this.#onTriggerKey}
+        >
+          <span>${chip(current?.swatch)}${current?.label ?? 'Choose'}</span>${icon('chevron')}
+        </button>
+        <ul
+          role="listbox"
+          class="cd-listbox-popup"
+          id="${id}-list"
+          tabindex="-1"
+          aria-labelledby="${id}-label"
+          aria-activedescendant="${id}-opt-${this.#active}"
+          ?hidden=${!this.#open}
+          @click=${this.#onPopupClick}
+          @keydown=${this.#onPopupKey}
+        >
+          ${this.#options.map(
+            (o, i) =>
+              html` <li
+                role="option"
+                id="${id}-opt-${i}"
+                data-index=${i}
+                class="cd-listbox-option ${i === this.#active ? 'is-active' : ''}"
+                aria-selected=${String(o.value === this.#value)}
+              >
+                ${chip(o.swatch)}${o.label}
+              </li>`,
+          )}
+        </ul>`,
+      this,
+    );
     if (this.#open) this.#popup.children[this.#active]?.scrollIntoView({ block: 'nearest' });
   }
 }

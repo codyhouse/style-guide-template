@@ -5,13 +5,17 @@ import { readFileSync } from 'node:fs';
 import { ResolveError, resolve, contexts, defaultInputs, aliasTarget, flatten } from '../src/lib/resolver.js';
 import { toHex } from '../src/lib/color.js';
 
-const load = () => JSON.parse(readFileSync(new URL('./fixtures/minimal.resolver.json', import.meta.url), 'utf8'));
+const load = () =>
+  JSON.parse(readFileSync(new URL('./fixtures/minimal.resolver.json', import.meta.url), 'utf8'));
 const tree = (doc) => doc.sets.foundation.sources[0];
 
 test('dark overrides light', () => {
   const doc = load();
   const n = tree(doc).color.neutral;
-  assert.equal(toHex(token(resolve(doc, { theme: 'dark' }), 'color.page.background').resolved), n['950'].$value.hex);
+  assert.equal(
+    toHex(token(resolve(doc, { theme: 'dark' }), 'color.page.background').resolved),
+    n['950'].$value.hex,
+  );
   assert.equal(toHex(token(resolve(doc), 'color.page.background').resolved), n['50'].$value.hex);
 });
 
@@ -49,7 +53,10 @@ test('cycle throws', () => {
 test('missing target throws with path', () => {
   const doc = load();
   tree(doc).color.primary.background.$value = '{color.nope}';
-  assert.throws(() => resolve(doc), (e) => e instanceof ResolveError && e.path === 'color.primary.background');
+  assert.throws(
+    () => resolve(doc),
+    (e) => e instanceof ResolveError && e.path === 'color.primary.background',
+  );
 });
 
 test('$root keeps its segment in the key', () => {
@@ -60,7 +67,13 @@ test('$root keeps its segment in the key', () => {
 
 test('contexts and default inputs', () => {
   const doc = load();
-  assert.deepEqual(contexts(doc).map((c) => [c.context, c.isDefault]), [['light', true], ['dark', false]]);
+  assert.deepEqual(
+    contexts(doc).map((c) => [c.context, c.isDefault]),
+    [
+      ['light', true],
+      ['dark', false],
+    ],
+  );
   assert.deepEqual(defaultInputs(doc), { theme: 'light' });
 });
 

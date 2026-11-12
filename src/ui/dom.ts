@@ -13,7 +13,8 @@ const ICONS = {
 
 export type IconName = keyof typeof ICONS;
 
-export const icon = (name: IconName) => html`<svg class="cd-icon" viewBox="0 0 24 24" aria-hidden="true">${ICONS[name]}</svg>`;
+export const icon = (name: IconName) =>
+  html`<svg class="cd-icon" viewBox="0 0 24 24" aria-hidden="true">${ICONS[name]}</svg>`;
 
 export function download(name: string, data: string | Uint8Array, type: string) {
   const url = URL.createObjectURL(new Blob([data as BlobPart], { type }));

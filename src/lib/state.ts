@@ -18,10 +18,22 @@ const BASE = 'styleguide:base';
 const HISTORY = 50;
 
 const read = (storage: StorageLike, key: string): ResolverDoc | null => {
-  try { return JSON.parse(storage.getItem(key) ?? 'null'); } catch { return null; }
+  try {
+    return JSON.parse(storage.getItem(key) ?? 'null');
+  } catch {
+    return null;
+  }
 };
 
-export function createStore({ doc, storage, fileStore }: { doc: ResolverDoc; storage: StorageLike; fileStore: FileStore }) {
+export function createStore({
+  doc,
+  storage,
+  fileStore,
+}: {
+  doc: ResolverDoc;
+  storage: StorageLike;
+  fileStore: FileStore;
+}) {
   let base = read(storage, BASE) ?? doc;
   let current = read(storage, DRAFT) ?? base;
   let timer: ReturnType<typeof setTimeout> | undefined;
@@ -45,7 +57,10 @@ export function createStore({ doc, storage, fileStore }: { doc: ResolverDoc; sto
     files,
     saveError: null as unknown,
     get: () => current,
-    subscribe(fn: (doc: ResolverDoc) => void) { subs.add(fn); return () => subs.delete(fn); },
+    subscribe(fn: (doc: ResolverDoc) => void) {
+      subs.add(fn);
+      return () => subs.delete(fn);
+    },
     set(next: ResolverDoc) {
       if (next !== current) record();
       show(next);
@@ -112,7 +127,11 @@ export function createStore({ doc, storage, fileStore }: { doc: ResolverDoc; sto
       for (const path of [...files.keys()]) {
         if (keep.has(path)) continue;
         files.delete(path);
-        try { await fileStore.delete(path); } catch { /* already gone */ }
+        try {
+          await fileStore.delete(path);
+        } catch {
+          /* already gone */
+        }
       }
     },
     drafts: () => [current, base, read(storage, PREVIOUS)].filter((d): d is ResolverDoc => !!d),
@@ -122,13 +141,20 @@ export function createStore({ doc, storage, fileStore }: { doc: ResolverDoc; sto
       for (const [path, data] of map) files.set(path, data);
       for (const fn of subs) fn(current);
       for (const [path, data] of map) {
-        try { await fileStore.put(path, data); } catch { notPersisted.push(path); }
+        try {
+          await fileStore.put(path, data);
+        } catch {
+          notPersisted.push(path);
+        }
       }
       return { notPersisted };
     },
-    ready: fileStore.getAll().then((saved) => {
-      for (const [p, data] of saved) if (!files.has(p)) files.set(p, data);
-    }).catch(() => {}),
+    ready: fileStore
+      .getAll()
+      .then((saved) => {
+        for (const [p, data] of saved) if (!files.has(p)) files.set(p, data);
+      })
+      .catch(() => {}),
   };
   return store;
 }

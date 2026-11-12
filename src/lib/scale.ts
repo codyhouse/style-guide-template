@@ -11,10 +11,12 @@ export interface ScaleSpec {
 const round = (n: number) => Math.round(n * 1e4) / 1e4;
 
 export function generateScale({ base, steps, ratio }: ScaleSpec): Record<string, Dimension> {
-  return Object.fromEntries(Object.entries(steps).map(([name, step]) => [
-    name,
-    { value: round(ratio ? base.value * ratio ** step : base.value * step), unit: base.unit },
-  ]));
+  return Object.fromEntries(
+    Object.entries(steps).map(([name, step]) => [
+      name,
+      { value: round(ratio ? base.value * ratio ** step : base.value * step), unit: base.unit },
+    ]),
+  );
 }
 
 export function applyScale(group: TokenNode, vendor: string): TokenNode {
@@ -31,6 +33,10 @@ export function applyScale(group: TokenNode, vendor: string): TokenNode {
 export function setStep(group: TokenNode, step: string, dimension: Dimension, vendor: string): TokenNode {
   const out = structuredClone(group);
   const ext = out[step]?.$extensions ?? {};
-  out[step] = { ...out[step], $value: dimension, $extensions: { ...ext, [vendor]: { ...ext[vendor], overridden: true } } };
+  out[step] = {
+    ...out[step],
+    $value: dimension,
+    $extensions: { ...ext, [vendor]: { ...ext[vendor], overridden: true } },
+  };
   return out;
 }

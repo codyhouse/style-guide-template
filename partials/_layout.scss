@@ -1,34 +1,40 @@
 // breakpoints (media queries cannot read custom properties)
 
-$S:     768px;   // ds-allow-hardcode: media query breakpoint
-$M:     1024px;  // ds-allow-hardcode: media query breakpoint
-$L:     1600px;  // ds-allow-hardcode: media query breakpoint
+$S: 768px; // ds-allow-hardcode: media query breakpoint
+$M: 1024px; // ds-allow-hardcode: media query breakpoint
+$L: 1600px; // ds-allow-hardcode: media query breakpoint
 
 // media queries
 
 @mixin MQ($canvas) {
-  @if $canvas == S {
-   @media only screen and (min-width: $S) { @content; }
-  }
-  @else if $canvas == M {
-   @media only screen and (min-width: $M) { @content; }
-  }
-  @else if $canvas == L {
-   @media only screen and (min-width: $L) { @content; }
-  }
+	@if $canvas == S {
+		@media only screen and (min-width: $S) {
+			@content;
+		}
+	} @else if $canvas == M {
+		@media only screen and (min-width: $M) {
+			@content;
+		}
+	} @else if $canvas == L {
+		@media only screen and (min-width: $L) {
+			@content;
+		}
+	}
 }
 
 // hover styles only where a pointer can hover
 
 @mixin hover {
-  @media (hover: hover) {
-    &:hover { @content; }
-  }
+	@media (hover: hover) {
+		&:hover {
+			@content;
+		}
+	}
 }
 
 // super light grid - it works with the .cd-container class inside style.scss
 
-@mixin column($percentage, $float-direction:left) {
-  width: 100% * $percentage;
-  float: $float-direction;
+@mixin column($percentage, $float-direction: left) {
+	width: 100% * $percentage;
+	float: $float-direction;
 }

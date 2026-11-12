@@ -1,76 +1,140 @@
 <!doctype html>
 <html lang="en" data-theme="light">
-<head>
-	<meta charset="UTF-8">
-	<meta name="viewport" content="width=device-width, initial-scale=1">
-	<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' blob: data:; font-src 'self' blob: data: https://cdn.jsdelivr.net; connect-src 'self' blob: https://api.fontsource.org https://cdn.jsdelivr.net; object-src 'none'; base-uri 'self'; form-action 'none'">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' blob: data:; font-src 'self' blob: data: https://cdn.jsdelivr.net; connect-src 'self' blob: https://api.fontsource.org https://cdn.jsdelivr.net; object-src 'none'; base-uri 'self'; form-action 'none'"
+    />
 
-	<link rel="stylesheet" href="/css/reset.css"> <!-- CSS reset -->
-	<link rel="stylesheet" href="/scss/style-guide.scss"> <!-- Resource style -->
-	<style id="brand-css"></style> <!-- generated from the brand file -->
+    <link rel="stylesheet" href="/css/reset.css" />
+    <!-- CSS reset -->
+    <link rel="stylesheet" href="/scss/style-guide.scss" />
+    <!-- Resource style -->
+    <style id="brand-css"></style>
+    <!-- generated from the brand file -->
 
-	<title>Style Guide</title>
-</head>
-<body>
-	<header>
-		<div class="cd-logo" id="cd-logo"></div>
+    <title>Style Guide</title>
+  </head>
+  <body>
+    <header>
+      <div class="cd-logo" id="cd-logo"></div>
 
-		<nav aria-label="Sections">
-			<ul class="cd-main-nav" id="cd-nav"></ul> <!-- cd-main-nav -->
-		</nav>
+      <nav aria-label="Sections">
+        <ul class="cd-main-nav" id="cd-nav"></ul>
+        <!-- cd-main-nav -->
+      </nav>
 
-		<div class="cd-actions">
-			<button type="button" class="cd-action" id="theme-toggle" title="Dark mode" aria-pressed="false">
-				<svg class="cd-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>
-				<span>Dark mode</span>
-			</button>
-			<button type="button" class="cd-action" id="edit-toggle" title="Edit the brand" aria-pressed="false" aria-controls="cd-drawer">
-				<svg class="cd-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M21.17 6.81a1 1 0 0 0-3.99-3.99L3.84 16.17a2 2 0 0 0-.5.83l-1.32 4.35a.5.5 0 0 0 .62.62l4.35-1.32a2 2 0 0 0 .83-.5Z"/><path d="m15 5 4 4"/></svg>
-				<span>Edit</span>
-			</button>
-			<div class="cd-actions-more">
-				<button type="button" class="cd-action" id="load-btn" title="Load a brand file, ZIP, fonts or assets">
-					<svg class="cd-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m17 8-5-5-5 5"/><path d="M12 3v12"/></svg>
-					<span>Load</span>
-				</button>
-				<button type="button" class="cd-action" id="save-btn" title="Save the brand file as JSON">
-					<svg class="cd-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M15.2 3a2 2 0 0 1 1.4.6l3.8 3.8a2 2 0 0 1 .6 1.4V19a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z"/><path d="M17 21v-7a1 1 0 0 0-1-1H8a1 1 0 0 0-1 1v7"/><path d="M7 3v4a1 1 0 0 0 1 1h7"/></svg>
-					<span>Save JSON</span>
-				</button>
-			</div>
-			<button type="button" class="cd-action" id="export-btn" title="Export the brand kit as a ZIP">
-				<svg class="cd-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/><path d="M12 15V3"/></svg>
-				<span>Export ZIP</span>
-			</button>
-			<input type="file" id="load-input" multiple hidden>
-		</div>
-	</header>
+      <div class="cd-actions">
+        <button type="button" class="cd-action" id="theme-toggle" title="Dark mode" aria-pressed="false">
+          <svg class="cd-icon" viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z" />
+          </svg>
+          <span>Dark mode</span>
+        </button>
+        <button
+          type="button"
+          class="cd-action"
+          id="edit-toggle"
+          title="Edit the brand"
+          aria-pressed="false"
+          aria-controls="cd-drawer"
+        >
+          <svg class="cd-icon" viewBox="0 0 24 24" aria-hidden="true">
+            <path
+              d="M21.17 6.81a1 1 0 0 0-3.99-3.99L3.84 16.17a2 2 0 0 0-.5.83l-1.32 4.35a.5.5 0 0 0 .62.62l4.35-1.32a2 2 0 0 0 .83-.5Z"
+            />
+            <path d="m15 5 4 4" />
+          </svg>
+          <span>Edit</span>
+        </button>
+        <div class="cd-actions-more">
+          <button
+            type="button"
+            class="cd-action"
+            id="load-btn"
+            title="Load a brand file, ZIP, fonts or assets"
+          >
+            <svg class="cd-icon" viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+              <path d="m17 8-5-5-5 5" />
+              <path d="M12 3v12" />
+            </svg>
+            <span>Load</span>
+          </button>
+          <button type="button" class="cd-action" id="save-btn" title="Save the brand file as JSON">
+            <svg class="cd-icon" viewBox="0 0 24 24" aria-hidden="true">
+              <path
+                d="M15.2 3a2 2 0 0 1 1.4.6l3.8 3.8a2 2 0 0 1 .6 1.4V19a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z"
+              />
+              <path d="M17 21v-7a1 1 0 0 0-1-1H8a1 1 0 0 0-1 1v7" />
+              <path d="M7 3v4a1 1 0 0 0 1 1h7" />
+            </svg>
+            <span>Save JSON</span>
+          </button>
+        </div>
+        <button type="button" class="cd-action" id="export-btn" title="Export the brand kit as a ZIP">
+          <svg class="cd-icon" viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+            <path d="m7 10 5 5 5-5" />
+            <path d="M12 15V3" />
+          </svg>
+          <span>Export ZIP</span>
+        </button>
+        <input type="file" id="load-input" multiple hidden />
+      </div>
+    </header>
 
-	<main></main> <!-- rendered from the brand file -->
+    <main></main>
+    <!-- rendered from the brand file -->
 
-	<div class="cd-drop" aria-hidden="true">Drop files to load them</div>
+    <div class="cd-drop" aria-hidden="true">Drop files to load them</div>
 
-	<aside id="cd-drawer" class="cd-drawer" aria-labelledby="cd-drawer-title" hidden>
-		<div class="cd-drawer-header">
-			<h2 id="cd-drawer-title">Edit brand</h2>
-			<div class="cd-drawer-actions">
-				<button type="button" class="cd-action" id="undo-btn" title="Undo (Ctrl+Z)" aria-keyshortcuts="Control+Z Meta+Z" aria-disabled="true">
-					<svg class="cd-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 5.5 5.5 5.5 5.5 0 0 1-5.5 5.5H11"/></svg>
-					<span>Undo</span>
-				</button>
-				<button type="button" class="cd-action" id="redo-btn" title="Redo (Ctrl+Shift+Z)" aria-keyshortcuts="Control+Shift+Z Meta+Shift+Z Control+Y" aria-disabled="true">
-					<svg class="cd-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m15 14 5-5-5-5"/><path d="M20 9H9.5A5.5 5.5 0 0 0 4 14.5 5.5 5.5 0 0 0 9.5 20H13"/></svg>
-					<span>Redo</span>
-				</button>
-				<button type="button" class="cd-action" id="drawer-close" title="Close the editor (Esc)">
-					<svg class="cd-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
-					<span>Close</span>
-				</button>
-			</div>
-		</div>
-		<div class="cd-drawer-body" id="cd-drawer-body"></div>
-	</aside>
+    <aside id="cd-drawer" class="cd-drawer" aria-labelledby="cd-drawer-title" hidden>
+      <div class="cd-drawer-header">
+        <h2 id="cd-drawer-title">Edit brand</h2>
+        <div class="cd-drawer-actions">
+          <button
+            type="button"
+            class="cd-action"
+            id="undo-btn"
+            title="Undo (Ctrl+Z)"
+            aria-keyshortcuts="Control+Z Meta+Z"
+            aria-disabled="true"
+          >
+            <svg class="cd-icon" viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M9 14 4 9l5-5" />
+              <path d="M4 9h10.5a5.5 5.5 0 0 1 5.5 5.5 5.5 5.5 0 0 1-5.5 5.5H11" />
+            </svg>
+            <span>Undo</span>
+          </button>
+          <button
+            type="button"
+            class="cd-action"
+            id="redo-btn"
+            title="Redo (Ctrl+Shift+Z)"
+            aria-keyshortcuts="Control+Shift+Z Meta+Shift+Z Control+Y"
+            aria-disabled="true"
+          >
+            <svg class="cd-icon" viewBox="0 0 24 24" aria-hidden="true">
+              <path d="m15 14 5-5-5-5" />
+              <path d="M20 9H9.5A5.5 5.5 0 0 0 4 14.5 5.5 5.5 0 0 0 9.5 20H13" />
+            </svg>
+            <span>Redo</span>
+          </button>
+          <button type="button" class="cd-action" id="drawer-close" title="Close the editor (Esc)">
+            <svg class="cd-icon" viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M18 6 6 18" />
+              <path d="m6 6 12 12" />
+            </svg>
+            <span>Close</span>
+          </button>
+        </div>
+      </div>
+      <div class="cd-drawer-body" id="cd-drawer-body"></div>
+    </aside>
 
-<script type="module" src="/src/main.ts"></script>
-</body>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
 </html>

@@ -6,7 +6,9 @@ xBasic style
 
 -------------------------------- */
 
-*, *::after, *::before {
+*,
+*::after,
+*::before {
 	box-sizing: border-box;
 }
 
@@ -33,11 +35,14 @@ img {
 }
 
 code {
-	font-family: monospace, monospace; // ds-allow-hardcode: code, not a brand font; doubled so browsers keep the inherited size
+	font-family:
+		monospace, monospace; // ds-allow-hardcode: code, not a brand font; doubled so browsers keep the inherited size
 	font-size: 0.95em;
 }
 
-input, textarea, button {
+input,
+textarea,
+button {
 	font-family: var(--font-body);
 	font-size: var(--font-size-md);
 }
@@ -131,8 +136,10 @@ nav {
 		align-items: center;
 		min-height: 2.75rem;
 		font-size: var(--font-size-sm);
-		padding: 0 .2em;
-		transition: color var(--duration-fast), box-shadow var(--duration-fast);
+		padding: 0 0.2em;
+		transition:
+			color var(--duration-fast),
+			box-shadow var(--duration-fast);
 	}
 
 	@include MQ(M) {
@@ -164,7 +171,8 @@ main {
 		column-gap: 4%;
 		padding-top: calc(var(--header-h) + 2.5rem);
 
-		> h1, > .cd-panels {
+		> h1,
+		> .cd-panels {
 			grid-column: 1 / -1;
 		}
 	}
@@ -191,7 +199,6 @@ section {
 /* xBranding section - basic style */
 
 .cd-branding {
-
 	.cd-logos {
 		display: grid;
 		gap: var(--spacing-lg);
@@ -238,7 +245,6 @@ section {
 }
 
 .cd-colors {
-
 	.cd-scale {
 		display: grid;
 		grid-template-columns: repeat(auto-fill, minmax(6.5rem, 1fr));
@@ -256,7 +262,7 @@ section {
 
 	b {
 		display: block;
-		padding: .6em 0 .2em;
+		padding: 0.6em 0 0.2em;
 	}
 
 	small {
@@ -274,20 +280,19 @@ section {
 	border-collapse: collapse;
 	font-size: var(--font-size-sm);
 
-	th, td {
+	th,
+	td {
 		overflow-wrap: anywhere;
 		text-align: left;
 		padding: var(--spacing-xs) var(--spacing-sm);
 		border-bottom: 1px solid var(--color-card-border); // ds-allow-hardcode: hairline
 		vertical-align: middle;
 	}
-
 }
 
 /* xTypography section - basic style */
 
 .cd-typography {
-
 	h1::before {
 		content: 'Aa - ';
 		color: var(--color-primary-background);

@@ -3,12 +3,24 @@ import assert from 'node:assert/strict';
 import { createStore } from '../src/lib/state.js';
 import type { ResolverDoc } from '../src/lib/types.js';
 
-const mem = () => { const m = new Map(); return { getItem: (k) => m.get(k) ?? null, setItem: (k, v) => m.set(k, String(v)), removeItem: (k) => m.delete(k) }; };
+const mem = () => {
+  const m = new Map();
+  return {
+    getItem: (k) => m.get(k) ?? null,
+    setItem: (k, v) => m.set(k, String(v)),
+    removeItem: (k) => m.delete(k),
+  };
+};
 const memFiles = (fail = false) => {
   const m = new Map();
   return {
-    put: async (p, b) => { if (fail) throw Object.assign(new Error('quota'), { name: 'QuotaExceededError' }); m.set(p, b); },
-    getAll: async () => new Map(m), delete: async (p) => m.delete(p), clear: async () => m.clear(),
+    put: async (p, b) => {
+      if (fail) throw Object.assign(new Error('quota'), { name: 'QuotaExceededError' });
+      m.set(p, b);
+    },
+    getAll: async () => new Map(m),
+    delete: async (p) => m.delete(p),
+    clear: async () => m.clear(),
   };
 };
 const doc = (name: string): ResolverDoc => ({ version: '2025.10', name, sets: {}, resolutionOrder: [] });
@@ -19,7 +31,9 @@ const edit = (d: ResolverDoc): ResolverDoc => ({ ...d, description: 'edited' });
 test('subscribers are notified', () => {
   const s = createStore({ doc: a, storage: mem(), fileStore: memFiles() });
   let seen;
-  const off = s.subscribe((d) => { seen = d; });
+  const off = s.subscribe((d) => {
+    seen = d;
+  });
   s.set(b);
   assert.deepEqual(seen, b);
   off();
@@ -94,7 +108,12 @@ test('restorePrevious swaps, so restoring twice gets back to where you were', ()
 test('prune deletes files no draft refers to', async () => {
   const fileStore = memFiles();
   const s = createStore({ doc: a, storage: mem(), fileStore });
-  await s.addFiles(new Map([['g/keep.svg', new Uint8Array(1)], ['g/drop.svg', new Uint8Array(1)]]));
+  await s.addFiles(
+    new Map([
+      ['g/keep.svg', new Uint8Array(1)],
+      ['g/drop.svg', new Uint8Array(1)],
+    ]),
+  );
   await s.prune(new Set(['g/keep.svg']));
   assert.deepEqual([...s.files.keys()], ['g/keep.svg']);
   assert.deepEqual([...(await fileStore.getAll()).keys()], ['g/keep.svg']);
@@ -144,7 +163,9 @@ test('subscribers see the history as it is after an undo or redo', () => {
   const s = createStore({ doc: a, storage: mem(), fileStore: memFiles() });
   s.set(b);
   let seen;
-  s.subscribe(() => { seen = [s.canUndo(), s.canRedo()]; });
+  s.subscribe(() => {
+    seen = [s.canUndo(), s.canRedo()];
+  });
   s.undo();
   assert.deepEqual(seen, [false, true]);
   s.redo();
