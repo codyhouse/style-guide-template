@@ -1,15 +1,18 @@
 <script setup lang="ts">
 import { Session } from '../../app/session.js';
+import { errorMessage } from '../../lib/io.js';
 import type { EditorContext } from './context.js';
 import Choice from './Choice.vue';
 import TextField from './TextField.vue';
+
 const { ctx } = defineProps<{ ctx: EditorContext }>();
 defineEmits<{ load: []; save: []; export: [] }>();
+
 async function replace(path: string) {
   try {
     ctx.session.store.load(await Session.fetchPreset(path));
   } catch (e) {
-    ctx.session.warn(`Could not load the preset: ${(e as Error).message}`);
+    ctx.session.warn(`Could not load the preset: ${errorMessage(e)}`);
   }
 }
 </script>
@@ -18,7 +21,7 @@ async function replace(path: string) {
   <TextField
     label="Name"
     :value="ctx.doc.name"
-    @commit="(value) => value && ctx.set({ ...ctx.session.store.get(), name: value })"
+    @commit="(value) => value && ctx.edit((doc) => ({ ...doc, name: value }))"
   />
   <div class="cd-field-row">
     <button type="button" class="btn btn-secondary btn-small" @click="$emit('load')">Load file</button>

@@ -14,7 +14,8 @@ import FileCard from './FileCard.vue';
 import Panels from './Panels.vue';
 import Scale from './Scale.vue';
 import Typography from './Typography.vue';
-import { sectionsOf } from './sections.js';
+import { isOtherToken, sectionsOf } from './sections.js';
+
 const props = defineProps<{
   session: Session;
   doc: ResolverDoc;
@@ -24,40 +25,48 @@ const props = defineProps<{
   inset: number;
 }>();
 const current = defineModel<string[]>('current', { required: true });
+
 const sections = computed(() => sectionsOf(props.meta, props.tokens));
-const group = (id: string) => props.meta.assetGroups.find((g) => g.id === id)?.items ?? [];
-const rest = computed(() =>
-  [...props.tokens].filter(
-    ([p]) =>
-      !['color.', 'spacing.', 'radius.', 'shadow.', 'font-size.', 'typography.', 'font.'].some((x) =>
-        p.startsWith(x),
-      ),
-  ),
-);
+const itemsOf = (id: string) => props.meta.assetGroups.find((g) => g.id === id)?.items ?? [];
+
+const otherTokens = computed(() => [...props.tokens].filter(([path]) => isOtherToken(path)));
+
 const specimen = ref(['', '']);
 const specimenEls = useTemplateRef<HTMLElement[]>('specimen');
+
 function measureSpecimen() {
   specimen.value = (specimenEls.value ?? []).map((el) => {
-    const s = getComputedStyle(el);
-    return `${s.fontWeight} ${s.fontFamily.split(',')[0].replace(/['"]/g, '')} ${Math.round(parseFloat(s.fontSize))}px`;
+    const style = getComputedStyle(el);
+    const family = style.fontFamily.split(',')[0].replace(/['"]/g, '');
+    const size = Math.round(Number.parseFloat(style.fontSize));
+    return `${style.fontWeight} ${family} ${size}px`;
   });
 }
+
 watch(() => props.tokens, measureSpecimen, { immediate: true, flush: 'post' });
 useEventListener('resize', measureSpecimen);
 useEventListener(document.fonts, 'loadingdone', measureSpecimen);
 
-// a section is current while it passes under the fixed header
 const sectionEls = shallowReactive(new Map<string, HTMLElement>());
 const { height } = useWindowSize();
-useIntersectionObserver(
-  () => [...sectionEls.values()],
-  (entries) => {
-    const ids = new Set(current.value);
-    for (const entry of entries) ids[entry.isIntersecting ? 'add' : 'delete'](entry.target.id);
-    current.value = [...ids];
-  },
-  { rootMargin: () => `0px 0px ${props.inset - height.value}px 0px` },
-);
+
+function keepSection(id: string, el: unknown) {
+  if (el instanceof HTMLElement) sectionEls.set(id, el);
+  else sectionEls.delete(id);
+}
+
+function trackSections(entries: IntersectionObserverEntry[]) {
+  const ids = new Set(current.value);
+  for (const entry of entries) {
+    if (entry.isIntersecting) ids.add(entry.target.id);
+    else ids.delete(entry.target.id);
+  }
+  current.value = [...ids];
+}
+
+useIntersectionObserver(() => [...sectionEls.values()], trackSections, {
+  rootMargin: () => `0px 0px ${props.inset - height.value}px 0px`,
+});
 </script>
 
 <template>
@@ -70,12 +79,12 @@ useIntersectionObserver(
       v-for="section in sections"
       :id="section.id"
       :key="section.id"
-      :ref="(el) => (el ? sectionEls.set(section.id, el as HTMLElement) : sectionEls.delete(section.id))"
+      :ref="(el) => keepSection(section.id, el)"
       :class="section.cls"
     >
       <h2>{{ section.title }}</h2>
       <div v-if="section.id === 'typography'" class="cd-box">
-        <h1 ref="specimen" role="none">
+        <h1 ref="specimen" role="presentation">
           Heading, <span class="cd-specimen-label">{{ specimen[0] }}</span>
         </h1>
         <p ref="specimen">
@@ -88,12 +97,12 @@ useIntersectionObserver(
       <div class="cd-section-body">
         <template v-if="section.id === 'branding'">
           <ul class="cd-logos">
-            <li v-for="item in group('logos')" :key="item.src" class="cd-box">
+            <li v-for="item in itemsOf('logos')" :key="item.src" class="cd-box">
               <AssetImage :item="item" :ctx="session.ctx" />
             </li>
           </ul>
           <ul class="cd-favicons">
-            <li v-for="item in group('favicons')" :key="item.src">
+            <li v-for="item in itemsOf('favicons')" :key="item.src">
               <AssetImage :item="item" :ctx="session.ctx" />
             </li>
           </ul>
@@ -101,7 +110,7 @@ useIntersectionObserver(
         <Colors v-else-if="section.id === 'colors'" :tokens="tokens" :vendor="session.vendor" />
         <Typography v-else-if="section.id === 'typography'" :tokens="tokens" :meta="meta" />
         <ul v-else-if="section.id === 'icons'" class="cd-box">
-          <li v-for="item in group('icons')" :key="item.src">
+          <li v-for="item in itemsOf('icons')" :key="item.src">
             <figure>
               <AssetImage :item="item" :ctx="session.ctx" alt="" />
               <figcaption>{{ item.label ?? fileName(item.src) }}</figcaption>
@@ -123,7 +132,7 @@ useIntersectionObserver(
               </tr>
             </thead>
             <tbody>
-              <tr v-for="[path, token] in rest" :key="path">
+              <tr v-for="[path, token] in otherTokens" :key="path">
                 <td>
                   <code>{{ cssName(path) }}</code>
                 </td>
@@ -136,10 +145,10 @@ useIntersectionObserver(
           </table>
         </div>
         <Code v-else-if="section.id === 'css-variables'" :doc="doc" :vendor="session.vendor" />
-        <template v-else>
-          <div v-if="group(section.id.replace(/^group-/, '')).length" class="cd-files">
+        <template v-else-if="section.group">
+          <div v-if="itemsOf(section.group).length" class="cd-files">
             <FileCard
-              v-for="item in group(section.id.replace(/^group-/, ''))"
+              v-for="item in itemsOf(section.group)"
               :key="item.src"
               :item="item"
               :ctx="session.ctx"

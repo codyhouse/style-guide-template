@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue';
+
 const props = defineProps<{ label: string; value?: string; placeholder?: string; hint?: string }>();
 const emit = defineEmits<{ commit: [value: string] }>();
 const text = computed({ get: () => props.value ?? '', set: (value) => emit('commit', value) });

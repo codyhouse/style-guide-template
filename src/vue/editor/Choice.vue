@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import Listbox, { type ListboxOption } from '../Listbox.vue';
+
 defineProps<{ label: string; options: ListboxOption[] }>();
 const value = defineModel<string>('value', { required: true });
 </script>

@@ -6,6 +6,7 @@ export const COLOR_ERROR =
 import { computed, ref } from 'vue';
 import { parseCssColor, toHex } from '../lib/color.js';
 import type { DtcgColor } from '../lib/types.js';
+
 const props = withDefaults(
   defineProps<{ label: string; placeholder?: string; picker?: boolean; error?: string }>(),
   { picker: true },
@@ -22,6 +23,7 @@ const hex = computed({
   },
   set: (value) => (text.value = value),
 });
+
 function commit() {
   const color = parseCssColor(text.value.trim());
   invalid.value = !color;
@@ -30,16 +32,19 @@ function commit() {
 </script>
 
 <template>
-  <div class="cd-color-input">
-    <input
-      v-model.lazy="text"
-      type="text"
-      :placeholder="placeholder"
-      :aria-invalid="error ? 'true' : undefined"
-      :aria-describedby="error ? errorId : undefined"
-      @change="commit"
-    />
-    <input v-if="picker" v-model="hex" type="color" :aria-label="`Pick ${label}`" @change="commit" />
-  </div>
-  <span v-if="error" :id="errorId" class="cd-error">{{ error }}</span>
+  <label class="cd-field">
+    <span>{{ label }}</span>
+    <span class="cd-color-input">
+      <input
+        v-model.lazy="text"
+        type="text"
+        :placeholder="placeholder"
+        :aria-invalid="error ? 'true' : undefined"
+        :aria-describedby="error ? errorId : undefined"
+        @change="commit"
+      />
+      <input v-if="picker" v-model="hex" type="color" :aria-label="`Pick ${label}`" @change="commit" />
+    </span>
+    <span v-if="error" :id="errorId" class="cd-error">{{ error }}</span>
+  </label>
 </template>

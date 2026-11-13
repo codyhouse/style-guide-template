@@ -9,6 +9,7 @@ import {
   SelectViewport,
 } from 'reka-ui';
 import Icon from './Icon.vue';
+
 export interface ListboxOption {
   value: string;
   label: string;
@@ -16,13 +17,16 @@ export interface ListboxOption {
 }
 const props = defineProps<{ label: string; options: ListboxOption[] }>();
 const value = defineModel<string>('value', { required: true });
+function choose(next: unknown) {
+  if (typeof next === 'string') value.value = next;
+}
+
 const selected = computed(() => props.options.find((o) => o.value === value.value));
 </script>
 
 <template>
   <div class="cd-listbox">
-    <!-- '' keeps it controlled while showing the placeholder -->
-    <SelectRoot :model-value="value ?? ''" @update:model-value="value = $event as string">
+    <SelectRoot :model-value="value ?? ''" @update:model-value="choose">
       <SelectTrigger class="cd-listbox-trigger" :aria-label="label">
         <span
           ><span

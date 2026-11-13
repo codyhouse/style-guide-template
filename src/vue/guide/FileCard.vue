@@ -5,14 +5,17 @@ import { extension, fileName } from '../../lib/path.js';
 import { downloadUrl, urlFor } from '../urls.js';
 import { formatSize, isImage } from './parts.js';
 import Icon from '../Icon.vue';
+
 const props = defineProps<{ item: AssetItem; ctx: AssetContext }>();
 const url = computed(() => urlFor(props.item, props.ctx));
 const ext = computed(() => extension(props.item.src));
 const name = computed(() => fileName(props.item.src));
 const data = computed(() => props.ctx.session.get(props.item.src));
-const size = computed(() =>
-  data.value ? formatSize(data.value instanceof Blob ? data.value.size : data.value.byteLength) : '',
-);
+const size = computed(() => {
+  if (!data.value) return '';
+  const bytes = data.value instanceof Blob ? data.value.size : data.value.byteLength;
+  return formatSize(bytes);
+});
 const href = computed(() => (data.value ? downloadUrl(props.item.src, data.value) : url.value));
 </script>
 

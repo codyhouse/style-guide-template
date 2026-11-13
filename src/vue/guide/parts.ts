@@ -1,9 +1,22 @@
-import type { Dimension } from '../../lib/types.js';
+import { isNode } from '../../lib/tree.js';
 
-export const dim = (v: Dimension | number | string) =>
-  v && typeof v === 'object' ? `${v.value}${v.unit}` : String(v);
+export function dim(value: unknown): string {
+  if (isNode(value) && typeof value.value === 'number' && typeof value.unit === 'string')
+    return `${value.value}${value.unit}`;
+  return typeof value === 'number' || typeof value === 'string' ? String(value) : '';
+}
 
 const images = new Set(['svg', 'png', 'jpg', 'jpeg', 'gif', 'webp', 'avif', 'ico']);
+
 export const isImage = (ext: string) => images.has(ext);
-export const formatSize = (n: number) =>
-  n < 1024 ? `${n} B` : n < 1048576 ? `${(n / 1024).toFixed(1)} KB` : `${(n / 1048576).toFixed(1)} MB`;
+
+const KB = 1024;
+const MB = 1024 * KB;
+
+export function formatSize(bytes: number) {
+  if (bytes < KB) return `${bytes} B`;
+  if (bytes < MB) return `${(bytes / KB).toFixed(1)} KB`;
+  return `${(bytes / MB).toFixed(1)} MB`;
+}
+
+export const cap = (value: string) => value.charAt(0).toUpperCase() + value.slice(1);

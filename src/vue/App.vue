@@ -17,6 +17,7 @@ import {
 import { DialogClose, DialogContent, DialogRoot, DialogTitle, DialogTrigger } from 'reka-ui';
 import type { Session } from '../app/session.js';
 import { download } from './download.js';
+import { errorMessage } from '../lib/io.js';
 import { urlFor } from './urls.js';
 import Action from './Action.vue';
 import Guide from './guide/Guide.vue';
@@ -27,18 +28,19 @@ import { deriveView } from './view.js';
 
 const props = defineProps<{ session: Session }>();
 const session = useSession(props.session);
+
 const { state: theme, store: themeChoice } = useColorMode({
   attribute: 'data-theme',
   storageKey: 'styleguide:theme',
 });
+const wide = useMediaQuery('(min-width: 48rem)');
+const reduceMotion = usePreferredReducedMotion();
+const { height: headerHeight } = useElementBounding(useTemplateRef('header'));
+
 const editing = ref(false);
 const editorMounted = ref(false);
 const exporting = ref(false);
-const current = ref<string[]>([]);
-const links = new Map<string, HTMLElement>();
-const wide = useMediaQuery('(min-width: 768px)');
-const reduceMotion = usePreferredReducedMotion();
-const { height: headerHeight } = useElementBounding(useTemplateRef('header'));
+
 const view = computed(() => deriveView(session.value, theme.value));
 const sections = computed(() => sectionsOf(view.value.meta, view.value.tokens));
 const logo = computed(() => view.value.meta.assetGroups.find((g) => g.id === 'logos')?.items[0]);
@@ -50,30 +52,33 @@ useStyleTag(
   { id: 'brand-css' },
 );
 watchDebounced(view, () => session.value.prune(), { debounce: 2000, immediate: true });
-useEventListener(document.fonts, 'loadingerror', (e: FontFaceSetLoadEvent) =>
-  session.value.warn(
-    ...e.fontfaces.map(
-      (f) => `Font could not be loaded: ${f.family.replace(/"/g, '')} ${f.weight} ${f.style}`,
-    ),
-  ),
-);
 whenever(editing, () => (editorMounted.value = true), { once: true });
+
+useEventListener(document.fonts, 'loadingerror', (e: FontFaceSetLoadEvent) => {
+  const failed = e.fontfaces.map((f) => `${f.family.replace(/"/g, '')} ${f.weight} ${f.style}`);
+  session.value.warn(...failed.map((font) => `Font could not be loaded: ${font}`));
+});
 
 function toggleTheme() {
   themeChoice.value = theme.value === 'dark' ? 'light' : 'dark';
 }
 
-function step(redo: boolean) {
-  if (redo) session.value.store.redo();
-  else session.value.store.undo();
+const TEXT_ENTRY = 'input, textarea, [contenteditable], [role=listbox]';
+
+function historyShortcut(e: KeyboardEvent): 'undo' | 'redo' | null {
+  if (!(e.ctrlKey || e.metaKey) || e.altKey) return null;
+  const key = e.key.toLowerCase();
+  if (key === 'z') return e.shiftKey ? 'redo' : 'undo';
+  if (key === 'y' && !e.shiftKey) return 'redo';
+  return null;
 }
 
 onKeyStroke(['z', 'Z', 'y', 'Y'], (e) => {
-  const y = e.key.toLowerCase() === 'y';
-  if (!(e.ctrlKey || e.metaKey) || e.altKey || (y && e.shiftKey)) return;
-  if ((e.target as Element).closest?.('input, textarea, [contenteditable], [role=listbox]')) return;
+  const action = historyShortcut(e);
+  const typing = e.target instanceof Element && e.target.closest(TEXT_ENTRY);
+  if (!action || typing) return;
   e.preventDefault();
-  step(y || e.shiftKey);
+  session.value.store[action]();
 });
 
 function save() {
@@ -88,7 +93,7 @@ async function exportKit() {
     const { name, data } = await session.value.brandKit();
     download(name, data, 'application/zip');
   } catch (e) {
-    session.value.warn(`Export failed: ${(e as Error).message}`);
+    session.value.warn(`Export failed: ${errorMessage(e)}`);
   } finally {
     exporting.value = false;
   }
@@ -100,25 +105,33 @@ loadDialog.onChange((files) => files && void session.value.receive([...files]));
 const { isOverDropZone: dragging } = useDropZone(document, {
   checkValidity: (items) => [...items].some((item) => item.kind === 'file'),
   onDrop(files, e) {
-    // the missing-files zone loads its own drops
-    if (files && !(e.target as Element).closest?.('.cd-drop-zone')) void session.value.receive(files);
+    const inMissingZone = e.target instanceof Element && e.target.closest('.cd-drop-zone');
+    if (files && !inMissingZone) void session.value.receive(files);
   },
 });
 
-function onNavWheel(e: WheelEvent) {
-  const strip = e.currentTarget as HTMLElement;
-  if (strip.scrollWidth <= strip.clientWidth || Math.abs(e.deltaX) > Math.abs(e.deltaY)) return;
-  e.preventDefault();
-  strip.scrollLeft += e.deltaY;
-}
+const current = ref<string[]>([]);
+const links = useTemplateRef<HTMLAnchorElement[]>('links');
+
 watch(current, (ids, before) => {
-  const id = ids.find((i) => !before.includes(i));
-  links.get(id ?? '')?.scrollIntoView({
+  const entered = ids.find((id) => !before.includes(id));
+  const link = links.value?.find((a) => a.hash === `#${entered}`);
+  link?.scrollIntoView({
     block: 'nearest',
     inline: 'center',
     behavior: reduceMotion.value === 'reduce' ? 'auto' : 'smooth',
   });
 });
+
+function onNavWheel(e: WheelEvent) {
+  const strip = e.currentTarget;
+  if (!(strip instanceof HTMLElement)) return;
+  const overflows = strip.scrollWidth > strip.clientWidth;
+  const vertical = Math.abs(e.deltaY) >= Math.abs(e.deltaX);
+  if (!overflows || !vertical) return;
+  e.preventDefault();
+  strip.scrollLeft += e.deltaY;
+}
 </script>
 
 <template>
@@ -133,7 +146,7 @@ watch(current, (ids, before) => {
           <ul id="cd-nav" class="cd-main-nav" @wheel="onNavWheel">
             <li v-for="section in sections" :key="section.id">
               <a
-                :ref="(el) => el && links.set(section.id, el as HTMLElement)"
+                ref="links"
                 :href="`#${section.id}`"
                 :class="{ selected: current.includes(section.id) }"
                 :aria-current="current.includes(section.id) || undefined"
@@ -207,7 +220,7 @@ watch(current, (ids, before) => {
               title="Undo (Ctrl+Z)"
               aria-keyshortcuts="Control+Z Meta+Z"
               :aria-disabled="!session.store.canUndo()"
-              @click="step(false)"
+              @click="session.store.undo()"
             />
             <Action
               id="redo-btn"
@@ -216,7 +229,7 @@ watch(current, (ids, before) => {
               title="Redo (Ctrl+Shift+Z)"
               aria-keyshortcuts="Control+Shift+Z Meta+Shift+Z Control+Y"
               :aria-disabled="!session.store.canRedo()"
-              @click="step(true)"
+              @click="session.store.redo()"
             />
             <DialogClose as-child>
               <Action id="drawer-close" icon="close" label="Close" title="Close the editor (Esc)" />

@@ -3,6 +3,7 @@ import { computed } from 'vue';
 import type { AssetContext, AssetItem } from '../../lib/types.js';
 import { urlFor } from '../urls.js';
 import Icon from '../Icon.vue';
+
 const props = defineProps<{ item: AssetItem; ctx: AssetContext; alt?: string }>();
 const url = computed(() => urlFor(props.item, props.ctx));
 </script>

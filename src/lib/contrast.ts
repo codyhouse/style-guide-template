@@ -1,6 +1,8 @@
 import { resolve, contexts, defaultInputs } from './resolver.js';
 import { contrastRatio } from './color.js';
 import type { ContrastResult, ResolverDoc, Tokens } from './types.js';
+import { VALUES } from './schema.js';
+import { valueAs } from './values.js';
 
 export const ROLES = [
   'primary',
@@ -38,11 +40,11 @@ export function checkContrast(doc: ResolverDoc): ContrastResult[] {
   return (themes.length ? themes : [{ context: 'default' }]).flatMap(({ context }): ContrastResult[] => {
     const tokens = resolve(doc, themes.length ? { ...inputs, theme: context } : inputs);
     return requiredPairs(tokens).flatMap((p) => {
-      const fg = tokens.get(p.fg);
-      const bg = tokens.get(p.bg);
+      const fg = valueAs(VALUES.color, tokens.get(p.fg)?.resolved);
+      const bg = valueAs(VALUES.color, tokens.get(p.bg)?.resolved);
       if (!fg || !bg) return [];
-      const raw = contrastRatio(fg.resolved, bg.resolved);
-      return [{ context, ...p, ratio: Math.round(raw * 100) / 100, pass: raw >= p.min }]; // pass on the unrounded ratio
+      const raw = contrastRatio(fg, bg);
+      return [{ context, ...p, ratio: Math.round(raw * 100) / 100, pass: raw >= p.min }];
     });
   });
 }

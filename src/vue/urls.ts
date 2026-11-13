@@ -1,3 +1,4 @@
+import { blobPart } from './download.js';
 import { resolveAsset } from '../lib/assets.js';
 import { extension } from '../lib/path.js';
 import type { AssetContext, AssetItem, FileData } from '../lib/types.js';
@@ -28,7 +29,7 @@ function cachedUrl(
   if (cached?.data === data) return cached.url;
   if (cached) URL.revokeObjectURL(cached.url);
   const url = URL.createObjectURL(
-    data instanceof Blob && type === '' ? data : new Blob([data as BlobPart], { type }),
+    data instanceof Blob && type === '' ? data : new Blob([blobPart(data)], { type }),
   );
   cache.set(path, { data, url });
   return url;
@@ -45,7 +46,6 @@ export const objectUrl = (path: string, data: FileData) =>
     data instanceof Blob ? '' : (MIME[extension(path)] ?? 'application/octet-stream'),
   );
 
-/** A URL to download a session file from: served as plain bytes, so an uploaded SVG never runs as a page. */
 export const downloadUrl = (path: string, data: FileData) =>
   cachedUrl(downloads, path, data, 'application/octet-stream');
 

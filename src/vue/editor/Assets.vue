@@ -9,23 +9,27 @@ import IconButton from './IconButton.vue';
 import TextField from './TextField.vue';
 import UploadButton from './UploadButton.vue';
 import type { EditorContext } from './context.js';
+
 const props = defineProps<{ ctx: EditorContext }>();
 const picks = shallowReactive(new Map<string, string>());
 const newGroup = ref('');
 const library = computed(() => [...props.ctx.session.library].filter((p) => !p.startsWith('brands/')));
 const image = /\.(svg|png|jpe?g|gif|webp|avif|ico)$/i;
 const pick = (group: AssetGroup) => picks.get(group.id) ?? library.value[0];
+
 function addFromLibrary(group: AssetGroup) {
   const src = pick(group);
   if (src && !group.items.some((item) => item.src === src))
     props.ctx.setMeta((meta) => E.addItems(meta, group.id, [{ label: fileName(src), src }]));
 }
+
 function addGroup() {
   const label = newGroup.value.trim();
   if (!label) return;
   props.ctx.setMeta((meta) => E.addGroup(meta, label));
   newGroup.value = '';
 }
+
 function thumb(item: AssetItem) {
   return urlFor(item, props.ctx.session.ctx);
 }

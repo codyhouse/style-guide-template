@@ -3,19 +3,18 @@ import type { FontFile } from './types.js';
 
 const FORMATS: Record<string, string> = { woff2: 'woff2', woff: 'woff', ttf: 'truetype', otf: 'opentype' };
 const format = (src: string) => FORMATS[extension(src)] ?? 'woff2';
-// Brand files come from users: everything written into CSS is escaped or limited to safe forms.
 export const cssString = (s: unknown) =>
   `"${String(s)
-    .replace(/[\\"]/g, '\\$&')
+    .replace(/[\\"]/g, String.raw`\$&`)
     .replace(/[\n\r]/g, ' ')}"`;
 const STYLES = new Set(['normal', 'italic', 'oblique']);
 
-export function fontFaceRules(fontFiles: FontFile[] = [], fontSrc: (f: FontFile) => string): string {
-  return fontFiles
+export function fontFaceRules(fontFiles: FontFile[] | undefined, fontSrc: (f: FontFile) => string): string {
+  return (fontFiles ?? [])
     .map((f) =>
       [
         '@font-face {',
-        `  font-family: ${cssString(f.family)};`, // ds-allow-hardcode: generated from the brand's font files
+        `  font-family: ${cssString(f.family)};`,
         `  font-weight: ${Number(f.weight) || 400};`,
         `  font-style: ${STYLES.has(f.style) ? f.style : 'normal'};`,
         `  src: url(${cssString(fontSrc(f))}) format("${format(f.src)}");`,

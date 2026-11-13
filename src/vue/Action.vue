@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import Icon, { type IconName } from './Icon.vue';
+
 defineProps<{
   id: string;
   icon: IconName;

@@ -1,5 +1,6 @@
 import { deepMerge } from './schema.js';
-import type { FlatToken, Json, ResolverDoc, TokenNode, Tokens } from './types.js';
+import { isNode } from './tree.js';
+import type { FlatToken, ResolverDoc, TokenNode, Tokens } from './types.js';
 
 export class ResolveError extends Error {
   path: string;
@@ -36,7 +37,7 @@ export const defaultInputs = (doc: ResolverDoc): Record<string, string> =>
 export function mergedTree(doc: ResolverDoc, inputs = defaultInputs(doc)): TokenNode {
   let tree: TokenNode = {};
   for (const { $ref } of doc.resolutionOrder) {
-    const [, kind, name] = $ref.match(/^#\/(sets|modifiers)\/(.+)$/) ?? [];
+    const [, kind, name] = /^#\/(sets|modifiers)\/(.+)$/.exec($ref) ?? [];
     const mod = kind === 'modifiers' ? doc.modifiers?.[name] : undefined;
     const sources =
       kind === 'sets'
@@ -82,7 +83,7 @@ export function resolve(doc: ResolverDoc, inputs = defaultInputs(doc)): Tokens {
   const flat = flatten(tree);
   const done = new Map<string, unknown>();
 
-  const resolveToken = (path: string, stack: string[]): Json => {
+  const resolveToken = (path: string, stack: string[]): unknown => {
     if (done.has(path)) return done.get(path);
     if (stack.includes(path))
       throw new ResolveError(stack[0], `alias cycle: ${[...stack, path].join(' -> ')}`);
@@ -97,8 +98,8 @@ export function resolve(doc: ResolverDoc, inputs = defaultInputs(doc)): Tokens {
     const segs = pointerSegments(ref);
     const at = segs.indexOf('$value');
     if (at === -1) throw new ResolveError(stack.at(-1) ?? ref, `$ref ${ref} must point into a token $value`);
-    let v: Json = resolveToken(segs.slice(0, at).join('.'), stack);
-    for (const s of segs.slice(at + 1)) v = v?.[s];
+    let v: unknown = resolveToken(segs.slice(0, at).join('.'), stack);
+    for (const s of segs.slice(at + 1)) v = isNode(v) ? v[s] : undefined;
     if (v === undefined) throw new ResolveError(stack.at(-1) ?? ref, `$ref ${ref} does not exist`);
     return v;
   };

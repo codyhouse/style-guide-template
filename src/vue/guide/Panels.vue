@@ -5,6 +5,7 @@ import type { Session } from '../../app/session.js';
 import type { ContrastResult } from '../../lib/types.js';
 import Icon from '../Icon.vue';
 import Listbox from '../Listbox.vue';
+
 const props = defineProps<{ session: Session; contrast: ContrastResult[]; missing: string[] }>();
 const newGroup = '__new';
 const pendingTarget = ref<string | null>(null);
@@ -19,9 +20,7 @@ const options = computed(() => [
 ]);
 const target = computed({
   get: () =>
-    options.value.some((o) => o.value === pendingTarget.value)
-      ? (pendingTarget.value as string)
-      : (options.value[0]?.value ?? newGroup),
+    options.value.find((o) => o.value === pendingTarget.value)?.value ?? options.value[0]?.value ?? newGroup,
   set: (value) => (pendingTarget.value = value),
 });
 const failures = computed(() => props.contrast.filter((r) => !r.pass).length);
