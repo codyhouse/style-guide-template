@@ -4,32 +4,40 @@ import { ROLES } from '../../lib/contrast.js';
 import * as E from '../../lib/edit.js';
 import Choice from './Choice.vue';
 import type { EditorContext } from './context.js';
-import { cap, huesOf, shadesOf } from './palette-data.js';
+import { cssName } from '../../lib/css.js';
+import { paletteColors } from '../../lib/palette.js';
+import { cap } from '../guide/parts.js';
+
 const props = defineProps<{ ctx: EditorContext }>();
 const shades = computed(() =>
-  huesOf(props.ctx.tree).flatMap((hue) =>
-    shadesOf(props.ctx.tree, hue).map((s) => ({
-      value: `{color.${hue}.${s}}`,
-      label: `${hue}-${s}`,
-      swatch: `var(--color-${hue}-${s})`,
-    })),
+  paletteColors(props.ctx.doc, props.ctx.vendor).flatMap((color) =>
+    color.shades.map((shade) => {
+      const path = `color.${color.id}.${shade.name}`;
+      return { value: `{${path}}`, label: `${color.id}-${shade.name}`, swatch: `var(${cssName(path)})` };
+    }),
   ),
 );
 const roleFields = computed(() =>
   ROLES.map((role) => ({
     role,
-    tokens: [...props.ctx.tokens].filter(([p]) => p.startsWith(`color.${role}.`)),
+    tokens: [...props.ctx.tokens]
+      .filter(([path]) => path.startsWith(`color.${role}.`))
+      .map(([path, token]) => ({
+        path,
+        label: cap(path.split('.').slice(1).join(' ').replaceAll('-', ' ')),
+        alias: typeof token.value === 'string' ? token.value : '',
+      })),
   })).filter((group) => group.tokens.length),
 );
+
 function options(path: string, value: string) {
   return shades.value.some((o) => o.value === value)
     ? shades.value
-    : [{ value, label: 'Custom value', swatch: `var(--${path.replace(/\./g, '-')})` }, ...shades.value];
+    : [{ value, label: 'Custom value', swatch: `var(${cssName(path)})` }, ...shades.value];
 }
+
 function setRole(path: string, value: string) {
-  props.ctx.set(
-    E.setRole(props.ctx.session.store.get(), props.ctx.theme, path.replace(/^color\./, ''), value),
-  );
+  props.ctx.edit((doc) => E.setRole(doc, props.ctx.theme, path.slice('color.'.length), value));
 }
 </script>
 
@@ -37,11 +45,11 @@ function setRole(path: string, value: string) {
   <p class="cd-hint">Editing the {{ ctx.theme }} theme. Switch the theme in the header to edit the other.</p>
   <div v-for="group in roleFields" :key="group.role">
     <Choice
-      v-for="[path, token] in group.tokens"
+      v-for="{ path, label, alias } in group.tokens"
       :key="path"
-      :label="cap(path.split('.').slice(1).join(' ').replace(/-/g, ' '))"
-      :options="options(path, token.value)"
-      :value="token.value"
+      :label="label"
+      :options="options(path, alias)"
+      :value="alias"
       @update:value="setRole(path, $event)"
     />
   </div>

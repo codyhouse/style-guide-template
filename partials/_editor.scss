@@ -57,13 +57,7 @@
 	transition: background-color var(--duration-fast);
 
 	span {
-		/* labels show on wide screens; icons carry them on small ones */
-		position: absolute;
-		width: 1px; // ds-allow-hardcode: visually hidden pattern
-		height: 1px; // ds-allow-hardcode: visually hidden pattern
-		overflow: hidden;
-		clip: rect(0 0 0 0);
-		white-space: nowrap;
+		@include visually-hidden;
 	}
 
 	@include hover {
@@ -86,7 +80,7 @@
 			width: auto;
 			height: auto;
 			overflow: visible;
-			clip: auto;
+			clip-path: none;
 		}
 	}
 }
@@ -193,7 +187,7 @@
 
 	@include MQ(S) {
 		width: 30rem;
-		border-left: 1px solid var(--color-card-border); // ds-allow-hardcode: hairline
+		border-left: var(--hairline) solid var(--color-card-border);
 	}
 }
 
@@ -211,7 +205,7 @@
 	justify-content: space-between;
 	gap: var(--spacing-sm);
 	padding: var(--spacing-sm) var(--spacing-lg);
-	border-bottom: 1px solid var(--color-card-border); // ds-allow-hardcode: hairline
+	border-bottom: var(--hairline) solid var(--color-card-border);
 
 	h2 {
 		margin: 0;
@@ -235,7 +229,7 @@
 }
 
 .cd-drawer-area {
-	border-bottom: 1px solid var(--color-card-border); // ds-allow-hardcode: hairline
+	border-bottom: var(--hairline) solid var(--color-card-border);
 	padding: var(--spacing-sm) 0;
 
 	> summary {
@@ -284,7 +278,6 @@
 
 	details > summary {
 		font-size: var(--font-size-sm);
-		/* padding, not flex: a flex summary loses its marker */
 		padding: var(--spacing-xs) 0;
 		cursor: pointer;
 	}
@@ -306,7 +299,7 @@
 		width: 100%;
 		min-height: var(--control-h);
 		padding: 0.5em 0.75em;
-		border: 1px solid var(--color-input-border); // ds-allow-hardcode: hairline
+		border: var(--hairline) solid var(--color-input-border);
 		border-radius: var(--radius-sm);
 		background: var(--color-input-background);
 		color: var(--color-input-foreground);
@@ -343,7 +336,7 @@
 		width: var(--control-h);
 		height: var(--control-h);
 		padding: 0.125rem;
-		border: 1px solid var(--color-input-border); // ds-allow-hardcode: hairline
+		border: var(--hairline) solid var(--color-input-border);
 		border-radius: var(--radius-sm);
 		background: var(--color-input-background);
 		cursor: pointer;
@@ -356,19 +349,113 @@
 
 .cd-mini-scale {
 	display: grid;
-	grid-template-columns: repeat(11, 1fr);
+	grid-template-columns: repeat(auto-fill, minmax(1.75rem, 1fr));
 	gap: 0.125rem;
 	margin: var(--spacing-xs) 0 var(--spacing-sm);
+}
 
-	li {
-		height: 1.5rem;
-		border-radius: var(--radius-sm);
-		box-shadow: inset 0 0 0 1px var(--color-card-border); // ds-allow-hardcode: hairline
-	}
+.cd-swatch-button {
+	position: relative;
+	display: block;
+	width: 100%;
+	height: 1.75rem;
+	padding: 0;
+	border: none;
+	border-radius: var(--radius-sm);
+	box-shadow: inset 0 0 0 var(--hairline) var(--color-card-border);
+	cursor: pointer;
 
-	.is-base {
+	&.is-base {
 		outline: 0.125rem solid var(--color-focus-border);
 		outline-offset: 0.125rem;
+	}
+
+	&.is-hand::after {
+		content: '';
+		position: absolute;
+		top: 0.25rem;
+		right: 0.25rem;
+		width: 0.5rem;
+		height: 0.5rem;
+		border-radius: 50%;
+		background: var(--color-card-background);
+		box-shadow: 0 0 0 var(--hairline) var(--color-card-foreground);
+	}
+
+	&:focus-visible {
+		outline: 0.125rem solid var(--color-focus-border);
+		outline-offset: 0.125rem;
+	}
+}
+
+.cd-popover {
+	z-index: 35;
+	display: grid;
+	gap: var(--spacing-xs);
+	width: min(20rem, var(--reka-popover-content-available-width, 20rem));
+	max-height: var(--reka-popover-content-available-height, none);
+	overflow-y: auto;
+	padding: var(--spacing-md);
+	border: var(--hairline) solid var(--color-card-border);
+	border-radius: var(--radius-sm);
+	background: var(--color-card-background);
+	color: var(--color-card-foreground);
+	box-shadow: var(--shadow-md);
+
+	h4,
+	p {
+		margin: 0;
+	}
+}
+
+.cd-confirm-overlay {
+	position: fixed;
+	inset: 0;
+	z-index: 50;
+	background: color-mix(in oklch, var(--color-page-background) 70%, transparent);
+}
+
+.cd-confirm {
+	position: fixed;
+	top: 50%;
+	left: 50%;
+	z-index: 51;
+	display: grid;
+	gap: var(--spacing-sm);
+	width: min(28rem, calc(100vw - 2 * var(--spacing-lg)));
+	padding: var(--spacing-lg);
+	border: var(--hairline) solid var(--color-card-border);
+	border-radius: var(--radius-md);
+	background: var(--color-card-background);
+	color: var(--color-card-foreground);
+	box-shadow: var(--shadow-lg);
+	transform: translate(-50%, -50%);
+
+	h2 {
+		margin: 0;
+		font-size: var(--font-size-lg);
+
+		&::before {
+			content: none;
+		}
+	}
+
+	p {
+		margin: 0;
+	}
+}
+
+.cd-confirm-items {
+	max-height: 12rem;
+	margin: 0;
+	padding: 0;
+	overflow-y: auto;
+	font-size: var(--font-size-sm);
+	line-height: 1.5;
+	list-style: none;
+
+	li {
+		padding-block: var(--spacing-xs);
 	}
 }
 
@@ -437,7 +524,7 @@
 	min-height: var(--control-h);
 	padding: 0.25em var(--spacing-sm) 0.25em 0.75em;
 	font-size: var(--font-size-sm);
-	border: 1px solid var(--color-input-border); // ds-allow-hardcode: hairline
+	border: var(--hairline) solid var(--color-input-border);
 	border-radius: var(--radius-sm);
 	background: var(--color-input-background);
 	color: var(--color-input-foreground);
@@ -459,7 +546,7 @@
 	max-height: min(16rem, var(--reka-select-content-available-height, 16rem));
 	overflow-y: auto;
 	padding: var(--spacing-xs);
-	border: 1px solid var(--color-card-border); // ds-allow-hardcode: hairline
+	border: var(--hairline) solid var(--color-card-border);
 	border-radius: var(--radius-sm);
 	background: var(--color-card-background);
 	box-shadow: var(--shadow-md);
@@ -530,7 +617,7 @@
 .cd-shadow-box {
 	height: 5rem;
 	background: var(--color-card-background);
-	border: 1px solid var(--color-card-border); // ds-allow-hardcode: hairline
+	border: var(--hairline) solid var(--color-card-border);
 }
 
 .cd-radius-box {
@@ -579,9 +666,12 @@
 }
 
 .cd-code {
+	max-height: 30rem;
+	overflow: auto;
+	border-radius: var(--radius-sm);
+
 	pre {
-		max-height: 30rem;
-		overflow: auto;
+		margin: 0;
 		padding: var(--spacing-lg);
 		border-radius: var(--radius-sm);
 		background: var(--color-muted-background);
@@ -617,7 +707,7 @@
 	margin-right: var(--spacing-xs);
 	vertical-align: middle;
 	border-radius: var(--radius-sm);
-	box-shadow: inset 0 0 0 1px var(--color-card-border); // ds-allow-hardcode: hairline
+	box-shadow: inset 0 0 0 var(--hairline) var(--color-card-border);
 }
 
 .cd-thumb {
@@ -658,7 +748,6 @@
 }
 
 .cd-copy-status {
-	/* over the button, so it never shifts the layout */
 	position: absolute;
 	inset: 0;
 	display: flex;
@@ -688,7 +777,7 @@
 	[role='tab'] {
 		min-height: 2.75rem;
 		padding: 0 var(--spacing-md);
-		border: 1px solid var(--color-card-border); // ds-allow-hardcode: hairline
+		border: var(--hairline) solid var(--color-card-border);
 		border-radius: var(--radius-sm);
 		background: transparent;
 		color: var(--color-page-foreground);

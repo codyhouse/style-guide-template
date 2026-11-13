@@ -4,11 +4,17 @@ import { RovingFocusGroup, RovingFocusItem } from 'reka-ui';
 import { cmyk, toHex, toOklchString, toRgbaString } from '../../lib/color.js';
 import { ROLES } from '../../lib/contrast.js';
 import { cssName } from '../../lib/css.js';
-import type { ResolvedToken, Tokens } from '../../lib/types.js';
+import type { DtcgColor, ResolvedToken, Tokens } from '../../lib/types.js';
+import { byShadeOrder } from '../../lib/palette.js';
+import { isNode } from '../../lib/tree.js';
+import { VALUES } from '../../lib/schema.js';
+import { valueAs } from '../../lib/values.js';
 import CopyButton from './CopyButton.vue';
 
 interface Shade {
   path: string;
+  group: string;
+  step: string;
   name: string;
   hex: string;
   copies: { text: string; shown: string }[];
@@ -21,41 +27,59 @@ interface Row {
 
 const props = defineProps<{ tokens: Tokens; vendor: string }>();
 
-const isStep = (part?: string) => !!part && Number.isInteger(Number(part));
-
-function shade(path: string, name: string, token: ResolvedToken): Shade {
-  const own = token.extensions?.[props.vendor] ?? {};
-  const printed = Array.isArray(own.cmyk);
-  const cmykText = `CMYK ${(printed ? own.cmyk : cmyk(token.resolved)).join(' ')}`;
-  const copies = [toHex(token.resolved), toRgbaString(token.resolved), toOklchString(token.resolved)].map(
-    (text) => ({ text, shown: text }),
-  );
-  copies.push({ text: cmykText, shown: printed ? cmykText : `${cmykText} (approx.)` });
-  if (own.pantone) copies.push({ text: String(own.pantone), shown: String(own.pantone) });
-  return { path, name, hex: toHex(token.resolved), copies };
+function shade(path: string, token: ResolvedToken): Shade | null {
+  const [, group, step] = path.split('.');
+  const color = valueAs(VALUES.color, token.resolved);
+  if (!color) return null;
+  const extension = token.extensions?.[props.vendor];
+  const own = isNode(extension) ? extension : {};
+  const printedCmyk = Array.isArray(own.cmyk) ? own.cmyk : null;
+  const cmykText = `CMYK ${(printedCmyk ?? cmyk(color)).join(' ')}`;
+  const copies = [toHex(color), toRgbaString(color), toOklchString(color)].map((text) => ({
+    text,
+    shown: text,
+  }));
+  copies.push({ text: cmykText, shown: printedCmyk ? cmykText : `${cmykText} (approx.)` });
+  if (typeof own.pantone === 'string') copies.push({ text: own.pantone, shown: own.pantone });
+  return { path, group, step, name: `${group}-${step}`, hex: toHex(color), copies };
 }
 
-function row(path: string, token: ResolvedToken): Row {
-  const { value } = token;
-  const source = typeof value === 'string' ? value : (value?.$ref ?? toOklchString(value));
-  return { path, source, hex: toHex(token.resolved) };
+function sourceOf(value: unknown, color: DtcgColor): string {
+  if (typeof value === 'string') return value;
+  if (isNode(value) && typeof value.$ref === 'string') return value.$ref;
+  return toOklchString(color);
+}
+
+function row(path: string, token: ResolvedToken): Row | null {
+  const color = valueAs(VALUES.color, token.resolved);
+  return color && { path, source: sourceOf(token.value, color), hex: toHex(color) };
+}
+
+type Kind = 'palette' | 'role' | 'other';
+
+function kindOf(path: string): Kind {
+  const [, group, step, ...deeper] = path.split('.');
+  if (ROLES.includes(group)) return 'role';
+  return step && !deeper.length ? 'palette' : 'other';
 }
 
 const color = computed(() => {
-  const hues = new Map<string, Shade[]>();
-  const roles: Row[] = [];
-  const other: Row[] = [];
+  const palette = new Map<string, Shade[]>();
+  const rows: Record<'role' | 'other', Row[]> = { role: [], other: [] };
   for (const [path, token] of props.tokens) {
     if (token.type !== 'color' || !path.startsWith('color.')) continue;
-    const [, group, step, ...deeper] = path.split('.');
-    if (ROLES.includes(group)) roles.push(row(path, token));
-    else if (isStep(step) && !deeper.length)
-      hues.set(group, [...(hues.get(group) ?? []), shade(path, `${group}-${step}`, token)]);
-    else other.push(row(path, token));
+    const kind = kindOf(path);
+    const swatch = kind === 'palette' ? shade(path, token) : null;
+    const line = swatch ? null : row(path, token);
+    if (swatch) palette.set(swatch.group, [...(palette.get(swatch.group) ?? []), swatch]);
+    else if (line) rows[kind === 'role' ? 'role' : 'other'].push(line);
   }
-  const tables = [{ title: 'Roles', rows: roles }];
-  if (other.length) tables.push({ title: 'Other tokens', rows: other });
-  return { hues: [...hues], tables };
+  const hues = [...palette].map(
+    ([id, shades]) => [id, shades.toSorted((a, b) => byShadeOrder(a.step, b.step))] as const,
+  );
+  const tables = [{ title: 'Roles', rows: rows.role }];
+  if (rows.other.length) tables.push({ title: 'Other tokens', rows: rows.other });
+  return { hues, tables };
 });
 
 const background = (path: string) => ({ background: `var(${cssName(path)})` });

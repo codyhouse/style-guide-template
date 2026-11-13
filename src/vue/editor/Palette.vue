@@ -1,151 +1,179 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
-import { parseCssColor, toHex, toOklchString } from '../../lib/color.js';
+import { parseCssColor, toHex } from '../../lib/color.js';
 import { ROLES } from '../../lib/contrast.js';
-import * as E from '../../lib/edit.js';
+import {
+  addColor,
+  generateShades,
+  handSetShades,
+  paletteColors,
+  paletteId,
+  referencesTo,
+  removeColor,
+  removeShade,
+  setShade,
+  type PaletteColor,
+} from '../../lib/palette.js';
+import type { DtcgColor } from '../../lib/types.js';
 import ColorInput, { COLOR_ERROR } from '../ColorInput.vue';
-import IconButton from './IconButton.vue';
-import TextField from './TextField.vue';
+import Confirm, { type ConfirmChoice } from '../Confirm.vue';
+import { cap } from '../guide/parts.js';
 import type { EditorContext } from './context.js';
-import { cap, huesOf, shadesOf } from './palette-data.js';
+import IconButton from './IconButton.vue';
+import AddShadeForm from './AddShadeForm.vue';
+import ShadeEditor from './ShadeEditor.vue';
+
+interface Question {
+  title: string;
+  message: string;
+  items: string[];
+  choices: ConfirmChoice[];
+  run: (choice: string) => void;
+}
+
 const props = defineProps<{ ctx: EditorContext }>();
-const nameError = ref<string>();
-const colorError = ref<string>();
+
+const colors = computed(() => paletteColors(props.ctx.doc, props.ctx.vendor));
+const baseHex = (color: PaletteColor) => {
+  const base = color.shades.find((shade) => shade.isBase)?.color;
+  return base ? toHex(base) : '';
+};
+
+const question = ref<Question>();
+const asking = ref(false);
+
+function ask(next: Question) {
+  question.value = next;
+  asking.value = true;
+}
+
+function describeReferences(colorId: string, shades?: string[]) {
+  return referencesTo(props.ctx.doc, colorId, shades).map((ref) =>
+    ref.context === 'foundation' ? ref.path : `${ref.path} (${ref.context})`,
+  );
+}
+
+function confirmRemoval(name: string, items: string[], run: () => void) {
+  if (!items.length) return run();
+  ask({
+    title: `Remove ${name}?`,
+    message: 'These tokens use it. They keep the color they show now, as a fixed value.',
+    items,
+    choices: [{ value: 'remove', label: `Remove ${name}`, primary: true }],
+    run,
+  });
+}
+
+function removeWholeColor(id: string) {
+  confirmRemoval(id, describeReferences(id), () => props.ctx.edit((doc) => removeColor(doc, id)));
+}
+
+function removeOneShade(id: string, shade: string) {
+  confirmRemoval(`${id}-${shade}`, describeReferences(id, [shade]), () =>
+    props.ctx.edit((doc) => removeShade(doc, id, shade, props.ctx.vendor)),
+  );
+}
+
+function generate(id: string) {
+  const run = (mode: string) =>
+    props.ctx.edit((doc) =>
+      generateShades(doc, id, props.ctx.vendor, mode === 'overwrite' ? 'overwrite' : 'keep'),
+    );
+  const handSet = handSetShades(props.ctx.doc, id, props.ctx.vendor);
+  if (!handSet.length) return run('keep');
+  ask({
+    title: `Regenerate ${id} shades?`,
+    message: 'These shades were set by hand. Keep them as they are, or replace them with generated ones.',
+    items: handSet.map((shade) => `${id}-${shade}`),
+    choices: [
+      { value: 'overwrite', label: 'Replace them' },
+      { value: 'keep', label: 'Keep hand-set shades', primary: true },
+    ],
+    run,
+  });
+}
+
+function setBaseColor(color: PaletteColor, value: DtcgColor) {
+  const base = color.shades.find((shade) => shade.isBase);
+  if (base) props.ctx.edit((doc) => setShade(doc, color.id, base.name, value, props.ctx.vendor));
+}
+
 const newName = ref('');
 const newColor = ref('');
-const hues = computed(() => huesOf(props.ctx.tree));
-function group(hue: string) {
-  return props.ctx.tree.color[hue];
+const nameError = ref<string>();
+const colorError = ref<string>();
+
+function colorNameProblem(id: string) {
+  if (!id) return 'Give the color a name.';
+  if (ROLES.includes(id) || colors.value.some((color) => color.id === id)) return `${id} is already taken.`;
+  return undefined;
 }
-function base(hue: string) {
-  const shades = shadesOf(props.ctx.tree, hue);
-  return (
-    group(hue).$extensions?.[props.ctx.session.vendor]?.base ??
-    ('600' in group(hue) ? '600' : shades[Math.floor(shades.length / 2)])
-  );
-}
-function name(hue: string, shade: string) {
-  return `${hue}-${shade}${shade === base(hue) ? ' (your color)' : ''}`;
-}
-function setExt(path: string, patch: Record<string, unknown>) {
-  const current = props.ctx.fresh(path),
-    vendor = props.ctx.session.vendor;
-  const own = { ...current.$extensions?.[vendor], ...patch };
-  props.ctx.set(
-    E.setToken(props.ctx.session.store.get(), path, {
-      ...current,
-      $extensions: { ...current.$extensions, [vendor]: own },
-    }),
-  );
-}
-function setCmyk(path: string, value: string) {
-  const parts = value
-    .split(/[\s,]+/)
-    .filter(Boolean)
-    .map(Number);
-  setExt(path, { cmyk: parts.length === 4 && parts.every((n) => n >= 0 && n <= 100) ? parts : undefined });
-}
-function setShade(path: string, color: Parameters<typeof E.setHue>[2]) {
-  props.ctx.set(E.setToken(props.ctx.session.store.get(), path, { ...props.ctx.fresh(path), $value: color }));
-}
-function addHue() {
-  const id = newName.value
-    .trim()
-    .toLowerCase()
-    .replace(/[^a-z0-9-]+/g, '-')
-    .replace(/^-|-$/g, '');
-  const color = parseCssColor(newColor.value.trim());
-  nameError.value = !id
-    ? 'Give the hue a name.'
-    : ROLES.includes(id) || hues.value.includes(id)
-      ? `${id} is already taken.`
-      : undefined;
-  colorError.value = color ? undefined : COLOR_ERROR;
-  if (nameError.value || !color) return;
-  props.ctx.set(E.setHue(props.ctx.session.store.get(), id, color, props.ctx.session.vendor));
-  newName.value = newColor.value = '';
+
+function addNewColor() {
+  const id = paletteId(newName.value);
+  const value = parseCssColor(newColor.value.trim());
+  nameError.value = colorNameProblem(id);
+  colorError.value = value ? undefined : COLOR_ERROR;
+  if (nameError.value || !value) return;
+  props.ctx.edit((doc) => addColor(doc, id, value, props.ctx.vendor));
+  newName.value = '';
+  newColor.value = '';
 }
 </script>
 
 <template>
-  <div v-for="hue in hues" :key="hue" class="cd-hue">
+  <section v-for="color in colors" :key="color.id" class="cd-hue" :aria-label="`${cap(color.id)} color`">
     <div class="cd-field-row">
-      <label class="cd-field"
-        ><span>{{ cap(hue) }} base color</span>
-        <ColorInput
-          :label="`${hue} base color`"
-          :model-value="toHex(group(hue)[base(hue)].$value)"
-          @commit="ctx.set(E.setHue(ctx.session.store.get(), hue, $event, ctx.session.vendor))"
-        />
-      </label>
-      <IconButton
-        name="trash"
-        :label="`Remove ${hue}`"
-        @click="ctx.set(E.removeHue(ctx.session.store.get(), hue))"
+      <ColorInput
+        :label="`${cap(color.id)} base color`"
+        :model-value="baseHex(color)"
+        @commit="setBaseColor(color, $event)"
       />
+      <IconButton name="trash" :label="`Remove ${color.id}`" @click="removeWholeColor(color.id)" />
     </div>
-    <p class="cd-hint">
-      Your color is kept as {{ hue }}-{{ base(hue) }}. The other
-      {{ shadesOf(ctx.tree, hue).length - 1 }} shades are generated from it.
-    </p>
-    <ol class="cd-mini-scale" :aria-label="`${hue} shades`">
-      <li
-        v-for="shade in shadesOf(ctx.tree, hue)"
-        :key="shade"
-        :class="{ 'is-base': shade === base(hue) }"
-        :title="name(hue, shade)"
-        :style="{ background: `var(--color-${hue}-${shade})` }"
-      >
-        <span class="cd-sr-only">{{ name(hue, shade) }}</span>
+    <ol class="cd-mini-scale" :aria-label="`${color.id} shades`">
+      <li v-for="shade in color.shades" :key="shade.name">
+        <ShadeEditor
+          :ctx="ctx"
+          :color-id="color.id"
+          :shade="shade"
+          @remove="removeOneShade(color.id, shade.name)"
+        />
       </li>
     </ol>
-    <details>
-      <summary>{{ cap(hue) }} shades, CMYK and Pantone</summary>
-      <div v-for="shade in shadesOf(ctx.tree, hue)" :key="shade" class="cd-field-row">
-        <label class="cd-field"
-          ><span>{{ hue }}-{{ shade }}</span>
-          <ColorInput
-            :label="`${hue}-${shade}`"
-            :model-value="toOklchString(group(hue)[shade].$value)"
-            :picker="false"
-            @commit="setShade(`color.${hue}.${shade}`, $event)"
-          />
-        </label>
-        <TextField
-          label="CMYK"
-          :value="group(hue)[shade].$extensions?.[ctx.session.vendor]?.cmyk?.join(' ')"
-          placeholder="C M Y K"
-          @commit="setCmyk(`color.${hue}.${shade}`, $event)"
-        />
-        <TextField
-          label="Pantone"
-          :value="group(hue)[shade].$extensions?.[ctx.session.vendor]?.pantone"
-          @commit="setExt(`color.${hue}.${shade}`, { pantone: $event || undefined })"
-        />
-      </div>
-    </details>
-  </div>
-  <form class="cd-field-row" @submit.prevent="addHue">
+    <p class="cd-hint">
+      {{ color.shades.length }} {{ color.shades.length === 1 ? 'shade' : 'shades' }}. Select a shade to edit
+      it; a dot marks shades set by hand.
+    </p>
+    <div class="cd-field-row">
+      <button type="button" class="btn btn-secondary btn-small" @click="generate(color.id)">
+        {{ color.shades.length === 1 ? 'Generate shades 50 to 950' : 'Regenerate shades' }}
+      </button>
+    </div>
+    <AddShadeForm :ctx="ctx" :color="color" />
+  </section>
+  <form class="cd-field-row" @submit.prevent="addNewColor">
     <label class="cd-field"
-      ><span>New hue name</span>
+      ><span>New color name</span>
       <input
         v-model="newName"
         type="text"
         placeholder="accent"
         :aria-invalid="nameError ? 'true' : undefined"
-        :aria-describedby="nameError ? 'new-hue-name-error' : undefined"
+        :aria-describedby="nameError ? 'new-color-name-error' : undefined"
       />
-      <span v-if="nameError" id="new-hue-name-error" class="cd-error">{{ nameError }}</span>
+      <span v-if="nameError" id="new-color-name-error" class="cd-error">{{ nameError }}</span>
     </label>
-    <label class="cd-field"
-      ><span>Color</span>
-      <ColorInput
-        v-model="newColor"
-        label="the new hue color"
-        placeholder="any CSS color"
-        :error="colorError"
-      />
-    </label>
-    <button type="submit" class="btn btn-small">Add hue</button>
+    <ColorInput v-model="newColor" label="Color" placeholder="any CSS color" :error="colorError" />
+    <button type="submit" class="btn btn-small">Add color</button>
   </form>
+  <Confirm
+    v-if="question"
+    v-model:open="asking"
+    :title="question.title"
+    :message="question.message"
+    :items="question.items"
+    :choices="question.choices"
+    @choose="question.run"
+  />
 </template>
