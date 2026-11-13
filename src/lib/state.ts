@@ -1,24 +1,19 @@
-import { createStore as idbStore, set, del, clear, entries } from 'idb-keyval';
-import type { FileData, ResolverDoc, SessionFiles } from './types.js';
+import type { FileStore, KeyValueStore } from '../ports.js';
+import { isResolver } from './schema.js';
+import type { ResolverDoc, SessionFiles } from './types.js';
 
-export interface FileStore {
-  put(path: string, data: FileData): Promise<unknown>;
-  delete(path: string): Promise<unknown>;
-  clear(): Promise<unknown>;
-  getAll(): Promise<Map<string, FileData>>;
-}
-
-type StorageLike = Pick<Storage, 'getItem' | 'setItem' | 'removeItem'>;
 export type Store = ReturnType<typeof createStore>;
 
 const DRAFT = 'styleguide:draft';
 const PREVIOUS = 'styleguide:previous';
 const BASE = 'styleguide:base';
 const HISTORY = 50;
+const noError: unknown = null;
 
-const read = (storage: StorageLike, key: string): ResolverDoc | null => {
+const read = (storage: KeyValueStore, key: string): ResolverDoc | null => {
   try {
-    return JSON.parse(storage.getItem(key) ?? 'null');
+    const stored: unknown = JSON.parse(storage.getItem(key) ?? 'null');
+    return isResolver(stored) ? stored : null;
   } catch {
     return null;
   }
@@ -30,7 +25,7 @@ export function createStore({
   fileStore,
 }: {
   doc: ResolverDoc;
-  storage: StorageLike;
+  storage: KeyValueStore;
   fileStore: FileStore;
 }) {
   let base = read(storage, BASE) ?? doc;
@@ -53,7 +48,7 @@ export function createStore({
 
   const store = {
     files,
-    saveError: null as unknown,
+    saveError: noError,
     get: () => current,
     subscribe(fn: (doc: ResolverDoc) => void) {
       subs.add(fn);
@@ -65,7 +60,6 @@ export function createStore({
     },
     canUndo: () => past.length > 0,
     canRedo: () => future.length > 0,
-    // history is settled before subscribers run, so they see the right canUndo / canRedo
     undo() {
       const prev = past.at(-1);
       if (!prev) return false;
@@ -92,7 +86,6 @@ export function createStore({
         store.saveError = e;
       }
     },
-    // record: false keeps the replaced document out of undo (used when it cannot be shown at all).
     load(next: ResolverDoc, newFiles?: SessionFiles, { record: undoable = true } = {}) {
       storage.setItem(PREVIOUS, JSON.stringify(current));
       base = next;
@@ -103,7 +96,6 @@ export function createStore({
       store.flush();
     },
     hasPrevious: () => storage.getItem(PREVIOUS) !== null,
-    // Swaps the current draft and the previous one, so a restore can itself be undone.
     restorePrevious() {
       const prev = read(storage, PREVIOUS);
       if (!prev) return false;
@@ -121,29 +113,17 @@ export function createStore({
       for (const fn of subs) fn(current);
     },
     async prune(keep: Set<string>) {
-      for (const path of [...files.keys()]) {
-        if (keep.has(path)) continue;
-        files.delete(path);
-        try {
-          await fileStore.delete(path);
-        } catch {
-          /* already gone */
-        }
-      }
+      const unused = [...files.keys()].filter((path) => !keep.has(path));
+      for (const path of unused) files.delete(path);
+      await Promise.allSettled(unused.map((path) => fileStore.delete(path)));
     },
     drafts: () => [current, base, read(storage, PREVIOUS)].filter((d): d is ResolverDoc => !!d),
-    // Session files always land in memory; persistence can fail (quota) and is reported.
     async addFiles(map: SessionFiles) {
-      const notPersisted: string[] = [];
       for (const [path, data] of map) files.set(path, data);
       for (const fn of subs) fn(current);
-      for (const [path, data] of map) {
-        try {
-          await fileStore.put(path, data);
-        } catch {
-          notPersisted.push(path);
-        }
-      }
+      const entries = [...map];
+      const results = await Promise.allSettled(entries.map(([path, data]) => fileStore.put(path, data)));
+      const notPersisted = entries.filter((_, i) => results[i].status === 'rejected').map(([path]) => path);
       return { notPersisted };
     },
     ready: fileStore
@@ -154,16 +134,4 @@ export function createStore({
       .catch(() => {}),
   };
   return store;
-}
-
-// Browser only: session files in IndexedDB (localStorage is too small for images and fonts).
-// Same database and store names as before, so files saved by earlier versions are still found.
-export function idbFileStore(): FileStore {
-  const db = idbStore('styleguide', 'files');
-  return {
-    put: (path, data) => set(path, data, db),
-    delete: (path) => del(path, db),
-    clear: () => clear(db),
-    getAll: async () => new Map(await entries<string, FileData>(db)),
-  };
 }

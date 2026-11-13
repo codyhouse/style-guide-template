@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { useFileDialog } from '@vueuse/core';
+
 const props = defineProps<{ label: string; accept?: string }>();
 const emit = defineEmits<{ files: [files: File[]] }>();
 const { open, onChange } = useFileDialog({ accept: props.accept, reset: true });

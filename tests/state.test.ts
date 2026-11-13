@@ -1,26 +1,18 @@
 import { test } from 'vitest';
 import assert from 'node:assert/strict';
+import { memoryFileStore, memoryKeyValueStore } from '../src/adapters/memory.js';
 import { createStore } from '../src/lib/state.js';
 import type { ResolverDoc } from '../src/lib/types.js';
 
-const mem = () => {
-  const m = new Map();
-  return {
-    getItem: (k) => m.get(k) ?? null,
-    setItem: (k, v) => m.set(k, String(v)),
-    removeItem: (k) => m.delete(k),
-  };
-};
+const mem = memoryKeyValueStore;
 const memFiles = (fail = false) => {
-  const m = new Map();
+  const files = memoryFileStore();
+  if (!fail) return files;
   return {
-    put: async (p, b) => {
-      if (fail) throw Object.assign(new Error('quota'), { name: 'QuotaExceededError' });
-      m.set(p, b);
+    ...files,
+    put: async () => {
+      throw Object.assign(new Error('quota'), { name: 'QuotaExceededError' });
     },
-    getAll: async () => new Map(m),
-    delete: async (p) => m.delete(p),
-    clear: async () => m.clear(),
   };
 };
 const doc = (name: string): ResolverDoc => ({ version: '2025.10', name, sets: {}, resolutionOrder: [] });

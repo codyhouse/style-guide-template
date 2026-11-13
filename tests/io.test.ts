@@ -1,7 +1,9 @@
 import { test } from 'vitest';
 import assert from 'node:assert/strict';
-import { present } from './helpers.js';
-import { readFileSync } from 'node:fs';
+import { setToken } from '../src/lib/edit.js';
+import { isNode, nodeAt } from '../src/lib/tree.js';
+import { fontsource } from '../src/adapters/fontsource.js';
+import { present, load, V } from './helpers.js';
 import { unzipSync } from 'fflate';
 import {
   classify,
@@ -16,17 +18,15 @@ import {
 import { resolve } from '../src/lib/resolver.js';
 import { brandMeta } from '../src/lib/assets.js';
 
-const V = 'com.example.styleguide';
-const load = () =>
-  JSON.parse(readFileSync(new URL('./fixtures/minimal.resolver.json', import.meta.url), 'utf8'));
-const bytes = (s) => new TextEncoder().encode(s);
-const text = (b) => new TextDecoder().decode(b);
+const bytes = (s: string) => new TextEncoder().encode(s);
+const text = (b: Uint8Array) => new TextDecoder().decode(b);
 const ctx = (over = {}) => ({
   vendor: V,
   hostedUrl: 'https://styleguide.example.com',
   files: new Map([['patterns/dots.svg', bytes('<svg/>')]]),
   library: new Set(['logos/primary.svg']),
-  fetchBytes: async (url) => bytes(`bytes of ${url}`),
+  fonts: fontsource(),
+  fetchBytes: async (url: string) => bytes(`bytes of ${url}`),
   ...over,
 });
 
@@ -50,8 +50,7 @@ test('invalid JSON reports it', () => {
 });
 
 test('schema and alias errors are reported with paths', () => {
-  const doc = load();
-  doc.sets.foundation.sources[0].color.primary.background.$value = '{color.nope}';
+  const doc = setToken(load(), 'color.primary.background', { $value: '{color.nope}' });
   const r = parseBrandJson(JSON.stringify(doc), 'x.resolver.json');
   assert.ok(
     r.errors.some((e) => e.path === 'color.primary.background'),
@@ -115,23 +114,24 @@ test('round trip', async () => {
     brandMeta(loaded, V).assetGroups.map((g) => g.id),
     ['logos', 'patterns'],
   );
-  assert.equal(text(back.files.get('patterns/dots.svg')), '<svg/>');
+  const dots = back.files.get('patterns/dots.svg');
+  assert.ok(dots instanceof Uint8Array);
+  assert.equal(text(dots), '<svg/>');
   assert.equal(back.files.has('README.md'), false);
   assert.equal(back.files.has('css/theme.css'), false);
 });
 
 test('foreign tokens and extensions round-trip unchanged', async () => {
-  const doc = load();
-  const t = doc.sets.foundation.sources[0];
-  t.color.accent = { $root: { $value: '{color.brand.600}', $extensions: { 'org.tool.x': { k: 1 } } } };
-  doc.sets.foundation.$extensions['org.tool.x'] = { keep: true };
+  const accent = { $root: { $value: '{color.brand.600}', $extensions: { 'org.tool.x': { k: 1 } } } };
+  const doc = setToken(load(), 'color.accent', accent);
+  present(doc.sets.foundation.$extensions)['org.tool.x'] = { keep: true };
   const back = present(loadZip((await buildExport(doc, ctx())).zip).doc);
-  assert.deepEqual(back.sets.foundation.sources[0].color.accent, t.color.accent);
+  assert.deepEqual(nodeAt(back.sets.foundation.sources[0], 'color.accent'), accent);
   assert.deepEqual(back.sets.foundation.$extensions?.['org.tool.x'], { keep: true });
 });
 
 test('a failed download is a warning listed in the README', async () => {
-  const fetchBytes = async (url) => {
+  const fetchBytes = async (url: string) => {
     if (url.includes('merriweather@')) throw new Error('offline');
     return bytes('x');
   };
@@ -170,7 +170,7 @@ test('README has the hosted URL and a contrast table with warnings', () => {
 
 test('a file that breaks in any theme is rejected at load', () => {
   const doc = load();
-  doc.modifiers.theme.contexts.dark = [
+  present(doc.modifiers?.theme).contexts.dark = [
     { color: { page: { background: { $type: 'color', $value: '{color.nope}' } } } },
   ];
   assert.ok(parseBrandJson(JSON.stringify(doc), 'x.resolver.json').errors.length);
@@ -178,7 +178,9 @@ test('a file that breaks in any theme is rejected at load', () => {
 
 test('a file with broken brand metadata is rejected at load', () => {
   const doc = load();
-  doc.sets.foundation.$extensions[V].fontFiles = [{ family: 'A' }];
+  const extensions = present(doc.sets.foundation.$extensions);
+  const meta = extensions[V];
+  extensions[V] = { ...(isNode(meta) ? meta : {}), fontFiles: [{ family: 'A' }] };
   assert.ok(parseBrandJson(JSON.stringify(doc), 'x.resolver.json').errors.some((e) => /src/.test(e.message)));
 });
 

@@ -1,69 +1,90 @@
 import { test } from 'vitest';
 import assert from 'node:assert/strict';
-import { present } from './helpers.js';
-import { readFileSync } from 'node:fs';
-import { parseList, fontEntries, licenseUrl, fileUrl, fetchList } from '../src/lib/fontsource.js';
+import * as z from 'zod/mini';
+import { fixture, present } from './helpers.js';
+import { fontDetail } from '../src/lib/schema.js';
+import { fontFiles, fontsource, parseList } from '../src/adapters/fontsource.js';
+import { memoryKeyValueStore } from '../src/adapters/memory.js';
 
-const fixture = (n) => JSON.parse(readFileSync(new URL(`./fixtures/${n}`, import.meta.url), 'utf8'));
-const detail = fixture('fontsource-merriweather.json');
+const detail = z.parse(fontDetail, fixture('fontsource-merriweather.json'));
+const listResponse = async () => ({
+  ok: true,
+  status: 200,
+  json: async () => fixture('fontsource-list.json'),
+});
+const latin = { weights: [400, 700], styles: ['normal'], subsets: ['latin'] };
 
 test('parseList keeps what the picker needs', () => {
   const m = present(parseList(fixture('fontsource-list.json')).find((f) => f.id === 'merriweather'));
-  assert.deepEqual(Object.keys(m).sort(), [
-    'category',
-    'defSubset',
-    'family',
-    'id',
-    'license',
-    'styles',
-    'weights',
-  ]);
+  assert.deepEqual(
+    Object.keys(m).sort((a, b) => a.localeCompare(b)),
+    ['category', 'defSubset', 'family', 'id', 'license', 'styles', 'weights'],
+  );
   assert.equal(m.family, 'Merriweather');
 });
 
-test('entries for chosen weights and styles', () => {
-  const e = fontEntries(detail, { weights: [400, 700], styles: ['normal'] });
-  assert.equal(e.length, 2);
-  assert.equal(e[0].src, 'fonts/merriweather-latin-400-normal.woff2');
-  assert.equal(e[0].url, detail.variants['400'].normal.latin.url.woff2);
-  assert.equal(e[0].version, detail.npmVersion);
-  assert.equal(e[0].unicodeRange, detail.unicodeRange.latin);
+test('files for chosen weights and styles', () => {
+  const files = fontFiles(detail, latin);
+  assert.equal(files.length, 2);
+  assert.equal(files[0].src, 'fonts/merriweather-latin-400-normal.woff2');
+  assert.equal(files[0].version, detail.npmVersion);
+  assert.equal(files[0].unicodeRange, detail.unicodeRange?.latin);
   assert.deepEqual(
-    [e[0].provider, e[0].fontsourceId, e[0].family],
+    [files[0].provider, files[0].fontsourceId, files[0].family],
     ['fontsource', 'merriweather', 'Merriweather'],
   );
-  assert.equal(fileUrl(e[0]), e[0].url);
+  assert.equal(fontsource().fileUrl(files[0]), detail.variants?.['400']?.normal?.latin?.url?.woff2);
 });
 
 test('missing variants are skipped', () => {
-  assert.equal(fontEntries(detail, { weights: [950], styles: ['normal'] }).length, 0);
+  assert.equal(fontFiles(detail, { ...latin, weights: [950] }).length, 0);
 });
 
 test('extra subsets are opt-in', () => {
-  const e = fontEntries(detail, { weights: [400], styles: ['normal'], subsets: ['latin', 'cyrillic'] });
+  const files = fontFiles(detail, { ...latin, weights: [400], subsets: ['latin', 'cyrillic'] });
   assert.deepEqual(
-    e.map((x) => x.subset),
+    files.map((x) => x.subset),
     ['latin', 'cyrillic'],
   );
 });
 
 test('license URL', () => {
   assert.equal(
-    licenseUrl('merriweather', '5.3.0'),
+    fontsource().licenseUrl({
+      family: 'Merriweather',
+      weight: 400,
+      style: 'normal',
+      src: 'fonts/merriweather.woff2',
+      fontsourceId: 'merriweather',
+      version: '5.3.0',
+    }),
     'https://cdn.jsdelivr.net/npm/@fontsource/merriweather@5.3.0/LICENSE',
   );
 });
 
 test('list is cached for a day', async () => {
   let calls = 0;
-  const fetchFn = async () => {
+  const fetch = async () => {
     calls++;
-    return { ok: true, status: 200, json: async () => fixture('fontsource-list.json') };
+    return listResponse();
   };
-  const store = new Map();
-  const storage = { getItem: (k) => store.get(k) ?? null, setItem: (k, v) => store.set(k, v) };
-  await fetchList(fetchFn, storage);
-  const second = await fetchList(fetchFn, storage);
+  const fonts = fontsource({ fetch, cache: memoryKeyValueStore() });
+  await fonts.list();
+  const second = await fonts.list();
   assert.equal(calls, 1);
   assert.ok(second.some((f) => f.id === 'merriweather'));
+});
+
+test('a corrupt cache is refetched and a full storage drops it', async () => {
+  const cache = memoryKeyValueStore();
+  cache.setItem('styleguide:fontsource-list', '{not json');
+  const full = {
+    ...cache,
+    setItem: () => {
+      throw new Error('quota');
+    },
+  };
+  const list = await fontsource({ fetch: listResponse, cache: full }).list();
+  assert.ok(list.some((f) => f.id === 'merriweather'));
+  assert.equal(cache.getItem('styleguide:fontsource-list'), null);
 });

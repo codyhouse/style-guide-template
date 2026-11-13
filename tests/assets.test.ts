@@ -1,7 +1,9 @@
 import { test } from 'vitest';
 import assert from 'node:assert/strict';
-import { present } from './helpers.js';
-import { readFileSync } from 'node:fs';
+import type { FileData } from '../src/lib/types.js';
+import { nodeAt, vendorData } from '../src/lib/tree.js';
+import { fontsource } from '../src/adapters/fontsource.js';
+import { present, load, V } from './helpers.js';
 import {
   brandMeta,
   withBrandMeta,
@@ -11,9 +13,6 @@ import {
   matchDropped,
 } from '../src/lib/assets.js';
 
-const V = 'com.example.styleguide';
-const load = () =>
-  JSON.parse(readFileSync(new URL('./fixtures/minimal.resolver.json', import.meta.url), 'utf8'));
 const font = {
   family: 'M',
   weight: 400,
@@ -25,17 +24,18 @@ const font = {
   version: '1.0.0',
 };
 
-test('resolution order: session, library, fontsource, missing', () => {
+test('resolution order: session, library, font provider, missing', () => {
   const ctx = {
     session: new Map([['logos/a.svg', new Uint8Array()]]),
     library: new Set(['logos/a.svg', 'logos/b.svg']),
+    fonts: fontsource(),
   };
   assert.equal(resolveAsset({ src: 'logos/a.svg' }, ctx).source, 'session');
   assert.deepEqual(resolveAsset({ src: 'logos/b.svg' }, ctx), {
     source: 'library',
     url: 'library/logos/b.svg',
   });
-  assert.equal(resolveAsset(font, ctx).source, 'fontsource');
+  assert.equal(resolveAsset(font, ctx).source, 'provider');
   assert.match(present(resolveAsset(font, ctx).url), /^https:\/\/cdn\.jsdelivr\.net\//);
   assert.equal(resolveAsset({ src: 'logos/c.svg' }, ctx).source, 'missing');
 });
@@ -50,9 +50,10 @@ test('missingAssets and allSrcs', () => {
       ['fonts/merriweather-latin-700-normal.woff2', 'font'],
     ],
   );
-  assert.deepEqual(missingAssets(meta, { session: new Map(), library: new Set(['logos/primary.svg']) }), [
-    'patterns/dots.svg',
-  ]);
+  assert.deepEqual(
+    missingAssets(meta, { session: new Map(), library: new Set(['logos/primary.svg']), fonts: fontsource() }),
+    ['patterns/dots.svg'],
+  );
 });
 
 test('dropped files match by basename, case-insensitive', () => {
@@ -77,12 +78,15 @@ test('colliding names are ambiguous, nothing assigned', () => {
 
 test('a file saved under another origin key is read and moved, other extensions kept', () => {
   const doc = load();
-  const { [V]: own, ...rest } = doc.sets.foundation.$extensions;
+  const { [V]: own, ...rest } = present(doc.sets.foundation.$extensions);
   doc.sets.foundation.$extensions = { ...rest, 'com.other.site': own, 'org.tool.x': { keep: true } };
   const meta = brandMeta(doc, V);
   assert.equal(meta.assetGroups.length, 2);
   const out = withBrandMeta(doc, V, meta);
-  assert.deepEqual(Object.keys(present(out.sets.foundation.$extensions)).sort(), [V, 'org.tool.x']);
+  assert.deepEqual(
+    Object.keys(present(out.sets.foundation.$extensions)).sort((a, b) => a.localeCompare(b)),
+    [V, 'org.tool.x'],
+  );
   assert.equal(doc.sets.foundation.$extensions['com.other.site'] !== undefined, true, 'input not mutated');
 });
 
@@ -94,8 +98,9 @@ test('empty meta when nothing is set', () => {
 
 test('srcs that are not plain relative paths are treated as missing', () => {
   const ctx = {
-    session: new Map(),
+    session: new Map<string, FileData>(),
     library: new Set(['../secret.svg', 'https://evil.example/x.svg', '/abs.svg']),
+    fonts: fontsource(),
   };
   for (const src of [
     '../secret.svg',
@@ -131,19 +136,19 @@ test('adoptVendor moves every foreign extension (tokens and groups) to this site
   const { adoptVendor } = await import('../src/lib/assets.js');
   const doc = load();
   const t = doc.sets.foundation.sources[0];
-  const move = (owner) => {
-    const { [V]: data, ...rest } = owner.$extensions;
+  const move = (owner: { $extensions?: Record<string, unknown> }) => {
+    const { [V]: data, ...rest } = present(owner.$extensions);
     owner.$extensions = { ...rest, 'com.other.site': data };
   };
   move(doc.sets.foundation);
-  move(t.color.brand['600']);
-  move(t.spacing);
+  move(present(nodeAt(t, 'color.brand.600')));
+  move(present(nodeAt(t, 'spacing')));
   const out = adoptVendor(doc, V);
   assert.deepEqual(
-    out.sets.foundation.sources[0].color.brand['600'].$extensions[V].pantone,
+    vendorData(nodeAt(out.sets.foundation.sources[0], 'color.brand.600'), V).pantone,
     'PANTONE 2727 C',
   );
-  assert.ok(out.sets.foundation.sources[0].spacing.$extensions[V].scale);
+  assert.ok(vendorData(nodeAt(out.sets.foundation.sources[0], 'spacing'), V).scale);
   assert.ok(brandMeta(out, V).assetGroups.length);
   assert.equal(JSON.stringify(out).includes('com.other.site'), false);
 });

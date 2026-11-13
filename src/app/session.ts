@@ -9,10 +9,21 @@ import {
   withBrandMeta,
 } from '../lib/assets.js';
 import * as E from '../lib/edit.js';
-import { buildExport, classify, loadZip, parseBrandJson, saveJson, slug } from '../lib/io.js';
+import {
+  buildExport,
+  classify,
+  errorMessage,
+  loadZip,
+  parseBrandJson,
+  problemText,
+  saveJson,
+  slug,
+} from '../lib/io.js';
 import { brandMeta as brandMetaSchema, manifest as manifestSchema, resolverDoc } from '../lib/schema.js';
-import { createStore, idbFileStore, type Store } from '../lib/state.js';
+import { createStore, type Store } from '../lib/state.js';
 import type { AssetContext, BrandMeta, Manifest, Problem, ResolverDoc, SessionFiles } from '../lib/types.js';
+import { uniquePath } from '../lib/path.js';
+import type { FileStore, FontProvider, KeyValueStore } from '../ports.js';
 import { vendorKey } from '../lib/vendor-key.js';
 
 export interface Ambiguous {
@@ -22,12 +33,18 @@ export interface Ambiguous {
 
 const stem = (name: string) => name.replace(/\.[^.]+$/, '');
 const describe = (file: string, errors: Problem[]) =>
-  errors.map((e) => `${file}: ${e.path ? `${e.path}: ` : ''}${e.message}`);
+  errors.map((problem) => `${file}: ${problemText(problem)}`);
 
 async function fetchJson(url: string): Promise<unknown> {
   const res = await fetch(url);
   if (!res.ok) throw new Error(`Could not load ${url} (${res.status})`);
   return res.json();
+}
+
+export interface SessionAdapters {
+  drafts: KeyValueStore;
+  files: FileStore;
+  fonts: FontProvider;
 }
 
 export class Session {
@@ -43,18 +60,19 @@ export class Session {
     readonly store: Store,
     readonly manifest: Manifest,
     readonly preset: ResolverDoc,
+    readonly fonts: FontProvider,
   ) {
     this.library = new Set(manifest.files);
-    this.ctx = { session: store.files, library: this.library };
+    this.ctx = { session: store.files, library: this.library, fonts };
     store.subscribe(() => this.#changed());
   }
 
-  static async open(): Promise<Session> {
+  static async open({ drafts, files, fonts }: SessionAdapters): Promise<Session> {
     const manifest = z.parse(manifestSchema, await fetchJson('library/manifest.json'));
     const preset = await Session.fetchPreset(manifest.brands[0].path);
-    const store = createStore({ doc: preset, storage: localStorage, fileStore: idbFileStore() });
+    const store = createStore({ doc: preset, storage: drafts, fileStore: files });
     await store.ready;
-    return new Session(store, manifest, preset);
+    return new Session(store, manifest, preset, fonts);
   }
 
   static async fetchPreset(path: string): Promise<ResolverDoc> {
@@ -94,7 +112,6 @@ export class Session {
     this.#changed();
   }
 
-  /** A draft that cannot be shown must never lock the page: show the preset, keep the draft as the previous one. */
   fallBack(error: unknown) {
     this.warnings = [
       ...this.warnings,
@@ -112,7 +129,7 @@ export class Session {
     const taken = this.#takenPaths();
     const map: SessionFiles = new Map();
     const entries = files.map((file) => {
-      const src = E.uniquePath(`${folder}/${file.name}`, taken);
+      const src = uniquePath(`${folder}/${file.name}`, taken);
       taken.add(src);
       map.set(src, file);
       return entry(file, src);
@@ -205,7 +222,7 @@ export class Session {
       const others = rest.filter((f) => !fonts.includes(f));
       if (others.length) await this.fillMissing(others);
     } catch (e) {
-      this.warn(`Could not load ${files.map((f) => f.name).join(', ')}: ${(e as Error).message}`);
+      this.warn(`Could not load ${files.map((f) => f.name).join(', ')}: ${errorMessage(e)}`);
     }
   }
 
@@ -236,6 +253,7 @@ export class Session {
       vendor: this.vendor,
       files: this.store.files,
       library: this.library,
+      fonts: this.fonts,
       fetchBytes,
       hostedUrl: HOSTED_URL,
     });
@@ -243,10 +261,6 @@ export class Session {
     return { name: `${this.fileName}-brand-kit.zip`, data: zip };
   }
 
-  /**
-   * Drops session files no draft refers to. If a draft does not parse (one that could not be shown),
-   * nothing is dropped: its files are still needed if it is restored.
-   */
   prune() {
     const used = new Set<string>();
     for (const draft of this.store.drafts()) {

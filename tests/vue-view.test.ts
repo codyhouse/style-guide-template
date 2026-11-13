@@ -1,15 +1,14 @@
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
 import { test } from 'vitest';
+import { fontsource } from '../src/adapters/fontsource.js';
 import { brandMeta } from '../src/lib/assets.js';
-import type { ResolverDoc } from '../src/lib/types.js';
+import type { FileData, ResolverDoc } from '../src/lib/types.js';
+import { preset as presetDoc } from './helpers.js';
 import { deriveView, type ViewSession } from '../src/vue/view.js';
 
-const preset = JSON.parse(
-  readFileSync(new URL('../public/library/brands/default.resolver.json', import.meta.url), 'utf8'),
-) as ResolverDoc;
+const preset = presetDoc();
 const vendor = 'com.example.styleguide';
-const ctx = { session: new Map(), library: new Set<string>() };
+const ctx = { session: new Map<string, FileData>(), library: new Set<string>(), fonts: fontsource() };
 
 function fixture(doc: ResolverDoc) {
   let current = doc;

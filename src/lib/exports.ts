@@ -1,12 +1,14 @@
-import { generateCss, cssName } from './css.js';
+import { block, generateCss, cssName } from './css.js';
 import { resolve, contexts, defaultInputs } from './resolver.js';
 import { toOklchString } from './color.js';
+import type { ExportFormat } from '../ports.js';
+import { VALUES } from './schema.js';
+import { valueAs } from './values.js';
 import type { FontFile, ResolverDoc, Tokens } from './types.js';
 
-// Tailwind v4 theme namespaces: font-size tokens become --text-*; the others already match.
 const tailwindName = (path: string) =>
   path.startsWith('font-size.')
-    ? `--text-${path.slice('font-size.'.length).replace(/\./g, '-')}`
+    ? `--text-${path.slice('font-size.'.length).replaceAll(/\./g, '-')}`
     : cssName(path);
 
 export function tailwindCss(
@@ -23,7 +25,6 @@ export function tailwindCss(
   ].join('\n');
 }
 
-// shadcn/ui variable -> our role token, first match wins.
 const SHADCN: Array<[name: string, paths: string[]]> = [
   ['background', ['color.page.background']],
   ['foreground', ['color.page.foreground']],
@@ -50,30 +51,43 @@ const RADIUS = ['radius.md', 'radius.lg', 'radius.sm'];
 function shadcnVars(tokens: Tokens, withRadius: boolean) {
   const lines: string[] = [];
   if (withRadius) {
-    const r = RADIUS.map((p) => tokens.get(p)).find(Boolean);
-    if (r) lines.push(`--radius: ${r.resolved.value}${r.resolved.unit};`);
+    const radius = RADIUS.map((p) => valueAs(VALUES.dimension, tokens.get(p)?.resolved)).find(Boolean);
+    if (radius) lines.push(`--radius: ${radius.value}${radius.unit};`);
   }
   for (const [name, paths] of SHADCN) {
-    const t = paths.map((x) => tokens.get(x)).find(Boolean);
-    if (t) lines.push(`--${name}: ${toOklchString(t.resolved)};`);
+    const color = paths.map((x) => valueAs(VALUES.color, tokens.get(x)?.resolved)).find(Boolean);
+    if (color) lines.push(`--${name}: ${toOklchString(color)};`);
   }
   return lines;
 }
 
-const block = (selector: string, lines: string[]) =>
-  `${selector} {\n${lines.map((l) => `  ${l}`).join('\n')}\n}\n`;
-
 export function shadcnCss(doc: ResolverDoc): string {
   const inputs = defaultInputs(doc);
   const light = shadcnVars(resolve(doc, inputs), true);
-  const dark = contexts(doc).find((c) => c.modifier === 'theme' && c.context === 'dark');
+  const hasDark = contexts(doc).some((c) => c.modifier === 'theme' && c.context === 'dark');
   const names = light.map((l) => l.split(':')[0].slice(2));
   return [
     block(':root', light),
-    dark ? block('.dark', shadcnVars(resolve(doc, { ...inputs, theme: 'dark' }), false)) : '',
+    hasDark ? block('.dark', shadcnVars(resolve(doc, { ...inputs, theme: 'dark' }), false)) : '',
     block(
       '@theme inline',
       names.map((n) => (n === 'radius' ? '--radius-lg: var(--radius);' : `--color-${n}: var(--${n});`)),
     ),
   ].join('\n');
 }
+
+const relativeFontSrc = (file: FontFile) => `../${file.src}`;
+
+export const exportFormats: ExportFormat[] = [
+  {
+    key: 'css',
+    label: 'CSS variables',
+    render: (doc, vendor) => generateCss(doc, { vendor, fontSrc: relativeFontSrc }),
+  },
+  {
+    key: 'tailwind',
+    label: 'Tailwind v4',
+    render: (doc, vendor) => tailwindCss(doc, { vendor, fontSrc: relativeFontSrc }),
+  },
+  { key: 'shadcn', label: 'shadcn/ui', render: (doc) => shadcnCss(doc) },
+];
