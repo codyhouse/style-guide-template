@@ -1,13 +1,13 @@
 import { test } from 'vitest';
 import assert from 'node:assert/strict';
+import type { FontFile } from '../src/lib/types.js';
+import { setToken } from '../src/lib/edit.js';
+import { load, present, V } from './helpers.js';
 import { readFileSync } from 'node:fs';
 import { cssName, cssValue, generateCss } from '../src/lib/css.js';
 import { fontFaceRules } from '../src/lib/fonts.js';
 
-const V = 'com.example.styleguide';
-const load = () =>
-  JSON.parse(readFileSync(new URL('./fixtures/minimal.resolver.json', import.meta.url), 'utf8'));
-const opts = { vendor: V, fontSrc: (e) => e.src };
+const opts = { vendor: V, fontSrc: (e: FontFile) => e.src };
 
 test('names', () => {
   assert.equal(cssName('color.primary.background'), '--color-primary-background');
@@ -60,9 +60,8 @@ test('dark block holds only differences', () => {
 });
 
 test('foreign tokens are emitted', () => {
-  const doc = load();
-  doc.sets.foundation.sources[0].color.accent = { $root: { $value: '{color.brand.600}' } };
-  doc.sets.foundation.sources[0].size = { $type: 'dimension', huge: { $value: { value: 100, unit: 'rem' } } };
+  let doc = setToken(load(), 'color.accent', { $root: { $value: '{color.brand.600}' } });
+  doc = setToken(doc, 'size', { $type: 'dimension', huge: { $value: { value: 100, unit: 'rem' } } });
   const css = generateCss(doc, opts);
   assert.match(css, /--color-accent: var\(--color-brand-600\);/);
   assert.match(css, /--size-huge: 100rem;/);
@@ -92,7 +91,7 @@ test('font-face', () => {
 });
 
 test('font family names cannot break out of the CSS string', () => {
-  assert.equal(cssValue('fontFamily', ['A"; } body { x: y']), '"A\\"; } body { x: y"');
+  assert.equal(cssValue('fontFamily', ['A"; } body { x: y']), String.raw`"A\"; } body { x: y"`);
   const css = fontFaceRules([{ family: 'B"}', weight: 400, style: 'normal', src: 'a".woff2' }], (e) => e.src);
   assert.match(css, /font-family: "B\\"\}";/);
   assert.match(css, /url\("a\\"\.woff2"\)/);
@@ -116,7 +115,7 @@ test('unusual token names are escaped, never injected', () => {
 
 test('modifier and context names cannot break the selector', () => {
   const doc = load();
-  doc.modifiers.theme.contexts['d"]{}body{color:red}x[y="'] = [
+  present(doc.modifiers?.theme).contexts['d"]{}body{color:red}x[y="'] = [
     { color: { page: { background: { $type: 'color', $value: '{color.brand.600}' } } } },
   ];
   const css = generateCss(doc, opts);
@@ -124,7 +123,6 @@ test('modifier and context names cannot break the selector', () => {
 });
 
 test('colors in other spaces are written natively', () => {
-  const doc = load();
-  doc.sets.foundation.sources[0].color.p3 = { $value: { colorSpace: 'display-p3', components: [1, 0, 0] } };
+  const doc = setToken(load(), 'color.p3', { $value: { colorSpace: 'display-p3', components: [1, 0, 0] } });
   assert.match(generateCss(doc, opts), /--color-p3: color\(display-p3 1 0 0\);/);
 });

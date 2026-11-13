@@ -1,7 +1,4 @@
 {
   "extends": "../tsconfig.json",
-  "compilerOptions": {
-    "noImplicitAny": false
-  },
-  "include": ["."]
+  "include": [".", "../src/reset.d.ts"]
 }

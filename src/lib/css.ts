@@ -1,7 +1,11 @@
 import { flatten, contexts, defaultInputs, mergedTree, aliasTarget } from './resolver.js';
 import { cssColor } from './color.js';
 import { fontFaceRules, cssString } from './fonts.js';
-import type { FlatToken, FontFile, Json, ResolverDoc } from './types.js';
+import * as z from 'zod/mini';
+import { brandMeta as brandMetaSchema, VALUES } from './schema.js';
+import { isNode } from './tree.js';
+import type { FlatToken, FontFile, ResolverDoc } from './types.js';
+import { valueAs } from './values.js';
 
 type Namer = (path: string) => string;
 
@@ -48,7 +52,6 @@ const TYPO_FIELDS: Array<[field: string, prop: string, type: string]> = [
   ['lineHeight', 'line-height', 'number'],
 ];
 
-// Names come from loaded files: anything outside [A-Za-z0-9_-] is written as a CSS escape.
 const ident = (s: string) =>
   s.replace(/[^A-Za-z0-9_-]/g, (c) => `\\${(c.codePointAt(0) ?? 0).toString(16)} `);
 export const cssName = (path: string) =>
@@ -67,46 +70,77 @@ const pointerPath = (ref: string) =>
     .filter((s) => s !== '$value')
     .join('.');
 
-export function cssValue(type: string | undefined, value: Json, name: Namer = cssName): string | null {
+function shadowCss(value: unknown, part: (type: string, value: unknown) => string | null): string | null {
+  const shadow = valueAs(VALUES.shadow, value);
+  if (!shadow) return null;
+  return [shadow]
+    .flat()
+    .map((layer) => {
+      if (aliasTarget(layer) || !isNode(layer)) return part('shadow', layer);
+      const lengths = (['offsetX', 'offsetY', 'blur', 'spread'] as const).map((key) =>
+        part('dimension', layer[key]),
+      );
+      return [...(layer.inset ? ['inset'] : []), ...lengths, part('color', layer.color)].join(' ');
+    })
+    .join(', ');
+}
+
+function weightCss(value: unknown): string | null {
+  const weight = valueAs(VALUES.fontWeight, value);
+  if (weight === null) return null;
+  return String(typeof weight === 'string' ? WEIGHTS[weight] : weight);
+}
+
+function familyCss(value: unknown): string | null {
+  const family = valueAs(VALUES.fontFamily, value);
+  if (family === null) return null;
+  return [family]
+    .flat()
+    .map((f) => (GENERIC.has(f) ? f : cssString(f)))
+    .join(', ');
+}
+
+export function cssValue(type: string | undefined, value: unknown, name: Namer = cssName): string | null {
   const target = aliasTarget(value);
   if (target) return `var(${name(target)})`;
-  if (value && typeof value === 'object' && typeof value.$ref === 'string')
-    return `var(${name(pointerPath(value.$ref))})`;
-  const v = (t: string, x: unknown) => cssValue(t, x, name);
+  if (isNode(value) && typeof value.$ref === 'string') return `var(${name(pointerPath(value.$ref))})`;
+  const part = (t: string, x: unknown) => cssValue(t, x, name);
   switch (type) {
-    case 'color':
-      return cssColor(value);
+    case 'color': {
+      const color = valueAs(VALUES.color, value);
+      return color && cssColor(color);
+    }
     case 'dimension':
-    case 'duration':
-      return `${value.value}${value.unit}`;
+    case 'duration': {
+      const length = valueAs(VALUES[type], value);
+      return length && `${length.value}${length.unit}`;
+    }
     case 'fontFamily':
-      return [value]
-        .flat()
-        .map((f) => (GENERIC.has(f) ? f : cssString(f)))
-        .join(', ');
+      return familyCss(value);
     case 'fontWeight':
-      return String(WEIGHTS[value] ?? value);
-    case 'cubicBezier':
-      return `cubic-bezier(${value.join(', ')})`;
+      return weightCss(value);
+    case 'cubicBezier': {
+      const curve = valueAs(VALUES.cubicBezier, value);
+      return curve && `cubic-bezier(${curve.join(', ')})`;
+    }
     case 'shadow':
-      return [value]
-        .flat()
-        .map((s): string | null =>
-          aliasTarget(s)
-            ? v('shadow', s)
-            : [
-                ...(s.inset ? ['inset'] : []),
-                ...['offsetX', 'offsetY', 'blur', 'spread'].map((k) => v('dimension', s[k])),
-                v('color', s.color),
-              ].join(' '),
-        )
-        .join(', ');
-    case 'border':
-      return `${v('dimension', value.width)} ${value.style} ${v('color', value.color)}`;
-    case 'transition':
-      return `${v('duration', value.duration)} ${v('cubicBezier', value.timingFunction)} ${v('duration', value.delay)}`;
+      return shadowCss(value, part);
+    case 'border': {
+      const border = valueAs(VALUES.border, value);
+      return (
+        border &&
+        `${part('dimension', border.width)} ${part('strokeStyle', border.style)} ${part('color', border.color)}`
+      );
+    }
+    case 'transition': {
+      const t = valueAs(VALUES.transition, value);
+      return (
+        t &&
+        `${part('duration', t.duration)} ${part('cubicBezier', t.timingFunction)} ${part('duration', t.delay)}`
+      );
+    }
     case 'number':
-      return Number.isFinite(value) ? String(value) : null;
+      return typeof value === 'number' && Number.isFinite(value) ? String(value) : null;
     case 'strokeStyle':
       return typeof value === 'string' && /^[a-z-]+$/.test(value) ? value : null;
     default:
@@ -114,25 +148,33 @@ export function cssValue(type: string | undefined, value: Json, name: Namer = cs
   }
 }
 
-export function cssDeclarations(tokens: Map<string, FlatToken>, name: Namer = cssName): string[] {
-  const out: string[] = [];
-  for (const [path, { type, value }] of tokens) {
-    if (type === 'typography') {
-      const whole = aliasTarget(value);
-      for (const [field, prop, t] of TYPO_FIELDS) {
-        const v = whole ? `var(${name(whole)}-${prop})` : cssValue(t, value[field], name);
-        out.push(`${name(path)}-${prop}: ${v};`);
-      }
-    } else {
-      const v = cssValue(type, value, name);
-      if (v !== null) out.push(`${name(path)}: ${v};`);
-    }
-  }
-  return out;
+function typographyDeclarations(path: string, value: unknown, name: Namer): string[] {
+  const whole = aliasTarget(value);
+  const fields = isNode(value) ? value : {};
+  return TYPO_FIELDS.map(([field, prop, type]) => {
+    const css = whole ? `var(${name(whole)}-${prop})` : cssValue(type, fields[field], name);
+    return `${name(path)}-${prop}: ${css};`;
+  });
 }
 
-const block = (selector: string, lines: string[]) =>
-  `${selector} {\n${lines.map((l) => `  ${l}`).join('\n')}\n}\n`;
+export function cssDeclarations(tokens: Map<string, FlatToken>, name: Namer = cssName): string[] {
+  return [...tokens].flatMap(([path, { type, value }]) => {
+    if (type === 'typography') return typographyDeclarations(path, value, name);
+    const css = cssValue(type, value, name);
+    return css === null ? [] : [`${name(path)}: ${css};`];
+  });
+}
+
+export function block(selector: string, lines: string[]) {
+  const body = lines.map((line) => '  ' + line).join('\n');
+  return `${selector} {\n${body}\n}\n`;
+}
+
+function fontFilesOf(doc: ResolverDoc, vendor?: string): FontFile[] {
+  if (!vendor) return [];
+  const meta = z.safeParse(brandMetaSchema, doc.sets?.foundation?.$extensions?.[vendor] ?? {});
+  return meta.success ? meta.data.fontFiles : [];
+}
 
 export function generateCss(
   doc: ResolverDoc,
@@ -154,9 +196,6 @@ export function generateCss(
     );
     if (lines.length) css += block(`:root[data-${ident(modifier)}="${ident(context)}"]`, lines);
   }
-  const faces = fontFaceRules(
-    vendor ? doc.sets?.foundation?.$extensions?.[vendor]?.fontFiles : undefined,
-    fontSrc,
-  );
+  const faces = fontFaceRules(fontFilesOf(doc, vendor), fontSrc);
   return faces ? `${css}${faces}\n` : css;
 }

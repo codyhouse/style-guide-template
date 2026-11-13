@@ -1,6 +1,6 @@
-// https://www.designtokens.org/tr/2025.10/format/ , /color/ , /resolver/
 import * as z from 'zod/mini';
-import type { Json, Problem, TokenNode } from './types.js';
+import type { Problem, TokenNode } from './types.js';
+import { child, isNode } from './tree.js';
 
 export const RESOLVER_SCHEMA = 'https://www.designtokens.org/schemas/2025.10/resolver.json';
 
@@ -44,9 +44,8 @@ const STROKES = ['solid', 'dashed', 'dotted', 'double', 'groove', 'ridge', 'outs
 const TOKEN_KEYS = new Set(['$type', '$value', '$description', '$extensions', '$deprecated']);
 const GROUP_KEYS = new Set(['$type', '$description', '$extensions', '$deprecated', '$extends', '$root']);
 
-const isObj = (v: unknown): v is TokenNode => v !== null && typeof v === 'object' && !Array.isArray(v);
 const isAlias = (v: unknown) =>
-  (typeof v === 'string' && /^\{[^{}]+\}$/.test(v)) || (isObj(v) && typeof v.$ref === 'string');
+  (typeof v === 'string' && /^\{[^{}]+\}$/.test(v)) || (isNode(v) && typeof v.$ref === 'string');
 const join = (path: string, key: string | number) => (path ? `${path}.${key}` : String(key));
 
 export const problems = (error: z.core.$ZodError, base = ''): Problem[] =>
@@ -96,7 +95,7 @@ const shadowLayer = z.object({
   inset: z.optional(z.boolean()),
 });
 
-const VALUES: Record<string, z.core.$ZodType> = {
+export const VALUES = {
   color,
   dimension: size,
   duration,
@@ -120,10 +119,11 @@ const VALUES: Record<string, z.core.$ZodType> = {
     lineHeight: orAlias(z.number()),
   }),
   gradient: z.array(z.looseObject({})),
-};
+} satisfies Record<string, z.core.$ZodType>;
 
-// Problems point at the token; the message names the part of its value that is wrong.
-function checkValue(type: string, value: unknown, path: string): Problem[] {
+const isValueType = (type: string): type is keyof typeof VALUES => Object.hasOwn(VALUES, type);
+
+function checkValue(type: keyof typeof VALUES, value: unknown, path: string): Problem[] {
   if (isAlias(value)) return [];
   const result = z.safeParse(VALUES[type], value);
   if (result.success) return [];
@@ -135,44 +135,53 @@ function checkValue(type: string, value: unknown, path: string): Problem[] {
 
 export function deepMerge(target: TokenNode, source: TokenNode): TokenNode {
   const out = { ...target };
-  for (const [k, v] of Object.entries(source)) {
-    if (!isObj(v) || !isObj(out[k])) out[k] = v;
-    else out[k] = '$value' in v ? { ...out[k], ...v } : deepMerge(out[k], v); // a token override keeps its own $type
+  for (const [key, value] of Object.entries(source)) {
+    const existing = out[key];
+    if (!isNode(value) || !isNode(existing)) out[key] = value;
+    else out[key] = '$value' in value ? { ...existing, ...value } : deepMerge(existing, value);
   }
   return out;
 }
 
-// `only` limits reported problems to paths that exist in that tree.
+function validateToken(token: TokenNode, path: string, groupType?: string): Problem[] {
+  const errors: Problem[] = Object.keys(token)
+    .filter((key) => key.startsWith('$') && !TOKEN_KEYS.has(key))
+    .map((key) => ({ path, message: `unknown reserved key ${key}` }));
+  const type = token.$type ?? groupType;
+  if (!type) errors.push({ path, message: 'token has no $type (own or inherited from a group)' });
+  else if (!isValueType(type)) errors.push({ path, message: `unknown $type "${type}"` });
+  else errors.push(...checkValue(type, token.$value, path));
+  return errors;
+}
+
+function validateEntry(
+  key: string,
+  node: unknown,
+  path: string,
+  groupType?: string,
+  only?: TokenNode,
+): Problem[] {
+  if (key.startsWith('$') && key !== '$root')
+    return GROUP_KEYS.has(key) ? [] : [{ path, message: `unknown reserved key ${key}` }];
+  if (/[{}.]/.test(key)) return [{ path, message: `name "${key}" must not contain {, } or .` }];
+  if (!isNode(node)) return [{ path, message: 'must be a token or a group' }];
+  if (only && only[key] === undefined) return [];
+  if (!('$value' in node)) return validateTokens(node, path, groupType, child(only, key));
+  return validateToken(node, path, groupType);
+}
+
 export function validateTokens(tree: TokenNode, path = '', inherited?: string, only?: TokenNode): Problem[] {
-  const errors: Problem[] = [];
   const groupType = tree.$type ?? inherited;
-  if (tree.$type !== undefined && !(tree.$type in VALUES))
+  const errors: Problem[] = [];
+  if (tree.$type !== undefined && !isValueType(tree.$type))
     errors.push({ path, message: `unknown $type "${tree.$type}"` });
-  for (const [key, node] of Object.entries(tree)) {
-    const p = join(path, key);
-    if (key.startsWith('$') && key !== '$root') {
-      if (!GROUP_KEYS.has(key)) errors.push({ path: p, message: `unknown reserved key ${key}` });
-      continue;
-    }
-    if (/[{}.]/.test(key)) errors.push({ path: p, message: `name "${key}" must not contain {, } or .` });
-    else if (!isObj(node)) errors.push({ path: p, message: 'must be a token or a group' });
-    else if (only && only[key] === undefined) continue;
-    else if (!('$value' in node)) errors.push(...validateTokens(node, p, groupType, only?.[key]));
-    else {
-      for (const k of Object.keys(node))
-        if (k.startsWith('$') && !TOKEN_KEYS.has(k))
-          errors.push({ path: p, message: `unknown reserved key ${k}` });
-      const type = node.$type ?? groupType;
-      if (!type) errors.push({ path: p, message: 'token has no $type (own or inherited from a group)' });
-      else if (!(type in VALUES)) errors.push({ path: p, message: `unknown $type "${type}"` });
-      else errors.push(...checkValue(type, node.$value, p));
-    }
-  }
+  for (const [key, node] of Object.entries(tree))
+    errors.push(...validateEntry(key, node, join(path, key), groupType, only));
   return errors;
 }
 
 const tokenTree = z
-  .record(z.string(), z.custom<Json>())
+  .record(z.string(), z.custom<unknown>())
   .check(
     z.refine((s) => typeof s.$ref !== 'string', 'file references are not supported here; inline the tokens'),
   );
@@ -185,7 +194,7 @@ export const resolverDoc = z.object({
   description: z.optional(z.string()),
   sets: z.record(
     z.string(),
-    z.looseObject({ sources, $extensions: z.optional(z.record(z.string(), z.custom<Json>())) }),
+    z.looseObject({ sources, $extensions: z.optional(z.record(z.string(), z.custom<unknown>())) }),
   ),
   modifiers: z.optional(
     z.record(
@@ -207,7 +216,7 @@ export function validateResolver(input: unknown): { ok: boolean; errors: Problem
   const modifiers = doc.modifiers ?? {};
   const errors: Problem[] = [];
   doc.resolutionOrder.forEach(({ $ref }, i) => {
-    const [, kind, name] = $ref.match(/^#\/(sets|modifiers)\/(.+)$/) ?? [];
+    const [, kind, name] = /^#\/(sets|modifiers)\/(.+)$/.exec($ref) ?? [];
     if (!(kind === 'sets' ? name in doc.sets : kind === 'modifiers' && name in modifiers)) {
       errors.push({ path: `resolutionOrder.${i}`, message: `${$ref} does not point to a set or modifier` });
     }
@@ -232,21 +241,20 @@ export function validateResolver(input: unknown): { ok: boolean; errors: Problem
 }
 
 export const isResolver = (json: unknown): json is ResolverDoc =>
-  isObj(json) && Array.isArray(json.resolutionOrder);
+  isNode(json) && Array.isArray(json.resolutionOrder);
 
-export function toResolver(json: unknown, name: string): ResolverDoc {
+export function toResolver(json: TokenNode, name: string): ResolverDoc {
   if (isResolver(json)) return json;
   return {
     $schema: RESOLVER_SCHEMA,
     version: '2025.10',
     name,
-    sets: { foundation: { sources: [json as Json] } },
+    sets: { foundation: { sources: [json] } },
     modifiers: { theme: { contexts: { light: [], dark: [] }, default: 'light' } },
     resolutionOrder: [{ $ref: '#/sets/foundation' }, { $ref: '#/modifiers/theme' }],
   };
 }
 
-// A src is a plain relative path: no scheme, no leading slash, no backslash, no '..' segments.
 export const isSafeSrc = (src: unknown): src is string =>
   typeof src === 'string' &&
   src !== '' &&
@@ -291,7 +299,7 @@ const fontFile = z
     fontsourceId: z.optional(
       z.string().check(z.regex(/^[a-z0-9-]+$/, 'fontsourceId must use a-z, 0-9 and -')),
     ),
-    version: z.optional(z.string().check(z.regex(/^[0-9][0-9a-z.-]*$/, 'version must look like 5.3.0'))),
+    version: z.optional(z.string().check(z.regex(/^\d[\da-z.-]*$/, 'version must look like 5.3.0'))),
   })
   .check(
     z.refine(

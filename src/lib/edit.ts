@@ -1,15 +1,7 @@
-import { anchoredScale } from './color.js';
 import { slug } from './io.js';
-import type {
-  AssetGroup,
-  AssetItem,
-  BrandMeta,
-  DtcgColor,
-  FontFile,
-  Json,
-  ResolverDoc,
-  TokenNode,
-} from './types.js';
+import { uniquePath } from './path.js';
+import type { AssetGroup, AssetItem, BrandMeta, FontFile, ResolverDoc, TokenNode } from './types.js';
+import { ensureChild, nodeAt } from './tree.js';
 
 const clone = <T>(x: T): T => structuredClone(x);
 export const foundation = (doc: ResolverDoc): TokenNode => doc.sets.foundation.sources[0];
@@ -17,9 +9,8 @@ export const foundation = (doc: ResolverDoc): TokenNode => doc.sets.foundation.s
 function setIn(tree: TokenNode, path: string, value: unknown) {
   const keys = path.split('.');
   const last = keys.pop() ?? path;
-  let node = tree;
-  for (const k of keys) node = node[k] ??= {};
-  node[last] = value;
+  const parent = keys.reduce((node, key) => ensureChild(node, key), tree);
+  parent[last] = value;
 }
 
 export function setToken(doc: ResolverDoc, path: string, token: TokenNode): ResolverDoc {
@@ -28,31 +19,12 @@ export function setToken(doc: ResolverDoc, path: string, token: TokenNode): Reso
   return out;
 }
 
-// The typed color is kept as one shade (recorded as the group's base); the rest are generated.
-export function setHue(doc: ResolverDoc, hue: string, color: DtcgColor, vendor?: string): ResolverDoc {
-  const out = clone(doc);
-  const { scale, anchor } = anchoredScale(color);
-  const group = (foundation(out).color[hue] ??= {});
-  for (const [shade, value] of Object.entries(scale)) group[shade] = { ...group[shade], $value: value };
-  if (vendor)
-    group.$extensions = { ...group.$extensions, [vendor]: { ...group.$extensions?.[vendor], base: anchor } };
-  return out;
-}
-
-export function removeHue(doc: ResolverDoc, hue: string): ResolverDoc {
-  const out = clone(doc);
-  const tree = foundation(out);
-  tree.color = Object.fromEntries(Object.entries(tree.color).filter(([k]) => k !== hue));
-  return out;
-}
-
-// Role edits apply to the theme being previewed: light is the foundation, others are context overrides.
 export function setRole(doc: ResolverDoc, theme: string, rolePath: string, alias: string): ResolverDoc {
   const out = clone(doc);
   const mod = out.modifiers?.theme;
   if (!mod || theme === (mod.default ?? 'light')) {
     setIn(foundation(out), `color.${rolePath}`, {
-      ...getIn(foundation(out), `color.${rolePath}`),
+      ...nodeAt(foundation(out), `color.${rolePath}`),
       $value: alias,
     });
     return out;
@@ -63,26 +35,21 @@ export function setRole(doc: ResolverDoc, theme: string, rolePath: string, alias
   return out;
 }
 
-export function getIn(tree: TokenNode, path: string): Json {
-  return path.split('.').reduce<Json>((n, k) => n?.[k], tree);
-}
-
 const updateGroups = (meta: BrandMeta, fn: (groups: AssetGroup[]) => AssetGroup[]): BrandMeta => ({
   ...meta,
   assetGroups: fn(meta.assetGroups.map((g) => ({ ...g, items: [...g.items] }))),
 });
-const move = <T>(list: T[], i: number, dir: number): T[] => {
+function move<T>(list: T[], i: number, dir: number): T[] {
   const j = i + dir;
   if (i < 0 || j < 0 || j >= list.length) return list;
-  [list[i], list[j]] = [list[j], list[i]];
-  return list;
-};
+  const moved = [...list];
+  [moved[i], moved[j]] = [moved[j], moved[i]];
+  return moved;
+}
 
 export function addGroup(meta: BrandMeta, label: string): BrandMeta {
   const ids = new Set(meta.assetGroups.map((g) => g.id));
-  const base = slug(label);
-  let id = base;
-  for (let n = 2; ids.has(id); n++) id = `${base}-${n}`;
+  const id = uniquePath(slug(label), ids);
   return updateGroups(meta, (gs) => [...gs, { id, label, items: [] }]);
 }
 
@@ -128,14 +95,6 @@ export const removeFontFile = (meta: BrandMeta, src: string): BrandMeta => ({
   fontFiles: meta.fontFiles.filter((f) => f.src !== src),
 });
 
-export function uniquePath(path: string, taken: Set<string>): string {
-  const dot = path.lastIndexOf('.');
-  const [stem, ext] = dot > path.lastIndexOf('/') ? [path.slice(0, dot), path.slice(dot)] : [path, ''];
-  let out = path;
-  for (let n = 2; taken.has(out); n++) out = `${stem}-${n}${ext}`;
-  return out;
-}
-
 const WEIGHT_WORDS: Array<[string, number]> = [
   ['extrabold', 800],
   ['ultrabold', 800],
@@ -154,11 +113,11 @@ const WEIGHT_WORDS: Array<[string, number]> = [
 
 export function fontFromFileName(name: string): Pick<FontFile, 'family' | 'weight' | 'style'> {
   const stem = name.replace(/\.[^.]+$/, '');
-  const [family, variant = ''] = stem.split(/[-]/);
+  const [family, variant = ''] = stem.split('-');
   const v = variant.toLowerCase();
   const weight = WEIGHT_WORDS.find(([w]) => v.includes(w))?.[1] ?? 400;
   return {
-    family: family.replace(/[_]+/g, ' ').trim(),
+    family: family.replace(/_+/g, ' ').trim(),
     weight,
     style: v.includes('italic') ? 'italic' : 'normal',
   };

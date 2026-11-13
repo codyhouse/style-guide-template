@@ -1,22 +1,28 @@
 import { test } from 'vitest';
 import assert from 'node:assert/strict';
-import { token } from './helpers.js';
-import { readFileSync } from 'node:fs';
+import { setToken } from '../src/lib/edit.js';
+import { nodeAt } from '../src/lib/tree.js';
+import { VALUES } from '../src/lib/schema.js';
+import { valueAs } from '../src/lib/values.js';
+import type { ResolverDoc, Tokens } from '../src/lib/types.js';
+import { load, present, token } from './helpers.js';
 import { ResolveError, resolve, contexts, defaultInputs, aliasTarget, flatten } from '../src/lib/resolver.js';
 import { toHex } from '../src/lib/color.js';
 
-const load = () =>
-  JSON.parse(readFileSync(new URL('./fixtures/minimal.resolver.json', import.meta.url), 'utf8'));
-const tree = (doc) => doc.sets.foundation.sources[0];
+const tree = (doc: ResolverDoc) => doc.sets.foundation.sources[0];
+
+const colorAt = (doc: ResolverDoc, path: string) =>
+  present(valueAs(VALUES.color, nodeAt(tree(doc), path)?.$value));
+const colorOf = (tokens: Tokens, path: string) =>
+  present(valueAs(VALUES.color, token(tokens, path).resolved));
 
 test('dark overrides light', () => {
   const doc = load();
-  const n = tree(doc).color.neutral;
   assert.equal(
-    toHex(token(resolve(doc, { theme: 'dark' }), 'color.page.background').resolved),
-    n['950'].$value.hex,
+    toHex(colorOf(resolve(doc, { theme: 'dark' }), 'color.page.background')),
+    colorAt(doc, 'color.neutral.950').hex,
   );
-  assert.equal(toHex(token(resolve(doc), 'color.page.background').resolved), n['50'].$value.hex);
+  assert.equal(toHex(colorOf(resolve(doc), 'color.page.background')), colorAt(doc, 'color.neutral.50').hex);
 });
 
 test('raw value keeps the alias, type is inherited', () => {
@@ -26,33 +32,33 @@ test('raw value keeps the alias, type is inherited', () => {
 });
 
 test('chained alias', () => {
-  const doc = load();
-  tree(doc).color.link = { $value: '{color.primary.background}' };
-  assert.equal(token(resolve(doc), 'color.link').resolved.hex, tree(doc).color.brand['600'].$value.hex);
+  let doc = load();
+  doc = setToken(doc, 'color.link', { $value: '{color.primary.background}' });
+  assert.equal(colorOf(resolve(doc), 'color.link').hex, colorAt(doc, 'color.brand.600').hex);
 });
 
 test('$ref pointer resolves like a curly alias', () => {
-  const doc = load();
-  tree(doc).color.ref = { $value: { $ref: '#/color/brand/600/$value' } };
-  assert.deepEqual(token(resolve(doc), 'color.ref').resolved, tree(doc).color.brand['600'].$value);
+  let doc = load();
+  doc = setToken(doc, 'color.ref', { $value: { $ref: '#/color/brand/600/$value' } });
+  assert.deepEqual(token(resolve(doc), 'color.ref').resolved, colorAt(doc, 'color.brand.600'));
 });
 
 test('composite alias', () => {
-  const t = token(resolve(load()), 'typography.heading-1').resolved;
+  const t = present(valueAs(VALUES.typography, token(resolve(load()), 'typography.heading-1').resolved));
   assert.deepEqual(t.fontSize, { value: 3.0518, unit: 'rem' });
   assert.deepEqual(t.fontFamily, ['Merriweather', 'serif']);
 });
 
 test('cycle throws', () => {
-  const doc = load();
-  tree(doc).color.a = { $value: '{color.b}' };
-  tree(doc).color.b = { $value: '{color.a}' };
+  let doc = load();
+  doc = setToken(doc, 'color.a', { $value: '{color.b}' });
+  doc = setToken(doc, 'color.b', { $value: '{color.a}' });
   assert.throws(() => resolve(doc), /cycle/i);
 });
 
 test('missing target throws with path', () => {
-  const doc = load();
-  tree(doc).color.primary.background.$value = '{color.nope}';
+  let doc = load();
+  doc = setToken(doc, 'color.primary.background', { $value: '{color.nope}' });
   assert.throws(
     () => resolve(doc),
     (e) => e instanceof ResolveError && e.path === 'color.primary.background',
@@ -60,8 +66,8 @@ test('missing target throws with path', () => {
 });
 
 test('$root keeps its segment in the key', () => {
-  const doc = load();
-  tree(doc).color.accent = { $root: { $value: '{color.brand.600}' } };
+  let doc = load();
+  doc = setToken(doc, 'color.accent', { $root: { $value: '{color.brand.600}' } });
   assert.ok(flatten(tree(doc)).has('color.accent.$root'));
 });
 
@@ -85,7 +91,7 @@ test('aliasTarget', () => {
 
 test('an unknown context falls back to the default one', () => {
   const doc = load();
-  delete doc.modifiers.theme.contexts.dark;
+  delete present(doc.modifiers?.theme).contexts.dark;
   assert.doesNotThrow(() => resolve(doc, { theme: 'dark' }));
   assert.equal(token(resolve(doc, { theme: 'dark' }), 'color.page.background').value, '{color.neutral.50}');
 });

@@ -1,12 +1,10 @@
 import { test } from 'vitest';
 import assert from 'node:assert/strict';
-import { present } from './helpers.js';
-import { readFileSync } from 'node:fs';
+import type { ResolverDoc } from '../src/lib/types.js';
+import { load, present, removeAt, setAt } from './helpers.js';
 import { validateResolver, toResolver, isResolver } from '../src/lib/schema.js';
 
-const load = () =>
-  JSON.parse(readFileSync(new URL('./fixtures/minimal.resolver.json', import.meta.url), 'utf8'));
-const tree = (doc) => doc.sets.foundation.sources[0];
+const tree = (doc: ResolverDoc) => doc.sets.foundation.sources[0];
 
 test('minimal fixture is valid', () => {
   assert.deepEqual(validateResolver(load()).errors, []);
@@ -20,7 +18,7 @@ test('wrong version', () => {
 
 test('missing $type is an error', () => {
   const doc = load();
-  delete tree(doc).spacing.$type;
+  removeAt(tree(doc), 'spacing.$type');
   const r = validateResolver(doc);
   assert.ok(
     r.errors.some((e) => e.path?.endsWith('spacing.md') && /\$type/.test(e.message)),
@@ -30,19 +28,19 @@ test('missing $type is an error', () => {
 
 test('$type inherited from group is valid', () => {
   const doc = load();
-  tree(doc).radius.lg = { $value: { value: 12, unit: 'px' } };
+  setAt(tree(doc), 'radius.lg', { $value: { value: 12, unit: 'px' } });
   assert.equal(validateResolver(doc).ok, true);
 });
 
 test('bad dimension unit', () => {
   const doc = load();
-  tree(doc).spacing.md.$value.unit = 'em';
+  setAt(tree(doc), 'spacing.md.$value.unit', 'em');
   assert.ok(validateResolver(doc).errors.some((e) => /px\|rem/.test(e.message)));
 });
 
 test('bad color space', () => {
   const doc = load();
-  tree(doc).color.brand['700'].$value.colorSpace = 'cmyk';
+  setAt(tree(doc), 'color.brand.700.$value.colorSpace', 'cmyk');
   assert.ok(
     validateResolver(doc).errors.some(
       (e) => e.path?.endsWith('color.brand.700') && /colorSpace/.test(e.message),
@@ -52,7 +50,7 @@ test('bad color space', () => {
 
 test('unknown $ key is an error', () => {
   const doc = load();
-  tree(doc).color.$foo = 1;
+  setAt(tree(doc), 'color.$foo', 1);
   assert.ok(validateResolver(doc).errors.some((e) => /\$foo/.test(e.message)));
 });
 
@@ -64,7 +62,10 @@ test('resolutionOrder must point at existing sets and modifiers', () => {
 
 test('foreign tokens and $root are valid', () => {
   const doc = load();
-  tree(doc).color.accent = { $root: { $value: '{color.brand.600}' }, light: { $value: '{color.brand.700}' } };
+  setAt(tree(doc), 'color.accent', {
+    $root: { $value: '{color.brand.600}' },
+    light: { $value: '{color.brand.700}' },
+  });
   tree(doc).size = { $type: 'dimension', huge: { $value: { value: 100, unit: 'rem' } } };
   assert.deepEqual(validateResolver(doc).errors, []);
 });
@@ -86,7 +87,7 @@ test('a resolver passes through toResolver unchanged', () => {
 
 test('color components must have three entries', () => {
   const doc = load();
-  tree(doc).color.brand['700'].$value.components = [0.5];
+  setAt(tree(doc), 'color.brand.700.$value.components', [0.5]);
   assert.ok(validateResolver(doc).errors.some((e) => /components/.test(e.message)));
 });
 
@@ -115,6 +116,6 @@ test('border and transition sub-values are validated', () => {
 
 test('names with { } . are rejected (DTCG)', () => {
   const doc = load();
-  tree(doc).color['a{b'] = { $value: '{color.brand.600}' };
+  setAt(tree(doc), 'color.a{b', { $value: '{color.brand.600}' });
   assert.ok(validateResolver(doc).errors.some((e) => /name/.test(e.message)));
 });

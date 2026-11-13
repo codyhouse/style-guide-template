@@ -7,32 +7,31 @@ const num = (v: number | 'none') => (v === 'none' ? 0 : v);
 const toLinear = (v: number) =>
   Math.abs(v) <= 0.04045 ? v / 12.92 : Math.sign(v) * ((Math.abs(v) + 0.055) / 1.055) ** 2.4;
 
-// DTCG color space: culori mode, its channels in DTCG order, and DTCG's scale for each (hsl/hwb use 0-100).
-const MODES: Record<string, [mode: string, channels: string, scale?: number[]]> = {
-  srgb: ['rgb', 'rgb'],
-  'srgb-linear': ['lrgb', 'rgb'],
-  hsl: ['hsl', 'hsl', [1, 100, 100]],
-  hwb: ['hwb', 'hwb', [1, 100, 100]],
-  lab: ['lab', 'lab'],
-  lch: ['lch', 'lch'],
-  oklab: ['oklab', 'lab'],
-  oklch: ['oklch', 'lch'],
-  'display-p3': ['p3', 'rgb'],
-  'a98-rgb': ['a98', 'rgb'],
-  'prophoto-rgb': ['prophoto', 'rgb'],
-  rec2020: ['rec2020', 'rgb'],
-  'xyz-d65': ['xyz65', 'xyz'],
-  'xyz-d50': ['xyz50', 'xyz'],
+type Channels = [number, number, number];
+
+const CULORI: Record<DtcgColor['colorSpace'], (c: Channels) => Color> = {
+  srgb: ([r, g, b]) => ({ mode: 'rgb', r, g, b }),
+  'srgb-linear': ([r, g, b]) => ({ mode: 'lrgb', r, g, b }),
+  hsl: ([h, s, l]) => ({ mode: 'hsl', h, s: s / 100, l: l / 100 }),
+  hwb: ([h, w, b]) => ({ mode: 'hwb', h, w: w / 100, b: b / 100 }),
+  lab: ([l, a, b]) => ({ mode: 'lab', l, a, b }),
+  lch: ([l, c, h]) => ({ mode: 'lch', l, c, h }),
+  oklab: ([l, a, b]) => ({ mode: 'oklab', l, a, b }),
+  oklch: ([l, c, h]) => ({ mode: 'oklch', l, c, h }),
+  'display-p3': ([r, g, b]) => ({ mode: 'p3', r, g, b }),
+  'a98-rgb': ([r, g, b]) => ({ mode: 'a98', r, g, b }),
+  'prophoto-rgb': ([r, g, b]) => ({ mode: 'prophoto', r, g, b }),
+  rec2020: ([r, g, b]) => ({ mode: 'rec2020', r, g, b }),
+  'xyz-d65': ([x, y, z]) => ({ mode: 'xyz65', x, y, z }),
+  'xyz-d50': ([x, y, z]) => ({ mode: 'xyz50', x, y, z }),
 };
 
-function toCulori(color: DtcgColor): Color {
-  const [mode, channels, scale = [1, 1, 1]] = MODES[color.colorSpace] ?? [];
-  if (!mode) throw new Error(`Unsupported color space: ${color.colorSpace}`);
-  return Object.fromEntries([
-    ['mode', mode],
-    ...[...channels].map((k, i) => [k, num(color.components[i]) / scale[i]]),
-  ]) as Color;
-}
+const channels = (color: DtcgColor): Channels => {
+  const [a, b, c] = color.components.map(num);
+  return [a, b, c];
+};
+
+const toCulori = (color: DtcgColor): Color => CULORI[color.colorSpace](channels(color));
 
 const toRgb = converter('rgb');
 const toOk = converter('oklch');
@@ -40,7 +39,6 @@ const converted = <T>(out: T | undefined, color: unknown): T => {
   if (!out) throw new Error(`Color could not be converted: ${JSON.stringify(color)}`);
   return out;
 };
-// culori leaves the hue of a grey undefined; DTCG wants a number
 const okParts = (c: Color): [number, number, number] => {
   const { l, c: chroma, h } = converted(toOk(c), c);
   return [l, chroma, chroma < 1e-7 || h === undefined ? 0 : h];
@@ -48,8 +46,7 @@ const okParts = (c: Color): [number, number, number] => {
 
 export function toOklch(color: DtcgColor): [number, number, number, number] {
   const alpha = color.alpha ?? 1;
-  if (color.colorSpace === 'oklch')
-    return [...(color.components.map(num) as [number, number, number]), alpha];
+  if (color.colorSpace === 'oklch') return [...channels(color), alpha];
   return [...okParts(toCulori(color)), alpha];
 }
 
@@ -59,6 +56,7 @@ export function toSrgb(color: DtcgColor) {
 }
 
 const FUNCTIONAL = new Set(['lab', 'lch', 'oklab', 'oklch']);
+
 export function cssColor(color: DtcgColor): string {
   const c = color.components.map((v) => (v === 'none' ? 'none' : round(v)));
   const a = color.alpha === undefined || color.alpha === 1 ? '' : ` / ${color.alpha}`;
@@ -107,7 +105,6 @@ export function toOklchString(color: DtcgColor): string {
   return a === 1 ? `oklch(${base})` : `oklch(${base} / ${a})`;
 }
 
-// Naive device CMYK from clamped sRGB. Real print values come from the brand book.
 export function cmyk(color: DtcgColor): number[] {
   const [r, g, b] = bytes(color)
     .slice(0, 3)
@@ -153,14 +150,14 @@ export function parseCssColor(input: string): DtcgColor | null {
   return oklch(round(l), round(c), round(h), parsed.alpha ?? 1);
 }
 
-// A scale built around a typed color: the color is kept exactly as the shade whose
-// target lightness is nearest; the other shades are generated from its hue and chroma.
 export function anchoredScale(color: DtcgColor): { scale: Record<string, DtcgColor>; anchor: string } {
   const [l, c, h] = toOklch(color);
   const scale = shadeScale(h, c);
-  const lightness = (k: string) => scale[k].components[0] as number;
-  const anchor = Object.keys(scale).reduce((best, k) =>
-    Math.abs(lightness(k) - l) < Math.abs(lightness(best) - l) ? k : best,
+  const lightness = (k: string) => channels(scale[k])[0];
+  const shades = Object.keys(scale);
+  const anchor = shades.reduce(
+    (best, k) => (Math.abs(lightness(k) - l) < Math.abs(lightness(best) - l) ? k : best),
+    shades[0],
   );
   scale[anchor] = color.colorSpace === 'oklch' && color.hex ? color : oklch(l, c, h, color.alpha ?? 1);
   return { scale, anchor };

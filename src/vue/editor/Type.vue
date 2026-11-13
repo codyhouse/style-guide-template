@@ -1,92 +1,114 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import * as E from '../../lib/edit.js';
-import type { TokenNode } from '../../lib/types.js';
-import FontsourcePicker from '../FontsourcePicker.vue';
+import { child, children } from '../../lib/tree.js';
+import { VALUES } from '../../lib/schema.js';
+import { valueAs } from '../../lib/values.js';
+import { cap, dim } from '../guide/parts.js';
+import FontPicker from '../FontPicker.vue';
 import Choice from './Choice.vue';
 import type { EditorContext } from './context.js';
 import IconButton from './IconButton.vue';
 import NumberField from './NumberField.vue';
 import UploadButton from './UploadButton.vue';
-import { cap } from './palette-data.js';
+
 const props = defineProps<{ ctx: EditorContext }>();
-const generic = ['sans-serif', 'serif', 'monospace', 'cursive', 'system-ui'];
-const own = (o?: TokenNode) => Object.keys(o ?? {}).filter((k) => !k.startsWith('$'));
+const generic = new Set(['sans-serif', 'serif', 'monospace', 'cursive', 'system-ui']);
+
+const familiesOf = (value: unknown) => [valueAs(VALUES.fontFamily, value) ?? []].flat();
+const aliasOrEmpty = (value: unknown) => (typeof value === 'string' ? value : '');
+
+const fonts = computed(() =>
+  children(child(props.ctx.tree, 'font')).map(([name, token]) => ({
+    name,
+    label: `${cap(name)} font`,
+    family: familiesOf(token.$value)[0] ?? '',
+  })),
+);
+
 const families = computed(() => {
-  const tokenFamilies = Object.values<TokenNode>(props.ctx.tree.font ?? {}).flatMap((t) =>
-    t?.$value ? [[t.$value].flat()[0]] : [],
-  );
-  return [...new Set([...props.ctx.meta.fontFiles.map((f) => f.family), ...tokenFamilies])].map((f) => ({
-    value: f,
-    label: f,
-  }));
+  const uploaded = props.ctx.meta.fontFiles.map((file) => file.family);
+  const named = fonts.value.map((font) => font.family).filter(Boolean);
+  return [...new Set([...uploaded, ...named])].map((family) => ({ value: family, label: family }));
 });
-const styles = computed(() =>
-  Object.entries<TokenNode>(props.ctx.tree.typography ?? {}).filter(
-    ([k, t]) => !k.startsWith('$') && t.$value && typeof t.$value === 'object',
-  ),
-);
+
 const fontOptions = computed(() =>
-  own(props.ctx.tree.font).map((f) => ({ value: `{font.${f}}`, label: `${cap(f)} font` })),
+  fonts.value.map((font) => ({ value: `{font.${font.name}}`, label: font.label })),
 );
+
 const sizeOptions = computed(() =>
-  own(props.ctx.tree['font-size']).map((s) => {
-    const { value, unit } = props.ctx.tree['font-size'][s].$value;
-    return { value: `{font-size.${s}}`, label: `${s} (${value}${unit})` };
+  children(child(props.ctx.tree, 'font-size')).map(([size, token]) => ({
+    value: `{font-size.${size}}`,
+    label: `${size} (${dim(token.$value)})`,
+  })),
+);
+
+const styles = computed(() =>
+  children(child(props.ctx.tree, 'typography')).flatMap(([name, token]) => {
+    const style = valueAs(VALUES.typography, token.$value);
+    if (!style) return [];
+    return [
+      {
+        name,
+        title: cap(name.replaceAll('-', ' ')),
+        fontFamily: aliasOrEmpty(style.fontFamily),
+        fontSize: aliasOrEmpty(style.fontSize),
+        fontWeight: typeof style.fontWeight === 'number' ? style.fontWeight : undefined,
+        lineHeight: typeof style.lineHeight === 'number' ? style.lineHeight : undefined,
+      },
+    ];
   }),
 );
+
 function put(name: string, patch: Record<string, unknown>) {
-  const path = `typography.${name}`,
-    cur = props.ctx.fresh(path);
-  props.ctx.set(
-    E.setToken(props.ctx.session.store.get(), path, { ...cur, $value: { ...cur.$value, ...patch } }),
-  );
+  props.ctx.patchValue(`typography.${name}`, patch);
 }
+
 function setFont(name: string, family: string) {
-  const current = [props.ctx.tree.font[name].$value].flat();
-  const suffix = generic.includes(current.at(-1)) ? current.at(-1) : 'sans-serif';
-  props.ctx.set(E.setToken(props.ctx.session.store.get(), `font.${name}`, { $value: [family, suffix] }));
+  const last = familiesOf(child(child(props.ctx.tree, 'font'), name)?.$value).at(-1);
+  const fallback = last && generic.has(last) ? last : 'sans-serif';
+  props.ctx.setToken(`font.${name}`, { $value: [family, fallback] });
 }
 </script>
 
 <template>
   <Choice
-    v-for="name in own(ctx.tree.font)"
-    :key="name"
-    :label="`${cap(name)} font`"
+    v-for="font in fonts"
+    :key="font.name"
+    :label="font.label"
     :options="families"
-    :value="[ctx.tree.font[name].$value].flat()[0]"
-    @update:value="setFont(name, $event)"
+    :value="font.family"
+    @update:value="setFont(font.name, $event)"
   />
-  <div v-for="[name, token] in styles" :key="name">
-    <h4>{{ cap(name.replace(/-/g, ' ')) }}</h4>
+  <div v-for="style in styles" :key="style.name">
+    <h4>{{ style.title }}</h4>
     <div class="cd-field-row">
       <Choice
         label="Font"
         :options="fontOptions"
-        :value="token.$value.fontFamily"
-        @update:value="put(name, { fontFamily: $event })"
+        :value="style.fontFamily"
+        @update:value="put(style.name, { fontFamily: $event })"
       />
       <Choice
         label="Size"
         :options="sizeOptions"
-        :value="token.$value.fontSize"
-        @update:value="put(name, { fontSize: $event })"
+        :value="style.fontSize"
+        @update:value="put(style.name, { fontSize: $event })"
       />
     </div>
     <div class="cd-field-row">
       <NumberField
         label="Weight"
-        :value="token.$value.fontWeight"
+        :value="style.fontWeight"
         :min="1"
         :max="1000"
-        @commit="(value) => value >= 1 && value <= 1000 && put(name, { fontWeight: value })"
+        @commit="(value) => value >= 1 && value <= 1000 && put(style.name, { fontWeight: value })"
       />
       <NumberField
         label="Line height"
-        :value="token.$value.lineHeight"
+        :value="style.lineHeight"
         :min="0"
-        @commit="(value) => value > 0 && put(name, { lineHeight: value })"
+        @commit="(value) => value > 0 && put(style.name, { lineHeight: value })"
       />
     </div>
   </div>
@@ -110,6 +132,6 @@ function setFont(name: string, family: string) {
     @files="ctx.session.addFontUploads($event)"
   />
   <p class="cd-hint">woff2, woff, ttf or otf. Family, weight and style are read from the file name.</p>
-  <h4>Add from Fontsource</h4>
-  <FontsourcePicker @pick="(files) => ctx.setMeta((m) => E.addFontFiles(m, files))" />
+  <h4>Add from {{ ctx.session.fonts.name }}</h4>
+  <FontPicker :provider="ctx.session.fonts" @pick="(files) => ctx.setMeta((m) => E.addFontFiles(m, files))" />
 </template>

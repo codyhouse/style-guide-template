@@ -1,68 +1,74 @@
 <script setup lang="ts">
 import { computed } from 'vue';
-import * as E from '../../lib/edit.js';
-import { applyScale, setStep } from '../../lib/scale.js';
+import { applyScale, scaleOf, setStep, type ScaleSpec } from '../../lib/scale.js';
+import { child, children, isHandSet, withVendorData } from '../../lib/tree.js';
+import { VALUES } from '../../lib/schema.js';
+import { valueAs } from '../../lib/values.js';
 import type { EditorContext } from './context.js';
 import NumberField from './NumberField.vue';
+
 const props = defineProps<{ ctx: EditorContext }>();
+
+const SCALES = [
+  ['spacing', 'Spacing'],
+  ['radius', 'Radius'],
+  ['font-size', 'Font size'],
+] as const;
+
 const scales = computed(() =>
-  (
-    [
-      ['spacing', 'Spacing'],
-      ['radius', 'Radius'],
-      ['font-size', 'Font size'],
-    ] as const
-  )
-    .map(([key, label]) => ({ key, label, group: props.ctx.tree[key] }))
-    .filter((x) => x.group),
+  SCALES.flatMap(([key, label]) => {
+    const group = child(props.ctx.tree, key);
+    if (!group) return [];
+    const steps = children(group).map(([step, token]) => ({
+      step,
+      length: valueAs(VALUES.dimension, token.$value),
+      byHand: isHandSet(token, props.ctx.vendor),
+    }));
+    return [{ key, label, spec: scaleOf(group, props.ctx.vendor), steps }];
+  }),
 );
-function regenerate(key: string, patch: Record<string, unknown>) {
-  const group = props.ctx.tree[key],
-    vendor = props.ctx.session.vendor;
-  const next = structuredClone(group);
-  next.$extensions[vendor].scale = { ...group.$extensions?.[vendor]?.scale, ...patch };
-  props.ctx.set(E.setToken(props.ctx.session.store.get(), key, applyScale(next, vendor)));
+
+function regenerate(key: string, patch: Partial<ScaleSpec>) {
+  const group = child(props.ctx.tree, key);
+  const spec = scaleOf(group, props.ctx.vendor);
+  if (!group || !spec) return;
+  const next = withVendorData(group, props.ctx.vendor, { scale: { ...spec, ...patch } });
+  props.ctx.setToken(key, applyScale(next, props.ctx.vendor));
 }
+
 function setValue(key: string, step: string, value: number) {
-  const group = props.ctx.tree[key],
-    token = group[step];
-  props.ctx.set(
-    E.setToken(
-      props.ctx.session.store.get(),
-      key,
-      setStep(group, step, { ...token.$value, value }, props.ctx.session.vendor),
-    ),
-  );
+  const group = child(props.ctx.tree, key);
+  const length = valueAs(VALUES.dimension, child(group, step)?.$value);
+  if (!group || !length) return;
+  props.ctx.setToken(key, setStep(group, step, { ...length, value }, props.ctx.vendor));
 }
-const steps = (key: string) => Object.keys(props.ctx.tree[key]).filter((k) => !k.startsWith('$'));
 </script>
 
 <template>
-  <div v-for="{ key, label, group } in scales" :key="key">
+  <div v-for="{ key, label, spec, steps } in scales" :key="key">
     <h4>{{ label }}</h4>
-    <div v-if="group.$extensions?.[ctx.session.vendor]?.scale" class="cd-field-row">
+    <div v-if="spec" class="cd-field-row">
       <NumberField
-        :label="`Base (${group.$extensions[ctx.session.vendor].scale.base.unit})`"
-        :value="group.$extensions[ctx.session.vendor].scale.base.value"
-        @commit="
-          regenerate(key, { base: { ...group.$extensions[ctx.session.vendor].scale.base, value: $event } })
-        "
+        :label="`Base (${spec.base.unit})`"
+        :value="spec.base.value"
+        @commit="regenerate(key, { base: { ...spec.base, value: $event } })"
       />
       <NumberField
-        v-if="group.$extensions[ctx.session.vendor].scale.ratio !== undefined"
+        v-if="spec.ratio !== undefined"
         label="Ratio"
-        :value="group.$extensions[ctx.session.vendor].scale.ratio"
+        :value="spec.ratio"
         @commit="(value) => value > 0 && regenerate(key, { ratio: value })"
       />
     </div>
     <div class="cd-field-row">
-      <NumberField
-        v-for="step in steps(key)"
-        :key="step"
-        :label="`${step}${group[step].$extensions?.[ctx.session.vendor]?.overridden ? ' (set by hand)' : ''}`"
-        :value="group[step].$value.value"
-        @commit="setValue(key, step, $event)"
-      />
+      <template v-for="{ step, length, byHand } in steps" :key="step">
+        <NumberField
+          v-if="length"
+          :label="byHand ? `${step} (set by hand)` : step"
+          :value="length.value"
+          @commit="setValue(key, step, $event)"
+        />
+      </template>
     </div>
   </div>
 </template>
